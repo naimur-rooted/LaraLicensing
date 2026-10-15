@@ -87,7 +87,6 @@ function RegisterPage() {
       await registerViaLara({ Email: email.trim(), Password: password });
       await navigate({ to: "/admin", replace: true });
     } catch (error) {
-      pushLaraApiError(new Error());
       if (
         error instanceof LaraApiError &&
         error.errorCode === ApiErrorCodeType.AuthRegistrationClosed

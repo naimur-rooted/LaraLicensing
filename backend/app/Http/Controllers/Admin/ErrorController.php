@@ -32,7 +32,7 @@ public function index(Request $request): JsonResponse
             return ApiEnvelope::success([], $requestId);
         }
 
-        // Tailing the last N lines (e.g., 500)
+        // Tailing the last N lines (e.g., 500);
         $limit = min(500, (int) $request->query('limit', 100));
         
         $lines = [];

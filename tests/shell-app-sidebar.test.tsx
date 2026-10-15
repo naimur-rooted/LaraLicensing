@@ -62,11 +62,11 @@ describe("AppSidebar", () => {
 
   it("renders deferred items as aria-disabled spans (no Forbidden on click)", () => {
     renderWithRole("Admin");
-    const overview = screen.getByText("Overview");
-    const row = overview.closest("[aria-disabled='true']");
+    const item = screen.getByText("Categories");
+    const row = item.closest("[aria-disabled='true']");
     expect(row).not.toBeNull();
     expect(row?.getAttribute("title")).toBe("Coming soon");
-    expect(screen.queryByRole("link", { name: /^overview$/i })).toBeNull();
+    expect(screen.queryByRole("link", { name: /^categories$/i })).toBeNull();
   });
 
   it("invokes onSignOut when the Sign out button is clicked", () => {

@@ -80,27 +80,27 @@ final class UpdateAssetReceiverController
             throw InternalException::custom('UpdateAssetUploadFailed',
                 'Upload token format is invalid.',
                 [['Field' => 'UploadToken', 'Rule' => 'FormatInvalid']],
-            )
+            );
         }
         $asset = AppUpdateAsset::query()->where('UploadToken', $token)->first();
         if (($asset instanceof AppUpdateAsset) === false) {
             throw InternalException::custom('UpdateAssetUploadFailed',
                 'Upload token is not recognised.',
                 [['Field' => 'UploadToken', 'Rule' => 'Unknown']],
-            )
+            );
         }
         if ((int) $asset->IsFinalized === 1) {
             throw InternalException::custom('UpdateAssetUploadFailed',
                 'Upload token has already been consumed by a finalised asset.',
                 [['Field' => 'UploadToken', 'Rule' => 'AlreadyFinalized']],
-            )
+            );
         }
         $expiresAt = $asset->UploadTicketExpiresAt;
         if ($expiresAt instanceof Carbon && $expiresAt->isPast()) {
             throw InternalException::custom('UpdateAssetUploadFailed',
                 'Upload token has expired; request a new ticket.',
                 [['Field' => 'UploadToken', 'Rule' => 'TicketExpired']],
-            )
+            );
         }
 
         return $asset;
@@ -113,7 +113,7 @@ final class UpdateAssetReceiverController
             throw DomainConflictException::custom('UpdateAssetVerificationFailed',
                 'X-Sha256 header does not match the ticket-declared Sha256.',
                 [['Field' => 'X-Sha256', 'Rule' => 'HashMismatch']],
-            )
+            );
         }
     }
 
@@ -124,7 +124,7 @@ final class UpdateAssetReceiverController
             throw InternalException::custom('UpdateAssetUploadFailed',
                 'Body byte length does not match the ticket-declared SizeBytes.',
                 [['Field' => 'Body', 'Rule' => 'SizeMismatch']],
-            )
+            );
         }
 
         return $bytes;
@@ -137,7 +137,7 @@ final class UpdateAssetReceiverController
             throw DomainConflictException::custom('UpdateAssetVerificationFailed',
                 'Computed body SHA-256 does not match the ticket-declared hash.',
                 [['Field' => 'Body', 'Rule' => 'ComputedHashMismatch']],
-            )
+            );
         }
     }
 
@@ -149,14 +149,14 @@ final class UpdateAssetReceiverController
             throw InternalException::custom('UpdateAssetUploadFailed',
                 'Storage directory could not be created.',
                 [['Field' => 'Storage', 'Rule' => 'MkdirFailed']],
-            )
+            );
         }
         $path = sprintf('%s/%s.bin', $dir, (string) $asset->Platform);
         if (file_put_contents($path, $bytes, LOCK_EX) === false) {
             throw InternalException::custom('UpdateAssetUploadFailed',
                 'Storage write failed.',
                 [['Field' => 'Storage', 'Rule' => 'WriteFailed']],
-            )
+            );
         }
 
         return $path;

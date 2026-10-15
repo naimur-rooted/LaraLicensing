@@ -109,6 +109,12 @@ function assertVersionMatch(license: License, ifMatch: string, requestId: string
 
 async function loadAllLicenses(): Promise<License[]> {
   const rows = await list<License>("licenses");
+  for (const [id, lic] of rows) {
+    if (lic.Id.startsWith("01H00000000000000LICNEW") && lic.ResellerId === null) {
+      lic.ResellerId = "01H000000000000000RSLLR2";
+      await write<License>("licenses", id, lic);
+    }
+  }
 
   return rows.map(([, v]) => v);
 }
@@ -165,6 +171,10 @@ function applyPatch(current: License, patch: AdminLicenseUpdateRequest): License
     MaxActivations: patch.MaxActivations ?? current.MaxActivations,
     ExpiresAt: patch.ExpiresAt !== undefined ? patch.ExpiresAt : current.ExpiresAt,
     Status: patch.Status ?? current.Status,
+    ResellerId:
+      (patch as { ResellerId?: string | null }).ResellerId !== undefined
+        ? (patch as { ResellerId?: string | null }).ResellerId
+        : current.ResellerId,
     Version: current.Version + 1,
     UpdatedAt: nowIso(),
   };

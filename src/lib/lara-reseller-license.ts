@@ -111,13 +111,26 @@ async function adaptPreviewResellerLicense(
   };
 }
 
+async function resolveResellerUlid(
+  resellerId: number,
+  signal?: AbortSignal,
+): Promise<string | undefined> {
+  const existing = await ulidFor("resellers", resellerId);
+  if (existing) return existing;
+  const list = await apiClient.call("admin.resellers.list", { Cursor: null }, { signal });
+  for (const r of list.Items) {
+    if ((await assignNumeric("resellers", r.Id)) === resellerId) return r.Id;
+  }
+
+  return undefined;
+}
+
 async function fetchPreviewResellerLicenseList(
   resellerId: number,
   signal?: AbortSignal,
 ): Promise<ResellerLicense[]> {
-  const ulid = await ulidFor("resellers", resellerId);
-  const isFailed = !ulid;
-  if (isFailed) {
+  const ulid = await resolveResellerUlid(resellerId, signal);
+  if (!ulid) {
     console.warn("lara-reseller-license:preview-bridge:reseller-not-found", {
       ResellerId: resellerId,
     });

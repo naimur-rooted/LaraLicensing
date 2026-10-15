@@ -135,7 +135,7 @@ final class SignedRequestMiddleware
             throw AuthException::custom('AbuseBlocked',
                 'Portal signature timestamp is outside the accepted window.',
                 [['Field' => 'X-Lara-Timestamp', 'Rule' => 'Skew']],
-            )
+            );
         }
     }
 
@@ -200,7 +200,7 @@ final class SignedRequestMiddleware
             throw AuthException::custom('AbuseBlocked',
                 'Portal signature nonce has already been used.',
                 [['Field' => 'X-Lara-Nonce', 'Rule' => 'NonceReplay']],
-            )
+            );
         }
     }
 }

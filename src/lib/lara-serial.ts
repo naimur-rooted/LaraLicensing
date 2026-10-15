@@ -6,6 +6,9 @@ import {
   parseEnvironmentId,
   type EnvironmentIdValue,
 } from "./lara-environment";
+import { assignNumeric, ulidFor } from "./preview-id-map";
+import { write } from "./preview-store";
+import { getRuntimeMode } from "./runtime-mode";
 
 export const serialCreateResultSchema = z.object({
   SerialId: z.number().int().positive(),
@@ -32,11 +35,39 @@ export const serialCreateSchema = z.object({
 
 export type SerialCreateInput = z.infer<typeof serialCreateSchema>;
 
+function generateSerialValue(prefixId?: number): string {
+  const chunk = Math.random().toString(36).slice(2, 6).toUpperCase().padEnd(4, "X");
+  const randomSuffix = Math.random().toString(36).slice(2, 6).toUpperCase().padEnd(4, "0");
+  const prefixPart = prefixId ? `PFX${prefixId}-` : "";
+
+  return `LARA-${prefixPart}${chunk}-${randomSuffix}`;
+}
+
+async function createPreviewSerial(
+  licenseId: number,
+  input: SerialCreateInput,
+): Promise<SerialCreateResult> {
+  const licenseUlid = await ulidFor("licenses", licenseId);
+  const serialValue = generateSerialValue(input.PrefixId);
+  const serialUlid = `01H000000000000SERNEW${Math.random().toString(16).slice(2, 8).toUpperCase()}`;
+
+  await write<{ Serial: string; LicenseId: string }>("serials", serialValue, {
+    Serial: serialValue,
+    LicenseId: licenseUlid ?? String(licenseId),
+  });
+  const serialId = await assignNumeric("serials", serialUlid);
+
+  return { SerialId: serialId, LicenseId: licenseId, SerialValue: serialValue, CreatedAt: new Date().toISOString() };
+}
+
 export async function createSerial(
   licenseId: number,
   input: SerialCreateInput,
   idempotencyKey?: string,
 ): Promise<SerialCreateResult> {
+  if (getRuntimeMode().Mode === "preview") {
+    return createPreviewSerial(licenseId, input);
+  }
   const headers = idempotencyKey ? { "Idempotency-Key": idempotencyKey } : undefined;
   const [created] = await requestLaraApi(
     `/Licenses/${licenseId}/Serials`,

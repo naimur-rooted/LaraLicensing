@@ -133,7 +133,6 @@ async function handleForceEnd(
     await endImpersonation("AdminForced", crypto.randomUUID());
     onEnded();
   } catch (caught) {
-    pushLaraApiError(new Error());
     setError(formatLaraApiError(caught));
   } finally {
     setPending(false);

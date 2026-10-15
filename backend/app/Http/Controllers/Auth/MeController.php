@@ -28,7 +28,7 @@ class MeController extends Controller
         
         $capabilities = [];
         foreach ($permissions as $p) {
-            // p is typically [sub, obj, act, eft]
+            // p is typically [sub, obj, act, eft];
             if (isset($p[1]) && str_starts_with($p[1], 'Capability:')) {
                 // If the effect is deny, we might need to handle it, but for now 
                 // the FE just needs a list of allowed capabilities.

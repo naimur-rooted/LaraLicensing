@@ -170,7 +170,7 @@ public function uploadTicket(AppUpdateUploadTicketRequest $request): JsonRespons
                 throw DomainConflictException::custom('UpdateVersionDowngradeBlocked',
                     'Version must be strictly greater than every published version for (Product, Channel).',
                     [['Field' => 'Version', 'Rule' => 'Monotonic']],
-                )
+                );
             }
         }
     }
@@ -283,7 +283,7 @@ public function publish(AppUpdatePublishRequest $request): JsonResponse
             throw InternalException::custom('UpdateChannelForbidden',
                 'Only the Stable channel is publishable in v1.0.',
                 [['Field' => 'Channel', 'Rule' => 'V1StableOnly']],
-            )
+            );
         }
         foreach ($p['Assets'] as $i => $a) {
             $this->assertMember(sprintf('Assets[%d].Platform', $i), $a['Platform'], (array) config('lara.self_update.platforms', []));
@@ -301,7 +301,7 @@ public function publish(AppUpdatePublishRequest $request): JsonResponse
             throw ValidationException::custom('ValidationInputInvalid',
                 'Assets[] must cover every declared platform exactly once.',
                 [['Field' => 'Assets', 'Rule' => 'PlatformCoverage']],
-            )
+            );
         }
     }
 
@@ -361,19 +361,19 @@ public function publish(AppUpdatePublishRequest $request): JsonResponse
             throw InternalException::custom('UpdateAssetUploadFailed',
                 'Upload ticket is unknown, expired, or already finalised.',
                 [['Field' => 'UploadToken', 'Rule' => 'TicketNotOpen']],
-            )
+            );
         }
         if (strtolower((string) $row->Sha256) !== $a['Sha256'] || (int) $row->SizeBytes !== $a['SizeBytes']) {
             throw DomainConflictException::custom('UpdateAssetVerificationFailed',
                 'Supplied Sha256/SizeBytes does not match the ticket-declared values.',
                 [['Field' => sprintf('Assets[Platform=%s]', $a['Platform']), 'Rule' => 'TicketMismatch']],
-            )
+            );
         }
         if ((string) $row->StoragePath === '' || !is_file((string) $row->StoragePath)) {
             throw InternalException::custom('UpdateAssetUploadFailed',
                 'Ticket bytes were not received before publish.',
                 [['Field' => sprintf('Assets[Platform=%s]', $a['Platform']), 'Rule' => 'BytesMissing']],
-            )
+            );
         }
     }
 
@@ -468,7 +468,7 @@ public function yank(AppUpdateYankRequest $request, string $version): JsonRespon
             throw DomainConflictException::custom('ValidationConflict',
                 'Version is already yanked; yank is irreversible in v1.',
                 [['Field' => 'IsYanked', 'Rule' => 'AlreadyYanked']],
-            )
+            );
         }
     }
 }

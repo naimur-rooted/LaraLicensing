@@ -72,7 +72,7 @@ final class RequestIdMiddleware
             throw ValidationException::custom('RequestIdMissing',
                 'X-Request-Id header is required on this endpoint.',
                 [['Field' => 'X-Request-Id', 'Rule' => 'Required']],
-            )
+            );
         }
 
         return $this->mintUuidV4();

@@ -9,65 +9,52 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as ResetPasswordRouteImport } from './routes/reset-password'
-import { Route as RegisterRouteImport } from './routes/register'
-import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
-import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
-import { Route as SplatRouteImport } from './routes/$'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as E2eErrorHarnessRouteImport } from './routes/e2e.error-harness'
-import { Route as AdminLoginRouteImport } from './routes/admin.login'
-import { Route as AuthenticatedPortalRouteImport } from './routes/_authenticated/portal'
+import { Route as SplatRouteImport } from './routes/$'
+import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as RegisterRouteImport } from './routes/register'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as AuthenticatedPortalRouteImport } from './routes/_authenticated/portal'
+import { Route as AdminLoginRouteImport } from './routes/admin.login'
+import { Route as E2eErrorHarnessRouteImport } from './routes/e2e.error-harness'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
-import { Route as AuthenticatedPortalUpdatesRouteImport } from './routes/_authenticated/portal.updates'
-import { Route as AuthenticatedPortalHomeRouteImport } from './routes/_authenticated/portal.home'
-import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin.users'
-import { Route as AuthenticatedAdminSnapshotsRouteImport } from './routes/_authenticated/admin.snapshots'
-import { Route as AuthenticatedAdminSerialsRouteImport } from './routes/_authenticated/admin.serials'
-import { Route as AuthenticatedAdminRuntimeRouteImport } from './routes/_authenticated/admin.runtime'
-import { Route as AuthenticatedAdminRolesRouteImport } from './routes/_authenticated/admin.roles'
-import { Route as AuthenticatedAdminResellersRouteImport } from './routes/_authenticated/admin.resellers'
-import { Route as AuthenticatedAdminQuotasRouteImport } from './routes/_authenticated/admin.quotas'
-import { Route as AuthenticatedAdminQuotaRequestsRouteImport } from './routes/_authenticated/admin.quota-requests'
-import { Route as AuthenticatedAdminErrorsRouteImport } from './routes/_authenticated/admin.errors'
-import { Route as AuthenticatedAdminDesignRouteImport } from './routes/_authenticated/admin.design'
-import { Route as AuthenticatedAdminBackupRouteImport } from './routes/_authenticated/admin.backup'
-import { Route as AuthenticatedAdminAuditRouteImport } from './routes/_authenticated/admin.audit'
-import { Route as AuthenticatedAdminAppUpdatesRouteImport } from './routes/_authenticated/admin.app-updates'
 import { Route as AuthenticatedAdminApiDocsRouteImport } from './routes/_authenticated/admin.api-docs'
-import { Route as AuthenticatedResellerResellerIdIndexRouteImport } from './routes/_authenticated/reseller.$resellerId.index'
-import { Route as AuthenticatedAdminSnapshotsIndexRouteImport } from './routes/_authenticated/admin.snapshots.index'
-import { Route as AuthenticatedResellerResellerIdQuotaRequestsRouteImport } from './routes/_authenticated/reseller.$resellerId.quota-requests'
-import { Route as AuthenticatedAdminUsersNewRouteImport } from './routes/_authenticated/admin.users.new'
-import { Route as AuthenticatedAdminUsersUserIdRouteImport } from './routes/_authenticated/admin.users.$userId'
-import { Route as AuthenticatedAdminSnapshotsSnapshotIdRouteImport } from './routes/_authenticated/admin.snapshots.$snapshotId'
-import { Route as AuthenticatedAdminResellersNewRouteImport } from './routes/_authenticated/admin.resellers.new'
-import { Route as AuthenticatedAdminResellersResellerIdRouteImport } from './routes/_authenticated/admin.resellers.$resellerId'
-import { Route as AuthenticatedAdminLicensesNewRouteImport } from './routes/_authenticated/admin.licenses.new'
-import { Route as AuthenticatedAdminLicensesLicenseIdRouteImport } from './routes/_authenticated/admin.licenses.$licenseId'
-import { Route as AuthenticatedAdminBackupImportRouteImport } from './routes/_authenticated/admin.backup.import'
+import { Route as AuthenticatedAdminAppUpdatesRouteImport } from './routes/_authenticated/admin.app-updates'
+import { Route as AuthenticatedAdminAuditRouteImport } from './routes/_authenticated/admin.audit'
+import { Route as AuthenticatedAdminBackupRouteImport } from './routes/_authenticated/admin.backup'
+import { Route as AuthenticatedAdminDesignRouteImport } from './routes/_authenticated/admin.design'
+import { Route as AuthenticatedAdminErrorsRouteImport } from './routes/_authenticated/admin.errors'
+import { Route as AuthenticatedAdminQuotaRequestsRouteImport } from './routes/_authenticated/admin.quota-requests'
+import { Route as AuthenticatedAdminQuotasRouteImport } from './routes/_authenticated/admin.quotas'
+import { Route as AuthenticatedAdminResellersRouteImport } from './routes/_authenticated/admin.resellers'
+import { Route as AuthenticatedAdminRolesRouteImport } from './routes/_authenticated/admin.roles'
+import { Route as AuthenticatedAdminRuntimeRouteImport } from './routes/_authenticated/admin.runtime'
+import { Route as AuthenticatedAdminSerialsRouteImport } from './routes/_authenticated/admin.serials'
+import { Route as AuthenticatedAdminSnapshotsRouteImport } from './routes/_authenticated/admin.snapshots'
+import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin.users'
+import { Route as AuthenticatedPortalHomeRouteImport } from './routes/_authenticated/portal.home'
+import { Route as AuthenticatedPortalUpdatesRouteImport } from './routes/_authenticated/portal.updates'
 import { Route as AuthenticatedAdminBackupExportRouteImport } from './routes/_authenticated/admin.backup.export'
+import { Route as AuthenticatedAdminBackupImportRouteImport } from './routes/_authenticated/admin.backup.import'
+import { Route as AuthenticatedAdminLicensesIndexRouteImport } from './routes/_authenticated/admin.licenses.index'
+import { Route as AuthenticatedAdminLicensesLicenseIdRouteImport } from './routes/_authenticated/admin.licenses.$licenseId'
+import { Route as AuthenticatedAdminLicensesNewRouteImport } from './routes/_authenticated/admin.licenses.new'
+import { Route as AuthenticatedAdminResellersResellerIdRouteImport } from './routes/_authenticated/admin.resellers.$resellerId'
+import { Route as AuthenticatedAdminResellersNewRouteImport } from './routes/_authenticated/admin.resellers.new'
+import { Route as AuthenticatedAdminSnapshotsIndexRouteImport } from './routes/_authenticated/admin.snapshots.index'
+import { Route as AuthenticatedAdminSnapshotsSnapshotIdRouteImport } from './routes/_authenticated/admin.snapshots.$snapshotId'
+import { Route as AuthenticatedAdminUsersUserIdRouteImport } from './routes/_authenticated/admin.users.$userId'
+import { Route as AuthenticatedAdminUsersNewRouteImport } from './routes/_authenticated/admin.users.new'
+import { Route as AuthenticatedResellerResellerIdIndexRouteImport } from './routes/_authenticated/reseller.$resellerId.index'
+import { Route as AuthenticatedResellerResellerIdQuotaRequestsRouteImport } from './routes/_authenticated/reseller.$resellerId.quota-requests'
 import { Route as AuthenticatedResellerResellerIdLicensesIndexRouteImport } from './routes/_authenticated/reseller.$resellerId.licenses.index'
 import { Route as AuthenticatedResellerResellerIdLicensesLicenseKeyRouteImport } from './routes/_authenticated/reseller.$resellerId.licenses.$licenseKey'
 
-const ResetPasswordRoute = ResetPasswordRouteImport.update({
-  id: '/reset-password',
-  path: '/reset-password',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RegisterRoute = RegisterRouteImport.update({
-  id: '/register',
-  path: '/register',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
-  id: '/forgot-password',
-  path: '/forgot-password',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthenticatedRoute = AuthenticatedRouteImport.update({
-  id: '/_authenticated',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SplatRoute = SplatRouteImport.update({
@@ -75,9 +62,38 @@ const SplatRoute = SplatRouteImport.update({
   path: '/$',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const AuthenticatedRoute = AuthenticatedRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegisterRoute = RegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedPortalRoute = AuthenticatedPortalRouteImport.update({
+  id: '/portal',
+  path: '/portal',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AdminLoginRoute = AdminLoginRouteImport.update({
+  id: '/admin/login',
+  path: '/admin/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const E2eErrorHarnessRoute = E2eErrorHarnessRouteImport.update({
@@ -85,87 +101,32 @@ const E2eErrorHarnessRoute = E2eErrorHarnessRouteImport.update({
   path: '/e2e/error-harness',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminLoginRoute = AdminLoginRouteImport.update({
-  id: '/admin/login',
-  path: '/admin/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthenticatedPortalRoute = AuthenticatedPortalRouteImport.update({
-  id: '/portal',
-  path: '/portal',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
-const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
-  id: '/admin',
-  path: '/admin',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
 const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AuthenticatedAdminRoute,
 } as any)
-const AuthenticatedPortalUpdatesRoute =
-  AuthenticatedPortalUpdatesRouteImport.update({
-    id: '/updates',
-    path: '/updates',
-    getParentRoute: () => AuthenticatedPortalRoute,
+const AuthenticatedAdminApiDocsRoute =
+  AuthenticatedAdminApiDocsRouteImport.update({
+    id: '/api-docs',
+    path: '/api-docs',
+    getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
-const AuthenticatedPortalHomeRoute = AuthenticatedPortalHomeRouteImport.update({
-  id: '/home',
-  path: '/home',
-  getParentRoute: () => AuthenticatedPortalRoute,
-} as any)
-const AuthenticatedAdminUsersRoute = AuthenticatedAdminUsersRouteImport.update({
-  id: '/users',
-  path: '/users',
+const AuthenticatedAdminAppUpdatesRoute =
+  AuthenticatedAdminAppUpdatesRouteImport.update({
+    id: '/app-updates',
+    path: '/app-updates',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminAuditRoute = AuthenticatedAdminAuditRouteImport.update({
+  id: '/audit',
+  path: '/audit',
   getParentRoute: () => AuthenticatedAdminRoute,
 } as any)
-const AuthenticatedAdminSnapshotsRoute =
-  AuthenticatedAdminSnapshotsRouteImport.update({
-    id: '/snapshots',
-    path: '/snapshots',
-    getParentRoute: () => AuthenticatedAdminRoute,
-  } as any)
-const AuthenticatedAdminSerialsRoute =
-  AuthenticatedAdminSerialsRouteImport.update({
-    id: '/serials',
-    path: '/serials',
-    getParentRoute: () => AuthenticatedAdminRoute,
-  } as any)
-const AuthenticatedAdminRuntimeRoute =
-  AuthenticatedAdminRuntimeRouteImport.update({
-    id: '/runtime',
-    path: '/runtime',
-    getParentRoute: () => AuthenticatedAdminRoute,
-  } as any)
-const AuthenticatedAdminRolesRoute = AuthenticatedAdminRolesRouteImport.update({
-  id: '/roles',
-  path: '/roles',
-  getParentRoute: () => AuthenticatedAdminRoute,
-} as any)
-const AuthenticatedAdminResellersRoute =
-  AuthenticatedAdminResellersRouteImport.update({
-    id: '/resellers',
-    path: '/resellers',
-    getParentRoute: () => AuthenticatedAdminRoute,
-  } as any)
-const AuthenticatedAdminQuotasRoute =
-  AuthenticatedAdminQuotasRouteImport.update({
-    id: '/quotas',
-    path: '/quotas',
-    getParentRoute: () => AuthenticatedAdminRoute,
-  } as any)
-const AuthenticatedAdminQuotaRequestsRoute =
-  AuthenticatedAdminQuotaRequestsRouteImport.update({
-    id: '/quota-requests',
-    path: '/quota-requests',
-    getParentRoute: () => AuthenticatedAdminRoute,
-  } as any)
-const AuthenticatedAdminErrorsRoute =
-  AuthenticatedAdminErrorsRouteImport.update({
-    id: '/errors',
-    path: '/errors',
+const AuthenticatedAdminBackupRoute =
+  AuthenticatedAdminBackupRouteImport.update({
+    id: '/backup',
+    path: '/backup',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
 const AuthenticatedAdminDesignRoute =
@@ -174,81 +135,85 @@ const AuthenticatedAdminDesignRoute =
     path: '/design',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
-const AuthenticatedAdminBackupRoute =
-  AuthenticatedAdminBackupRouteImport.update({
-    id: '/backup',
-    path: '/backup',
+const AuthenticatedAdminErrorsRoute =
+  AuthenticatedAdminErrorsRouteImport.update({
+    id: '/errors',
+    path: '/errors',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
-const AuthenticatedAdminAuditRoute = AuthenticatedAdminAuditRouteImport.update({
-  id: '/audit',
-  path: '/audit',
+const AuthenticatedAdminQuotaRequestsRoute =
+  AuthenticatedAdminQuotaRequestsRouteImport.update({
+    id: '/quota-requests',
+    path: '/quota-requests',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminQuotasRoute =
+  AuthenticatedAdminQuotasRouteImport.update({
+    id: '/quotas',
+    path: '/quotas',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminResellersRoute =
+  AuthenticatedAdminResellersRouteImport.update({
+    id: '/resellers',
+    path: '/resellers',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminRolesRoute = AuthenticatedAdminRolesRouteImport.update({
+  id: '/roles',
+  path: '/roles',
   getParentRoute: () => AuthenticatedAdminRoute,
 } as any)
-const AuthenticatedAdminAppUpdatesRoute =
-  AuthenticatedAdminAppUpdatesRouteImport.update({
-    id: '/app-updates',
-    path: '/app-updates',
+const AuthenticatedAdminRuntimeRoute =
+  AuthenticatedAdminRuntimeRouteImport.update({
+    id: '/runtime',
+    path: '/runtime',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
-const AuthenticatedAdminApiDocsRoute =
-  AuthenticatedAdminApiDocsRouteImport.update({
-    id: '/api-docs',
-    path: '/api-docs',
+const AuthenticatedAdminSerialsRoute =
+  AuthenticatedAdminSerialsRouteImport.update({
+    id: '/serials',
+    path: '/serials',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
-const AuthenticatedResellerResellerIdIndexRoute =
-  AuthenticatedResellerResellerIdIndexRouteImport.update({
-    id: '/reseller/$resellerId/',
-    path: '/reseller/$resellerId/',
-    getParentRoute: () => AuthenticatedRoute,
+const AuthenticatedAdminSnapshotsRoute =
+  AuthenticatedAdminSnapshotsRouteImport.update({
+    id: '/snapshots',
+    path: '/snapshots',
+    getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
-const AuthenticatedAdminSnapshotsIndexRoute =
-  AuthenticatedAdminSnapshotsIndexRouteImport.update({
-    id: '/',
-    path: '/',
-    getParentRoute: () => AuthenticatedAdminSnapshotsRoute,
+const AuthenticatedAdminUsersRoute = AuthenticatedAdminUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => AuthenticatedAdminRoute,
+} as any)
+const AuthenticatedPortalHomeRoute = AuthenticatedPortalHomeRouteImport.update({
+  id: '/home',
+  path: '/home',
+  getParentRoute: () => AuthenticatedPortalRoute,
+} as any)
+const AuthenticatedPortalUpdatesRoute =
+  AuthenticatedPortalUpdatesRouteImport.update({
+    id: '/updates',
+    path: '/updates',
+    getParentRoute: () => AuthenticatedPortalRoute,
   } as any)
-const AuthenticatedResellerResellerIdQuotaRequestsRoute =
-  AuthenticatedResellerResellerIdQuotaRequestsRouteImport.update({
-    id: '/reseller/$resellerId/quota-requests',
-    path: '/reseller/$resellerId/quota-requests',
-    getParentRoute: () => AuthenticatedRoute,
+const AuthenticatedAdminBackupExportRoute =
+  AuthenticatedAdminBackupExportRouteImport.update({
+    id: '/export',
+    path: '/export',
+    getParentRoute: () => AuthenticatedAdminBackupRoute,
   } as any)
-const AuthenticatedAdminUsersNewRoute =
-  AuthenticatedAdminUsersNewRouteImport.update({
-    id: '/new',
-    path: '/new',
-    getParentRoute: () => AuthenticatedAdminUsersRoute,
+const AuthenticatedAdminBackupImportRoute =
+  AuthenticatedAdminBackupImportRouteImport.update({
+    id: '/import',
+    path: '/import',
+    getParentRoute: () => AuthenticatedAdminBackupRoute,
   } as any)
-const AuthenticatedAdminUsersUserIdRoute =
-  AuthenticatedAdminUsersUserIdRouteImport.update({
-    id: '/$userId',
-    path: '/$userId',
-    getParentRoute: () => AuthenticatedAdminUsersRoute,
-  } as any)
-const AuthenticatedAdminSnapshotsSnapshotIdRoute =
-  AuthenticatedAdminSnapshotsSnapshotIdRouteImport.update({
-    id: '/$snapshotId',
-    path: '/$snapshotId',
-    getParentRoute: () => AuthenticatedAdminSnapshotsRoute,
-  } as any)
-const AuthenticatedAdminResellersNewRoute =
-  AuthenticatedAdminResellersNewRouteImport.update({
-    id: '/new',
-    path: '/new',
-    getParentRoute: () => AuthenticatedAdminResellersRoute,
-  } as any)
-const AuthenticatedAdminResellersResellerIdRoute =
-  AuthenticatedAdminResellersResellerIdRouteImport.update({
-    id: '/$resellerId',
-    path: '/$resellerId',
-    getParentRoute: () => AuthenticatedAdminResellersRoute,
-  } as any)
-const AuthenticatedAdminLicensesNewRoute =
-  AuthenticatedAdminLicensesNewRouteImport.update({
-    id: '/licenses/new',
-    path: '/licenses/new',
+const AuthenticatedAdminLicensesIndexRoute =
+  AuthenticatedAdminLicensesIndexRouteImport.update({
+    id: '/licenses/',
+    path: '/licenses/',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
 const AuthenticatedAdminLicensesLicenseIdRoute =
@@ -257,17 +222,59 @@ const AuthenticatedAdminLicensesLicenseIdRoute =
     path: '/licenses/$licenseId',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
-const AuthenticatedAdminBackupImportRoute =
-  AuthenticatedAdminBackupImportRouteImport.update({
-    id: '/import',
-    path: '/import',
-    getParentRoute: () => AuthenticatedAdminBackupRoute,
+const AuthenticatedAdminLicensesNewRoute =
+  AuthenticatedAdminLicensesNewRouteImport.update({
+    id: '/licenses/new',
+    path: '/licenses/new',
+    getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
-const AuthenticatedAdminBackupExportRoute =
-  AuthenticatedAdminBackupExportRouteImport.update({
-    id: '/export',
-    path: '/export',
-    getParentRoute: () => AuthenticatedAdminBackupRoute,
+const AuthenticatedAdminResellersResellerIdRoute =
+  AuthenticatedAdminResellersResellerIdRouteImport.update({
+    id: '/$resellerId',
+    path: '/$resellerId',
+    getParentRoute: () => AuthenticatedAdminResellersRoute,
+  } as any)
+const AuthenticatedAdminResellersNewRoute =
+  AuthenticatedAdminResellersNewRouteImport.update({
+    id: '/new',
+    path: '/new',
+    getParentRoute: () => AuthenticatedAdminResellersRoute,
+  } as any)
+const AuthenticatedAdminSnapshotsIndexRoute =
+  AuthenticatedAdminSnapshotsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedAdminSnapshotsRoute,
+  } as any)
+const AuthenticatedAdminSnapshotsSnapshotIdRoute =
+  AuthenticatedAdminSnapshotsSnapshotIdRouteImport.update({
+    id: '/$snapshotId',
+    path: '/$snapshotId',
+    getParentRoute: () => AuthenticatedAdminSnapshotsRoute,
+  } as any)
+const AuthenticatedAdminUsersUserIdRoute =
+  AuthenticatedAdminUsersUserIdRouteImport.update({
+    id: '/$userId',
+    path: '/$userId',
+    getParentRoute: () => AuthenticatedAdminUsersRoute,
+  } as any)
+const AuthenticatedAdminUsersNewRoute =
+  AuthenticatedAdminUsersNewRouteImport.update({
+    id: '/new',
+    path: '/new',
+    getParentRoute: () => AuthenticatedAdminUsersRoute,
+  } as any)
+const AuthenticatedResellerResellerIdIndexRoute =
+  AuthenticatedResellerResellerIdIndexRouteImport.update({
+    id: '/reseller/$resellerId/',
+    path: '/reseller/$resellerId/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedResellerResellerIdQuotaRequestsRoute =
+  AuthenticatedResellerResellerIdQuotaRequestsRouteImport.update({
+    id: '/reseller/$resellerId/quota-requests',
+    path: '/reseller/$resellerId/quota-requests',
+    getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedResellerResellerIdLicensesIndexRoute =
   AuthenticatedResellerResellerIdLicensesIndexRouteImport.update({
@@ -319,6 +326,7 @@ export interface FileRoutesByFullPath {
   '/admin/users/$userId': typeof AuthenticatedAdminUsersUserIdRoute
   '/admin/users/new': typeof AuthenticatedAdminUsersNewRoute
   '/reseller/$resellerId/quota-requests': typeof AuthenticatedResellerResellerIdQuotaRequestsRoute
+  '/admin/licenses/': typeof AuthenticatedAdminLicensesIndexRoute
   '/admin/snapshots/': typeof AuthenticatedAdminSnapshotsIndexRoute
   '/reseller/$resellerId/': typeof AuthenticatedResellerResellerIdIndexRoute
   '/reseller/$resellerId/licenses/$licenseKey': typeof AuthenticatedResellerResellerIdLicensesLicenseKeyRoute
@@ -359,6 +367,7 @@ export interface FileRoutesByTo {
   '/admin/users/$userId': typeof AuthenticatedAdminUsersUserIdRoute
   '/admin/users/new': typeof AuthenticatedAdminUsersNewRoute
   '/reseller/$resellerId/quota-requests': typeof AuthenticatedResellerResellerIdQuotaRequestsRoute
+  '/admin/licenses': typeof AuthenticatedAdminLicensesIndexRoute
   '/admin/snapshots': typeof AuthenticatedAdminSnapshotsIndexRoute
   '/reseller/$resellerId': typeof AuthenticatedResellerResellerIdIndexRoute
   '/reseller/$resellerId/licenses/$licenseKey': typeof AuthenticatedResellerResellerIdLicensesLicenseKeyRoute
@@ -403,6 +412,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/users/$userId': typeof AuthenticatedAdminUsersUserIdRoute
   '/_authenticated/admin/users/new': typeof AuthenticatedAdminUsersNewRoute
   '/_authenticated/reseller/$resellerId/quota-requests': typeof AuthenticatedResellerResellerIdQuotaRequestsRoute
+  '/_authenticated/admin/licenses/': typeof AuthenticatedAdminLicensesIndexRoute
   '/_authenticated/admin/snapshots/': typeof AuthenticatedAdminSnapshotsIndexRoute
   '/_authenticated/reseller/$resellerId/': typeof AuthenticatedResellerResellerIdIndexRoute
   '/_authenticated/reseller/$resellerId/licenses/$licenseKey': typeof AuthenticatedResellerResellerIdLicensesLicenseKeyRoute
@@ -447,6 +457,7 @@ export interface FileRouteTypes {
     | '/admin/users/$userId'
     | '/admin/users/new'
     | '/reseller/$resellerId/quota-requests'
+    | '/admin/licenses/'
     | '/admin/snapshots/'
     | '/reseller/$resellerId/'
     | '/reseller/$resellerId/licenses/$licenseKey'
@@ -487,6 +498,7 @@ export interface FileRouteTypes {
     | '/admin/users/$userId'
     | '/admin/users/new'
     | '/reseller/$resellerId/quota-requests'
+    | '/admin/licenses'
     | '/admin/snapshots'
     | '/reseller/$resellerId'
     | '/reseller/$resellerId/licenses/$licenseKey'
@@ -530,6 +542,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/users/$userId'
     | '/_authenticated/admin/users/new'
     | '/_authenticated/reseller/$resellerId/quota-requests'
+    | '/_authenticated/admin/licenses/'
     | '/_authenticated/admin/snapshots/'
     | '/_authenticated/reseller/$resellerId/'
     | '/_authenticated/reseller/$resellerId/licenses/$licenseKey'
@@ -549,32 +562,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/reset-password': {
-      id: '/reset-password'
-      path: '/reset-password'
-      fullPath: '/reset-password'
-      preLoaderRoute: typeof ResetPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/register': {
-      id: '/register'
-      path: '/register'
-      fullPath: '/register'
-      preLoaderRoute: typeof RegisterRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/forgot-password': {
-      id: '/forgot-password'
-      path: '/forgot-password'
-      fullPath: '/forgot-password'
-      preLoaderRoute: typeof ForgotPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_authenticated': {
-      id: '/_authenticated'
-      path: ''
+    '/': {
+      id: '/'
+      path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof AuthenticatedRouteImport
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/$': {
@@ -584,11 +576,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SplatRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+      preLoaderRoute: typeof AuthenticatedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/register': {
+      id: '/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/admin': {
+      id: '/_authenticated/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthenticatedAdminRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/portal': {
+      id: '/_authenticated/portal'
+      path: '/portal'
+      fullPath: '/portal'
+      preLoaderRoute: typeof AuthenticatedPortalRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/admin/login': {
+      id: '/admin/login'
+      path: '/admin/login'
+      fullPath: '/admin/login'
+      preLoaderRoute: typeof AdminLoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/e2e/error-harness': {
@@ -598,137 +632,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof E2eErrorHarnessRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/admin/login': {
-      id: '/admin/login'
-      path: '/admin/login'
-      fullPath: '/admin/login'
-      preLoaderRoute: typeof AdminLoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_authenticated/portal': {
-      id: '/_authenticated/portal'
-      path: '/portal'
-      fullPath: '/portal'
-      preLoaderRoute: typeof AuthenticatedPortalRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/admin': {
-      id: '/_authenticated/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof AuthenticatedAdminRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
     '/_authenticated/admin/': {
       id: '/_authenticated/admin/'
       path: '/'
       fullPath: '/admin/'
       preLoaderRoute: typeof AuthenticatedAdminIndexRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
-    }
-    '/_authenticated/portal/updates': {
-      id: '/_authenticated/portal/updates'
-      path: '/updates'
-      fullPath: '/portal/updates'
-      preLoaderRoute: typeof AuthenticatedPortalUpdatesRouteImport
-      parentRoute: typeof AuthenticatedPortalRoute
-    }
-    '/_authenticated/portal/home': {
-      id: '/_authenticated/portal/home'
-      path: '/home'
-      fullPath: '/portal/home'
-      preLoaderRoute: typeof AuthenticatedPortalHomeRouteImport
-      parentRoute: typeof AuthenticatedPortalRoute
-    }
-    '/_authenticated/admin/users': {
-      id: '/_authenticated/admin/users'
-      path: '/users'
-      fullPath: '/admin/users'
-      preLoaderRoute: typeof AuthenticatedAdminUsersRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
-    }
-    '/_authenticated/admin/snapshots': {
-      id: '/_authenticated/admin/snapshots'
-      path: '/snapshots'
-      fullPath: '/admin/snapshots'
-      preLoaderRoute: typeof AuthenticatedAdminSnapshotsRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
-    }
-    '/_authenticated/admin/serials': {
-      id: '/_authenticated/admin/serials'
-      path: '/serials'
-      fullPath: '/admin/serials'
-      preLoaderRoute: typeof AuthenticatedAdminSerialsRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
-    }
-    '/_authenticated/admin/runtime': {
-      id: '/_authenticated/admin/runtime'
-      path: '/runtime'
-      fullPath: '/admin/runtime'
-      preLoaderRoute: typeof AuthenticatedAdminRuntimeRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
-    }
-    '/_authenticated/admin/roles': {
-      id: '/_authenticated/admin/roles'
-      path: '/roles'
-      fullPath: '/admin/roles'
-      preLoaderRoute: typeof AuthenticatedAdminRolesRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
-    }
-    '/_authenticated/admin/resellers': {
-      id: '/_authenticated/admin/resellers'
-      path: '/resellers'
-      fullPath: '/admin/resellers'
-      preLoaderRoute: typeof AuthenticatedAdminResellersRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
-    }
-    '/_authenticated/admin/quotas': {
-      id: '/_authenticated/admin/quotas'
-      path: '/quotas'
-      fullPath: '/admin/quotas'
-      preLoaderRoute: typeof AuthenticatedAdminQuotasRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
-    }
-    '/_authenticated/admin/quota-requests': {
-      id: '/_authenticated/admin/quota-requests'
-      path: '/quota-requests'
-      fullPath: '/admin/quota-requests'
-      preLoaderRoute: typeof AuthenticatedAdminQuotaRequestsRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
-    }
-    '/_authenticated/admin/errors': {
-      id: '/_authenticated/admin/errors'
-      path: '/errors'
-      fullPath: '/admin/errors'
-      preLoaderRoute: typeof AuthenticatedAdminErrorsRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
-    }
-    '/_authenticated/admin/design': {
-      id: '/_authenticated/admin/design'
-      path: '/design'
-      fullPath: '/admin/design'
-      preLoaderRoute: typeof AuthenticatedAdminDesignRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
-    }
-    '/_authenticated/admin/backup': {
-      id: '/_authenticated/admin/backup'
-      path: '/backup'
-      fullPath: '/admin/backup'
-      preLoaderRoute: typeof AuthenticatedAdminBackupRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
-    }
-    '/_authenticated/admin/audit': {
-      id: '/_authenticated/admin/audit'
-      path: '/audit'
-      fullPath: '/admin/audit'
-      preLoaderRoute: typeof AuthenticatedAdminAuditRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
-    }
-    '/_authenticated/admin/app-updates': {
-      id: '/_authenticated/admin/app-updates'
-      path: '/app-updates'
-      fullPath: '/admin/app-updates'
-      preLoaderRoute: typeof AuthenticatedAdminAppUpdatesRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
     '/_authenticated/admin/api-docs': {
@@ -738,67 +646,130 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminApiDocsRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
-    '/_authenticated/reseller/$resellerId/': {
-      id: '/_authenticated/reseller/$resellerId/'
-      path: '/reseller/$resellerId'
-      fullPath: '/reseller/$resellerId/'
-      preLoaderRoute: typeof AuthenticatedResellerResellerIdIndexRouteImport
-      parentRoute: typeof AuthenticatedRoute
+    '/_authenticated/admin/app-updates': {
+      id: '/_authenticated/admin/app-updates'
+      path: '/app-updates'
+      fullPath: '/admin/app-updates'
+      preLoaderRoute: typeof AuthenticatedAdminAppUpdatesRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
     }
-    '/_authenticated/admin/snapshots/': {
-      id: '/_authenticated/admin/snapshots/'
-      path: '/'
-      fullPath: '/admin/snapshots/'
-      preLoaderRoute: typeof AuthenticatedAdminSnapshotsIndexRouteImport
-      parentRoute: typeof AuthenticatedAdminSnapshotsRoute
+    '/_authenticated/admin/audit': {
+      id: '/_authenticated/admin/audit'
+      path: '/audit'
+      fullPath: '/admin/audit'
+      preLoaderRoute: typeof AuthenticatedAdminAuditRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
     }
-    '/_authenticated/reseller/$resellerId/quota-requests': {
-      id: '/_authenticated/reseller/$resellerId/quota-requests'
-      path: '/reseller/$resellerId/quota-requests'
-      fullPath: '/reseller/$resellerId/quota-requests'
-      preLoaderRoute: typeof AuthenticatedResellerResellerIdQuotaRequestsRouteImport
-      parentRoute: typeof AuthenticatedRoute
+    '/_authenticated/admin/backup': {
+      id: '/_authenticated/admin/backup'
+      path: '/backup'
+      fullPath: '/admin/backup'
+      preLoaderRoute: typeof AuthenticatedAdminBackupRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
     }
-    '/_authenticated/admin/users/new': {
-      id: '/_authenticated/admin/users/new'
-      path: '/new'
-      fullPath: '/admin/users/new'
-      preLoaderRoute: typeof AuthenticatedAdminUsersNewRouteImport
-      parentRoute: typeof AuthenticatedAdminUsersRoute
+    '/_authenticated/admin/design': {
+      id: '/_authenticated/admin/design'
+      path: '/design'
+      fullPath: '/admin/design'
+      preLoaderRoute: typeof AuthenticatedAdminDesignRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
     }
-    '/_authenticated/admin/users/$userId': {
-      id: '/_authenticated/admin/users/$userId'
-      path: '/$userId'
-      fullPath: '/admin/users/$userId'
-      preLoaderRoute: typeof AuthenticatedAdminUsersUserIdRouteImport
-      parentRoute: typeof AuthenticatedAdminUsersRoute
+    '/_authenticated/admin/errors': {
+      id: '/_authenticated/admin/errors'
+      path: '/errors'
+      fullPath: '/admin/errors'
+      preLoaderRoute: typeof AuthenticatedAdminErrorsRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
     }
-    '/_authenticated/admin/snapshots/$snapshotId': {
-      id: '/_authenticated/admin/snapshots/$snapshotId'
-      path: '/$snapshotId'
-      fullPath: '/admin/snapshots/$snapshotId'
-      preLoaderRoute: typeof AuthenticatedAdminSnapshotsSnapshotIdRouteImport
-      parentRoute: typeof AuthenticatedAdminSnapshotsRoute
+    '/_authenticated/admin/quota-requests': {
+      id: '/_authenticated/admin/quota-requests'
+      path: '/quota-requests'
+      fullPath: '/admin/quota-requests'
+      preLoaderRoute: typeof AuthenticatedAdminQuotaRequestsRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
     }
-    '/_authenticated/admin/resellers/new': {
-      id: '/_authenticated/admin/resellers/new'
-      path: '/new'
-      fullPath: '/admin/resellers/new'
-      preLoaderRoute: typeof AuthenticatedAdminResellersNewRouteImport
-      parentRoute: typeof AuthenticatedAdminResellersRoute
+    '/_authenticated/admin/quotas': {
+      id: '/_authenticated/admin/quotas'
+      path: '/quotas'
+      fullPath: '/admin/quotas'
+      preLoaderRoute: typeof AuthenticatedAdminQuotasRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
     }
-    '/_authenticated/admin/resellers/$resellerId': {
-      id: '/_authenticated/admin/resellers/$resellerId'
-      path: '/$resellerId'
-      fullPath: '/admin/resellers/$resellerId'
-      preLoaderRoute: typeof AuthenticatedAdminResellersResellerIdRouteImport
-      parentRoute: typeof AuthenticatedAdminResellersRoute
+    '/_authenticated/admin/resellers': {
+      id: '/_authenticated/admin/resellers'
+      path: '/resellers'
+      fullPath: '/admin/resellers'
+      preLoaderRoute: typeof AuthenticatedAdminResellersRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
     }
-    '/_authenticated/admin/licenses/new': {
-      id: '/_authenticated/admin/licenses/new'
-      path: '/licenses/new'
-      fullPath: '/admin/licenses/new'
-      preLoaderRoute: typeof AuthenticatedAdminLicensesNewRouteImport
+    '/_authenticated/admin/roles': {
+      id: '/_authenticated/admin/roles'
+      path: '/roles'
+      fullPath: '/admin/roles'
+      preLoaderRoute: typeof AuthenticatedAdminRolesRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/runtime': {
+      id: '/_authenticated/admin/runtime'
+      path: '/runtime'
+      fullPath: '/admin/runtime'
+      preLoaderRoute: typeof AuthenticatedAdminRuntimeRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/serials': {
+      id: '/_authenticated/admin/serials'
+      path: '/serials'
+      fullPath: '/admin/serials'
+      preLoaderRoute: typeof AuthenticatedAdminSerialsRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/snapshots': {
+      id: '/_authenticated/admin/snapshots'
+      path: '/snapshots'
+      fullPath: '/admin/snapshots'
+      preLoaderRoute: typeof AuthenticatedAdminSnapshotsRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/users': {
+      id: '/_authenticated/admin/users'
+      path: '/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AuthenticatedAdminUsersRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/portal/home': {
+      id: '/_authenticated/portal/home'
+      path: '/home'
+      fullPath: '/portal/home'
+      preLoaderRoute: typeof AuthenticatedPortalHomeRouteImport
+      parentRoute: typeof AuthenticatedPortalRoute
+    }
+    '/_authenticated/portal/updates': {
+      id: '/_authenticated/portal/updates'
+      path: '/updates'
+      fullPath: '/portal/updates'
+      preLoaderRoute: typeof AuthenticatedPortalUpdatesRouteImport
+      parentRoute: typeof AuthenticatedPortalRoute
+    }
+    '/_authenticated/admin/backup/export': {
+      id: '/_authenticated/admin/backup/export'
+      path: '/export'
+      fullPath: '/admin/backup/export'
+      preLoaderRoute: typeof AuthenticatedAdminBackupExportRouteImport
+      parentRoute: typeof AuthenticatedAdminBackupRoute
+    }
+    '/_authenticated/admin/backup/import': {
+      id: '/_authenticated/admin/backup/import'
+      path: '/import'
+      fullPath: '/admin/backup/import'
+      preLoaderRoute: typeof AuthenticatedAdminBackupImportRouteImport
+      parentRoute: typeof AuthenticatedAdminBackupRoute
+    }
+    '/_authenticated/admin/licenses/': {
+      id: '/_authenticated/admin/licenses/'
+      path: '/licenses'
+      fullPath: '/admin/licenses/'
+      preLoaderRoute: typeof AuthenticatedAdminLicensesIndexRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
     '/_authenticated/admin/licenses/$licenseId': {
@@ -808,19 +779,68 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminLicensesLicenseIdRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
-    '/_authenticated/admin/backup/import': {
-      id: '/_authenticated/admin/backup/import'
-      path: '/import'
-      fullPath: '/admin/backup/import'
-      preLoaderRoute: typeof AuthenticatedAdminBackupImportRouteImport
-      parentRoute: typeof AuthenticatedAdminBackupRoute
+    '/_authenticated/admin/licenses/new': {
+      id: '/_authenticated/admin/licenses/new'
+      path: '/licenses/new'
+      fullPath: '/admin/licenses/new'
+      preLoaderRoute: typeof AuthenticatedAdminLicensesNewRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
     }
-    '/_authenticated/admin/backup/export': {
-      id: '/_authenticated/admin/backup/export'
-      path: '/export'
-      fullPath: '/admin/backup/export'
-      preLoaderRoute: typeof AuthenticatedAdminBackupExportRouteImport
-      parentRoute: typeof AuthenticatedAdminBackupRoute
+    '/_authenticated/admin/resellers/$resellerId': {
+      id: '/_authenticated/admin/resellers/$resellerId'
+      path: '/$resellerId'
+      fullPath: '/admin/resellers/$resellerId'
+      preLoaderRoute: typeof AuthenticatedAdminResellersResellerIdRouteImport
+      parentRoute: typeof AuthenticatedAdminResellersRoute
+    }
+    '/_authenticated/admin/resellers/new': {
+      id: '/_authenticated/admin/resellers/new'
+      path: '/new'
+      fullPath: '/admin/resellers/new'
+      preLoaderRoute: typeof AuthenticatedAdminResellersNewRouteImport
+      parentRoute: typeof AuthenticatedAdminResellersRoute
+    }
+    '/_authenticated/admin/snapshots/': {
+      id: '/_authenticated/admin/snapshots/'
+      path: '/'
+      fullPath: '/admin/snapshots/'
+      preLoaderRoute: typeof AuthenticatedAdminSnapshotsIndexRouteImport
+      parentRoute: typeof AuthenticatedAdminSnapshotsRoute
+    }
+    '/_authenticated/admin/snapshots/$snapshotId': {
+      id: '/_authenticated/admin/snapshots/$snapshotId'
+      path: '/$snapshotId'
+      fullPath: '/admin/snapshots/$snapshotId'
+      preLoaderRoute: typeof AuthenticatedAdminSnapshotsSnapshotIdRouteImport
+      parentRoute: typeof AuthenticatedAdminSnapshotsRoute
+    }
+    '/_authenticated/admin/users/$userId': {
+      id: '/_authenticated/admin/users/$userId'
+      path: '/$userId'
+      fullPath: '/admin/users/$userId'
+      preLoaderRoute: typeof AuthenticatedAdminUsersUserIdRouteImport
+      parentRoute: typeof AuthenticatedAdminUsersRoute
+    }
+    '/_authenticated/admin/users/new': {
+      id: '/_authenticated/admin/users/new'
+      path: '/new'
+      fullPath: '/admin/users/new'
+      preLoaderRoute: typeof AuthenticatedAdminUsersNewRouteImport
+      parentRoute: typeof AuthenticatedAdminUsersRoute
+    }
+    '/_authenticated/reseller/$resellerId/': {
+      id: '/_authenticated/reseller/$resellerId/'
+      path: '/reseller/$resellerId'
+      fullPath: '/reseller/$resellerId/'
+      preLoaderRoute: typeof AuthenticatedResellerResellerIdIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/reseller/$resellerId/quota-requests': {
+      id: '/_authenticated/reseller/$resellerId/quota-requests'
+      path: '/reseller/$resellerId/quota-requests'
+      fullPath: '/reseller/$resellerId/quota-requests'
+      preLoaderRoute: typeof AuthenticatedResellerResellerIdQuotaRequestsRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/reseller/$resellerId/licenses/': {
       id: '/_authenticated/reseller/$resellerId/licenses/'
@@ -924,6 +944,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
   AuthenticatedAdminLicensesLicenseIdRoute: typeof AuthenticatedAdminLicensesLicenseIdRoute
   AuthenticatedAdminLicensesNewRoute: typeof AuthenticatedAdminLicensesNewRoute
+  AuthenticatedAdminLicensesIndexRoute: typeof AuthenticatedAdminLicensesIndexRoute
 }
 
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
@@ -947,6 +968,7 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminLicensesLicenseIdRoute:
     AuthenticatedAdminLicensesLicenseIdRoute,
   AuthenticatedAdminLicensesNewRoute: AuthenticatedAdminLicensesNewRoute,
+  AuthenticatedAdminLicensesIndexRoute: AuthenticatedAdminLicensesIndexRoute,
 }
 
 const AuthenticatedAdminRouteWithChildren =

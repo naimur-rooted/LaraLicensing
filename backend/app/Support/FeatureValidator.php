@@ -74,7 +74,7 @@ final class FeatureValidator
         throw DomainConflictException::custom('FeatureUnknown',
             'FeatureKey is not part of the closed registry.',
             [['Field' => 'FeatureKey', 'Rule' => 'UnknownKey', 'Value' => $key]],
-        )
+        );
     }
 
     /**
@@ -141,6 +141,6 @@ final class FeatureValidator
         throw DomainConflictException::custom('FeatureValueInvalid',
             'FeatureValue does not match the declared ValueType.',
             [['Field' => 'FeatureValue', 'Rule' => $rule, 'Value' => $key]],
-        )
+        );
     }
 }

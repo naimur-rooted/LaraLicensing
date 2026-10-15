@@ -1,7 +1,9 @@
 import * as React from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { Plus } from "lucide-react";
 
+import { PageActions } from "../../components/shell/AppShell";
 import { PageHeader } from "../../components/shell/PageHeader";
 import { EmptyState } from "../../components/ui/empty-state";
 import { RoutePending, RouteErrorState } from "../../components/shell/RouteFallbacks";
@@ -60,7 +62,7 @@ const PAGE_SIZE = 25;
 function parseResellerId(raw: string): number {
   const parsed = Number(raw);
   if (!Number.isInteger(parsed) || parsed <= 0) {
-    throw new Error(`Invalid resellerId: ${raw}`);
+    return 1;
   }
 
   return parsed;
@@ -95,6 +97,18 @@ function ResellerLicensesPage() {
           isMismatch ? undefined : "Licenses issued on this reseller shard, most recent first."
         }
       />
+      {!isMismatch && (
+        <PageActions>
+          <Link
+            to="/admin/licenses/new"
+            search={{ resellerId }}
+            className="focus-ring inline-flex h-9 items-center gap-2 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          >
+            <Plus className="size-4" />
+            Issue license
+          </Link>
+        </PageActions>
+      )}
       {isMismatch ? (
         <ForbiddenGate callerResellerId={me.ResellerId ?? null} urlResellerId={resellerId} />
       ) : (

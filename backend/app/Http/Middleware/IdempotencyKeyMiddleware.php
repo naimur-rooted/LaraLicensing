@@ -82,7 +82,7 @@ final class IdempotencyKeyMiddleware
                 throw InternalException::custom('IdempotencyKeyRequired',
                     'Idempotency-Key header is required on this endpoint.',
                     [['Field' => 'Idempotency-Key', 'Rule' => 'Required']],
-                )
+                );
             }
 
             return null;
@@ -187,7 +187,7 @@ final class IdempotencyKeyMiddleware
             throw DomainConflictException::custom('IdempotencyConflict',
                 'Idempotency-Key reused with a different request body.',
                 [['Field' => 'Idempotency-Key', 'Rule' => 'BodyMismatch']],
-            )
+            );
         }
         Log::info('idempotency.replay', [
             'Endpoint' => $request->path(),

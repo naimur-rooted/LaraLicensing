@@ -73,7 +73,7 @@ async function copyIdentifier(value: string, resource: string): Promise<void> {
     await navigator.clipboard.writeText(value);
     toast.success(`Copied ${resource}`, { description: value });
   } catch (error) {
-    pushLaraApiError(new Error());
+    console.error(error);
     toast.error(`Could not copy ${resource}`);
   }
 }

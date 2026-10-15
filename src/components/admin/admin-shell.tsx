@@ -1,7 +1,7 @@
 import { Link, Outlet, useNavigate } from "@tanstack/react-router";
-import { Home, PanelLeft, ShieldCheck } from "lucide-react";
+import { Home, Menu, PanelLeft, ShieldCheck } from "lucide-react";
 
-import { AppShell } from "../shell/AppShell";
+import { AppShell, useMobileSidebar } from "../shell/AppShell";
 import { AppSidebar } from "../shell/AppSidebar";
 import { CommandPalette } from "../shell/CommandPalette";
 import { PreviewDebugDrawerLazy } from "../shell/PreviewDebugDrawerLazy";
@@ -96,35 +96,49 @@ function AdminBrandName() {
 }
 
 function SidebarToggle() {
-  const [collapsed, toggle] = useSidebarCollapsed();
-  const label = collapsed ? "Expand sidebar" : "Collapse sidebar";
+  const [collapsed, toggleDesktop] = useSidebarCollapsed();
+  const { toggle: toggleMobile, open: mobileOpen } = useMobileSidebar();
 
   return (
-    <button
-      type="button"
-      onClick={toggle}
-      aria-label={label}
-      aria-pressed={collapsed}
-      className="focus-ring inline-flex size-9 items-center justify-center rounded-md border border-input surface-hover"
-    >
-      <PanelLeft aria-hidden="true" className="size-4" />
-    </button>
+    <>
+      {/* Mobile hamburger menu button: visible on screens < md (768px) */}
+      <button
+        type="button"
+        onClick={toggleMobile}
+        aria-label={mobileOpen ? "Close navigation menu" : "Open navigation menu"}
+        aria-expanded={mobileOpen}
+        className="focus-ring inline-flex size-9 items-center justify-center rounded-md border border-input surface-hover md:hidden shrink-0"
+      >
+        <Menu aria-hidden="true" className="size-4" />
+      </button>
+
+      {/* Desktop rail collapse button: visible on screens >= md (768px) */}
+      <button
+        type="button"
+        onClick={toggleDesktop}
+        aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        aria-pressed={collapsed}
+        className="focus-ring hidden size-9 items-center justify-center rounded-md border border-input surface-hover md:inline-flex shrink-0"
+      >
+        <PanelLeft aria-hidden="true" className="size-4" />
+      </button>
+    </>
   );
 }
 
 function AdminTopbar({ onSignOut }: { onSignOut: () => void }) {
   return (
-    <div className="flex w-full items-center justify-between gap-3">
+    <div className="flex w-full items-center justify-between gap-2 sm:gap-3 min-w-0">
       <AdminIdentity />
-      <div className="hidden flex-1 justify-center md:flex">
+      <div className="hidden flex-1 justify-center md:flex min-w-0">
         <TopbarSearch />
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
         <NotificationBell />
-        <Link to="/" className="inline-flex size-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground" aria-label="Back to Homepage">
+        <Link to="/" className="inline-flex size-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground shrink-0" aria-label="Back to Homepage">
           <Home className="size-4" />
         </Link>
-        <div className="text-xs text-muted-foreground hidden lg:block px-2 py-1 rounded-md border border-border/50 bg-muted/30 truncate max-w-[200px] whitespace-nowrap">
+        <div className="text-xs text-muted-foreground hidden xl:block px-2 py-1 rounded-md border border-border/50 bg-muted/30 truncate max-w-[200px] whitespace-nowrap">
           {"Plan 09: Fluid UI & cPanel Release (Steps 90/100)"}
         </div>
         <ProfileMenu onSignOut={onSignOut} />
@@ -135,10 +149,10 @@ function AdminTopbar({ onSignOut }: { onSignOut: () => void }) {
 
 function AdminIdentity() {
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-2 sm:gap-3 shrink-0">
       <SidebarToggle />
       <span
-        className="text-sm font-semibold text-foreground"
+        className="text-sm font-semibold text-foreground hidden sm:inline"
         style={{ fontFamily: "var(--font-display)" }}
       >
         Admin console

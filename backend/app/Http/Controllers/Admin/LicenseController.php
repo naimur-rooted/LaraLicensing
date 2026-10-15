@@ -557,7 +557,7 @@ public function destroy(LicenseRevokeRequest $request, string $licenseKey): Json
                 ['Field' => 'If-Match', 'Rule' => 'ETagMismatch'],
                 ['Field' => 'ServerVersion', 'Rule' => 'Current', 'Value' => (string) (int) $license->Version],
             ],
-        )
+        );
     }
 
     private function assertNotRevoked(License $license): void
@@ -566,7 +566,7 @@ public function destroy(LicenseRevokeRequest $request, string $licenseKey): Json
             throw DomainConflictException::custom('LicenseRevoked',
                 'License is revoked and cannot be updated.',
                 [['Field' => 'Status', 'Rule' => 'Revoked']],
-            )
+            );
         }
     }
 

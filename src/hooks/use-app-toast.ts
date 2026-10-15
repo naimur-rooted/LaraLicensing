@@ -119,7 +119,6 @@ export const appToast: AppToastApi = {
   error: (title, opts) => callToast("error", title, opts),
   fromApiError: (err, fallbackTitle = "Request failed") => {
     if (!(err instanceof LaraApiError)) {
-      pushLaraApiError(new Error());
       callToast("error", fallbackTitle, {
         description: err instanceof Error ? err.message : String(err),
       });

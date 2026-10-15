@@ -43,7 +43,7 @@ final class UpdateManifestController
             throw InternalException::custom('UpdateManifestUnavailable',
                 'No finalized manifest is available for the requested product/channel/platform.',
                 [['Field' => 'Manifest', 'Rule' => 'NoFinalizedRow']],
-            )
+            );
         }
 
         return $this->respond($request, $picked, $q['Channel']);
@@ -78,7 +78,7 @@ final class UpdateManifestController
             throw ValidationException::custom('ValidationInputInvalid',
                 sprintf('Query parameter %s is required.', $field),
                 [['Field' => $field, 'Rule' => 'Required']],
-            )
+            );
         }
     }
 
@@ -89,7 +89,7 @@ final class UpdateManifestController
             throw ValidationException::custom('ValidationInvalidVersion',
                 'CurrentVersion is not a valid semver value.',
                 [['Field' => $field, 'Rule' => 'SemverFormat']],
-            )
+            );
         }
     }
 
@@ -103,7 +103,7 @@ final class UpdateManifestController
         throw AuthException::custom('AuthzRoleDenied',
             'Beta channel requires AppBuilder or Admin role (reserved post-v1.0).',
             [['Field' => 'Channel', 'Rule' => 'BetaRoleGate']],
-        )
+        );
     }
 
     /**

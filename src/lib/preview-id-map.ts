@@ -51,7 +51,6 @@ function storeFor(domain: string): UseStore {
 }
 
 function fail(op: string, ctx: Record<string, unknown>, err: unknown): never {
-  pushLaraApiError(new Error());
   throw err;
 }
 

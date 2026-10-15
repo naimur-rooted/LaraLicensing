@@ -127,7 +127,7 @@ public function issue(SerialIssueRequest $request): JsonResponse
             throw DomainConflictException::custom('LicenseRevoked',
                 'License is revoked and cannot mint serials.',
                 [['Field' => 'Status', 'Rule' => 'Revoked']],
-            )
+            );
         }
         if ($license->Status !== self::STATUS_ACTIVE) {
             throw DomainConflictException::conflict('LicenseConflict',
@@ -139,7 +139,7 @@ public function issue(SerialIssueRequest $request): JsonResponse
             throw DomainConflictException::custom('LicenseExpired',
                 'License has expired.',
                 [['Field' => 'ExpiresAt', 'Rule' => 'InPast', 'Value' => (string) $license->ExpiresAt]],
-            )
+            );
         }
 
         return $license;
@@ -154,7 +154,7 @@ public function issue(SerialIssueRequest $request): JsonResponse
         throw DomainConflictException::custom('EnvironmentMismatch',
             'Requested environment does not match license environment.',
             [['Field' => 'Environment', 'Rule' => 'Mismatch', 'Value' => $requested . '/' . (string) $license->EnvironmentName]],
-        )
+        );
     }
 
     /**

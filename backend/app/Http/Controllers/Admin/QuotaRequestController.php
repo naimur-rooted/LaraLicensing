@@ -310,13 +310,13 @@ final class QuotaRequestController
             throw NotFoundException::custom('ResourceRoleNotAssigned',
                 'Quota request not found on the selected reseller shard.',
                 [['Field' => 'QuotaRequestId', 'Rule' => 'NotFound', 'Value' => $requestId]],
-            )
+            );
         }
         if ((int) $row->Status !== self::STATUS_PENDING) {
             throw DomainConflictException::custom('IdempotencyConflict',
                 'Quota request is not in Pending state; refusing to transition.',
                 [['Field' => 'Status', 'Rule' => 'NotPending', 'Value' => (string) $row->Status]],
-            )
+            );
         }
 
         return $row;

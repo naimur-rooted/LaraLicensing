@@ -83,7 +83,7 @@ const AdminTree: NavItemType[] = [
     icon: LayoutDashboard,
     permission: "Admin.Overview.Read",
     group: "Primary",
-    status: "D",
+    status: "C",
   },
   {
     label: "Resellers",
@@ -167,7 +167,7 @@ const ResellerTree: NavItemType[] = [
     icon: LayoutDashboard,
     permission: "Reseller.Overview.Read",
     group: "Primary",
-    status: "D",
+    status: "C",
   },
   {
     label: "Packages",

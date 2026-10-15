@@ -138,7 +138,7 @@ final class BindingService
         throw DomainConflictException::custom('MachineRebindCooldownActive',
             'Rebind cooldown active for this fingerprint.',
             [['Field' => 'FingerprintHash', 'Rule' => 'CooldownActive', 'RetryAfterSeconds' => $retryAfter]],
-        )
+        );
     }
 
     private function assertMachineQuota(int $licenseId, int $maxConcurrent, string $requestId): void
@@ -153,7 +153,7 @@ final class BindingService
             throw DomainConflictException::custom('LicenseMachineLimit',
                 'License concurrent machine binding limit reached.',
                 [['Field' => 'MachineBindings', 'Rule' => 'QuotaExceeded', 'CurrentCount' => $current, 'MaxCount' => $maxConcurrent]],
-            )
+            );
         }
     }
 
@@ -202,7 +202,7 @@ final class BindingService
             throw DomainConflictException::custom('LicenseUserLimit',
                 'License user binding limit reached.',
                 [['Field' => 'UserBindings', 'Rule' => 'QuotaExceeded', 'CurrentCount' => $current, 'MaxCount' => $maxUsers]],
-            )
+            );
         }
     }
 

@@ -71,7 +71,7 @@ final class EtagMiddleware
             throw ValidationException::custom('PreconditionRequired',
                 'If-Match header is required on this endpoint.',
                 [['Field' => 'If-Match', 'Rule' => 'Missing']],
-            )
+            );
         }
         $this->rejectWildcardOrWeak($header);
         $request->attributes->set('lara.if_match', $header);

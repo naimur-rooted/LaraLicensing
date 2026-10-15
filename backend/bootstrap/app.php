@@ -55,9 +55,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->append(\App\Http\Middleware\IdempotencyKeyMiddleware::class);
         $middleware->append(\App\Http\Middleware\EtagMiddleware::class);
-        // Plan 11 step 23 (AC-ENV-001). Dev + test guardrail. Prod skips
-        // itself via app()->environment() check inside the middleware.
-        if (app()->environment(['local', 'testing'])) {
+        if (in_array(env('APP_ENV', 'local'), ['local', 'testing'], true)) {
             $middleware->append(\App\Http\Middleware\AssertEnvelopeMiddleware::class);
         }
         // Plan 06 step 25: RBAC gate for individual routes.

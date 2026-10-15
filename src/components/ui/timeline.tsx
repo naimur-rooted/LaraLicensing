@@ -66,7 +66,7 @@ export function Timeline({ entries, emptyState, ariaLabel, className }: Timeline
   return (
     <ol
       aria-label={ariaLabel ?? "Activity timeline"}
-      className={cn("relative ms-2 border-s border-border ps-6", className)}
+      className={cn("relative ms-3 border-s border-border", className)}
       data-testid="timeline"
     >
       {entries.map((entry) => (
@@ -79,11 +79,11 @@ export function Timeline({ entries, emptyState, ariaLabel, className }: Timeline
 function TimelineRow({ entry }: { entry: TimelineEntry }) {
   const tone: TimelineTone = entry.tone ?? "neutral";
   return (
-    <li className="relative py-3" data-testid="timeline-row" data-tone={tone}>
+    <li className="relative py-3 ps-6" data-testid="timeline-row" data-tone={tone}>
       <span
         aria-hidden="true"
         className={cn(
-          "absolute -start-[7px] top-4 inline-flex size-3 rounded-full bg-background ring-2 ring-current",
+          "absolute -start-1.5 top-4 inline-flex size-3 rounded-full bg-background ring-2 ring-current",
           TONE_CLASS[tone],
         )}
       />

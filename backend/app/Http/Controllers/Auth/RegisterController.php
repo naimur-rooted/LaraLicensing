@@ -123,7 +123,7 @@ final class RegisterController
         throw AuthException::custom('AuthRegistrationClosed',
             'Registration is closed. Ask a SuperAdmin to create your account.',
             [['Field' => 'Registration', 'Rule' => 'Closed']],
-        )
+        );
     }
 
     private function assignSuperAdminRole(int $userId, Carbon $now): void
@@ -136,7 +136,7 @@ final class RegisterController
             throw AuthException::custom('AuthRegistrationClosed',
                 'SuperAdmin role is not seeded. Run db:seed before registering.',
                 [['Field' => 'Roles', 'Rule' => 'Unseeded', 'Value' => self::SUPER_ADMIN_ROLE]],
-            )
+            );
         }
         DB::connection(self::ROOT_CONNECTION)
             ->table(self::USER_ROLES_TABLE)

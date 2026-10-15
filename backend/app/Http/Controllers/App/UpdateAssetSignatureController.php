@@ -50,7 +50,7 @@ final class UpdateAssetSignatureController
             throw NotFoundException::custom('UpdateSignatureUnavailable',
                 'Signature blob is missing on disk for this finalised asset.',
                 [['Field' => 'SignatureStoragePath', 'Rule' => 'FileMissing']],
-            )
+            );
         }
         $size = (int) filesize($sigPath);
         $headers = [
@@ -79,7 +79,7 @@ final class UpdateAssetSignatureController
             throw ValidationException::custom('ValidationInputInvalid',
                 'Platform is not in the closed enum.',
                 [['Field' => 'Platform', 'Rule' => 'PlatformEnum']],
-            )
+            );
         }
     }
 
@@ -99,7 +99,7 @@ final class UpdateAssetSignatureController
             throw NotFoundException::custom('UpdateSignatureUnavailable',
                 'No signed asset row matches the requested (Product, Version, Platform).',
                 [['Field' => 'Signature', 'Rule' => 'NotFound']],
-            )
+            );
         }
 
         return $asset;

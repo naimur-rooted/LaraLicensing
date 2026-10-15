@@ -96,7 +96,6 @@ function ImpersonateDialog({ targetUserId, targetLabel, onClose, onStarted }: Di
       await startImpersonation(targetUserId, { Reason: trimmed }, crypto.randomUUID());
       onStarted();
     } catch (caught) {
-      pushLaraApiError(new Error());
       setError(formatLaraApiError(caught));
       setPending(false);
     }

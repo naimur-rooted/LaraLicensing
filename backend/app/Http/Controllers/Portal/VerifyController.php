@@ -30,8 +30,7 @@ use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Validation\ValidationException;
+use Illuminate\Validation\ValidationException as IlluminateValidationException;
 
 /**
  * Plan 06 step 39a. `POST /Api/Portal/Verify/Serial`.
@@ -223,7 +222,7 @@ public function hash(VerifyHashRequest $request): JsonResponse
             throw InternalException::custom('ServerConfigurationError',
                 'Environments closed set is not configured.',
                 [['Field' => 'Environments', 'Rule' => 'Empty']],
-            )
+            );
         }
         try {
             /** @var array<string,mixed> $v */
@@ -238,7 +237,7 @@ public function hash(VerifyHashRequest $request): JsonResponse
                 'MachineFingerprint.MacAddress' => ['sometimes', 'string'],
                 'UserIdentifier' => ['sometimes', 'string'],
             ]);
-        } catch (ValidationException $e) {
+        } catch (IlluminateValidationException $e) {
             $this->throwValidationFailedHash($e);
         }
         $fp = (array) $v['MachineFingerprint'];
@@ -279,7 +278,7 @@ public function hash(VerifyHashRequest $request): JsonResponse
         return $verifyKey;
     }
 
-    private function throwValidationFailedHash(ValidationException $e): never
+    private function throwValidationFailedHash(IlluminateValidationException $e): never
     {
         $details = [];
         foreach ($e->errors() as $field => $_messages) {
@@ -301,7 +300,7 @@ public function hash(VerifyHashRequest $request): JsonResponse
             throw InternalException::custom('ServerConfigurationError',
                 'Environments closed set is not configured.',
                 [['Field' => 'Environments', 'Rule' => 'Empty']],
-            )
+            );
         }
         try {
             /** @var array<string,mixed> $v */
@@ -309,7 +308,7 @@ public function hash(VerifyHashRequest $request): JsonResponse
                 'SerialValue' => ['required', 'string', 'regex:' . self::SERIAL_VALUE_REGEX],
                 'EnvironmentId' => ['required', 'integer', 'min:' . self::ENV_ORDINAL_MIN, 'max:' . $envMax],
             ]);
-        } catch (ValidationException $e) {
+        } catch (IlluminateValidationException $e) {
             $this->throwValidationFailed($e);
         }
 
@@ -331,7 +330,7 @@ public function hash(VerifyHashRequest $request): JsonResponse
             throw ValidationException::custom('SerialInvalid',
                 'Serial does not resolve to a known reseller.',
                 [],
-            )
+            );
         }
         $reseller = Reseller::query()->where('ResellerId', (int) $prefix->ResellerId)->first();
         if ($reseller === null) {
@@ -340,7 +339,7 @@ public function hash(VerifyHashRequest $request): JsonResponse
             throw InternalException::custom('ServerConfigurationError',
                 'Reseller owning the serial prefix is missing.',
                 [],
-            )
+            );
         }
 
         return $reseller;
@@ -397,7 +396,7 @@ public function hash(VerifyHashRequest $request): JsonResponse
             throw DomainConflictException::custom('LicenseExpired',
                 'License has expired.',
                 [['Field' => 'ExpiresAt', 'Rule' => 'InPast', 'Actual' => (string) $license->ExpiresAt]],
-            )
+            );
         }
     }
 
@@ -464,13 +463,13 @@ public function hash(VerifyHashRequest $request): JsonResponse
             throw ValidationException::custom('RequestIdMissing',
                 'X-Request-Id is required on verify endpoints.',
                 [],
-            )
+            );
         }
 
         return $id;
     }
 
-    private function throwValidationFailed(ValidationException $e): never
+    private function throwValidationFailed(IlluminateValidationException $e): never
     {
         $details = [];
         foreach ($e->errors() as $field => $_messages) {
@@ -640,7 +639,7 @@ public function final(VerifyFinalRequest $request): JsonResponse
             throw DomainConflictException::custom('VerifyKeyExpired',
                 'Verify key has expired.',
                 [['Field' => 'ExpiresAt', 'Rule' => 'InPast', 'Actual' => (string) $row->ExpiresAt]],
-            )
+            );
         }
     }
 
@@ -711,7 +710,7 @@ public function final(VerifyFinalRequest $request): JsonResponse
                 'FingerprintHash' => ['nullable', 'string', 'regex:' . self::FINGERPRINT_HASH_REGEX],
                 'UserIdentifier' => ['nullable', 'string', 'regex:' . self::USER_IDENTIFIER_REGEX],
             ]);
-        } catch (ValidationException $e) {
+        } catch (IlluminateValidationException $e) {
             $this->throwValidationFailedFinal($e);
         }
 
@@ -726,7 +725,7 @@ public function final(VerifyFinalRequest $request): JsonResponse
     }
 
 
-    private function throwValidationFailedFinal(ValidationException $e): never
+    private function throwValidationFailedFinal(IlluminateValidationException $e): never
     {
         $details = [];
         foreach ($e->errors() as $field => $_messages) {

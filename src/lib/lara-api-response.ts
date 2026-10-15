@@ -39,7 +39,6 @@ async function readJson(response: Response, path: string): Promise<unknown> {
   try {
     return await response.json();
   } catch (error) {
-    pushLaraApiError(new Error());
     throw new LaraApiError(
       "The API returned invalid JSON.",
       ApiErrorCodeType.ServerError,

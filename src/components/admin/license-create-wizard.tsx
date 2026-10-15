@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import { toast } from "sonner";
 
@@ -18,6 +18,7 @@ import {
   resellerQuotasQueryOptions,
   type ResellerQuota,
 } from "../../lib/lara-quota";
+import { resellersQueryOptions, type Reseller } from "../../lib/lara-reseller";
 
 // ---- Constants (no magic literals) ----------------------------------------
 
@@ -115,9 +116,16 @@ async function runQuotaPreflight(input: LicenseCreateInput, queryClient: QC): Pr
 
 // ---- Main component ---------------------------------------------------------
 
-export function LicenseCreateWizard() {
+export function LicenseCreateWizard({
+  defaultResellerId,
+}: {
+  defaultResellerId?: string;
+} = {}) {
   const [stepIndex, setStepIndex] = useState(0);
-  const [state, setState] = useState<WizardState>(INITIAL_STATE);
+  const [state, setState] = useState<WizardState>(() => ({
+    ...INITIAL_STATE,
+    ResellerId: defaultResellerId ?? "",
+  }));
   const [stepError, setStepError] = useState<string | undefined>();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -144,7 +152,8 @@ export function LicenseCreateWizard() {
 
       return createLicense(input, crypto.randomUUID());
     },
-    onSuccess: (license) => {
+    onSuccess: async (license) => {
+      await queryClient.invalidateQueries({ queryKey: ["LaraApi"] });
       toast.success(`License #${license.LicenseId} issued`);
       void router.navigate({
         to: "/admin/licenses/$licenseId",
@@ -223,6 +232,38 @@ function WizardStepContent({
 
 // ---- Step 1: Reseller -------------------------------------------------------
 
+function ResellerSelectField({
+  value,
+  onChange,
+  resellers,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  resellers: readonly Reseller[];
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor="ResellerId" className="text-sm font-medium">
+        Assigned Reseller (optional)
+      </label>
+      <select
+        id="ResellerId"
+        name="ResellerId"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <option value="">Admin-issued (no reseller / quota-exempt)</option>
+        {resellers.map((r) => (
+          <option key={r.ResellerId} value={String(r.ResellerId)}>
+            {r.ResellerName} (ID: {r.ResellerId})
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 function ResellerStep({
   state,
   onUpdate,
@@ -230,17 +271,17 @@ function ResellerStep({
   state: WizardState;
   onUpdate: <K extends keyof WizardState>(key: K, value: WizardState[K]) => void;
 }) {
+  const { data: resellers = [] } = useQuery(resellersQueryOptions);
+
   return (
     <section className="space-y-4" aria-label="Reseller">
       <p className="text-sm text-muted-foreground">
-        Leave Reseller ID empty to issue an admin-scoped license (quota exempt).
+        Select a reseller shard to allocate quota, or leave as Admin-issued for direct system licenses.
       </p>
-      <FormField
-        id="ResellerId"
-        label="Reseller ID (optional)"
-        inputMode="numeric"
+      <ResellerSelectField
         value={state.ResellerId}
         onChange={(v) => onUpdate("ResellerId", v)}
+        resellers={resellers}
       />
       <FormField
         id="LicensePackageId"
@@ -352,7 +393,16 @@ function EnvironmentStep({
 
 // ---- Step 5: Confirm --------------------------------------------------------
 
+function resolveResellerLabel(resellerId: string, resellers: readonly Reseller[]): string {
+  if (!resellerId) return "Admin-issued (no reseller)";
+  const match = resellers.find((r) => String(r.ResellerId) === resellerId);
+
+  return `${match?.ResellerName ?? "Reseller"} (ID: ${resellerId})`;
+}
+
 function ConfirmStep({ state }: { state: WizardState }) {
+  const { data: resellers = [] } = useQuery(resellersQueryOptions);
+  const resellerLabel = resolveResellerLabel(state.ResellerId, resellers);
   const categoryLabel =
     CATEGORY_OPTIONS.find((o) => o.value === state.LicenseCategoryId)?.label ??
     String(state.LicenseCategoryId);
@@ -368,8 +418,8 @@ function ConfirmStep({ state }: { state: WizardState }) {
         Quota preflight runs on submit. Review before issuing.
       </p>
       <dl className="grid grid-cols-[12rem_1fr] gap-y-2 text-sm">
-        <dt className="text-muted-foreground">Reseller ID</dt>
-        <dd>{state.ResellerId || "Admin-issued (no reseller)"}</dd>
+        <dt className="text-muted-foreground">Target Reseller</dt>
+        <dd className="font-semibold text-primary">{resellerLabel}</dd>
         <dt className="text-muted-foreground">Package ID</dt>
         <dd>{state.LicensePackageId || "None"}</dd>
         <dt className="text-muted-foreground">Category</dt>

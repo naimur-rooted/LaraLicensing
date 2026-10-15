@@ -32,7 +32,13 @@ const describeError = formatLaraApiError;
 function parseInput(prefixIdText: string, randomLengthText: string): SerialCreateInput {
   const input: SerialCreateInput = {};
   const trimmedPrefix = prefixIdText.trim();
-  if (trimmedPrefix !== "") input.PrefixId = Number(trimmedPrefix);
+  if (trimmedPrefix !== "") {
+    const parsedPrefix = Number(trimmedPrefix);
+    if (!Number.isInteger(parsedPrefix) || parsedPrefix <= 0) {
+      throw new Error("PrefixId must be a positive number (e.g. 1, 2) or left empty.");
+    }
+    input.PrefixId = parsedPrefix;
+  }
   if (randomLengthText !== "") {
     const parsed = Number(randomLengthText);
     if (parsed === 16 || parsed === 24 || parsed === 32) input.RandomLength = parsed;
@@ -166,6 +172,7 @@ export function SerialIssueForm({ licenseId }: Props) {
           value={prefixId}
           onChange={(e) => setPrefixId(e.target.value)}
           inputMode="numeric"
+          placeholder="Numeric ID (e.g. 1) or leave empty"
           className={INPUT}
         />
       </label>

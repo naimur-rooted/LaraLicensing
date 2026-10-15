@@ -172,14 +172,14 @@ public function update(ResellerUpdateRequest $request, string $ResellerSlug): Js
             throw ValidationException::custom('PreconditionRequired',
                 'If-Match header is required on this endpoint.',
                 [['Field' => 'If-Match', 'Rule' => 'Missing']],
-            )
+            );
         }
         $currentHex = EntityHasher::hashSingleResource($this->project($row), $this->requestId($request));
         if (EntityHasher::ifMatchMatches($header, $currentHex) === false) {
             throw ValidationException::custom('PreconditionFailed',
                 'Reseller state has changed since the client-cached version.',
                 [['Field' => 'If-Match', 'Rule' => 'Stale']],
-            )
+            );
         }
     }
 
@@ -229,7 +229,7 @@ public function update(ResellerUpdateRequest $request, string $ResellerSlug): Js
                 'Reseller name or slug is already in use.',
                 [['Field' => 'ResellerSlug', 'Rule' => 'UniqueViolation']],
                 $e,
-            )
+            );
         }
     }
 }

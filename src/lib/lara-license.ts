@@ -97,6 +97,9 @@ export async function createLicense(
   input: LicenseCreateInput,
   idempotencyKey: string,
 ): Promise<License> {
+  if (getRuntimeMode().Mode === "preview") {
+    return createPreviewLicense(input);
+  }
   const [created] = await requestLaraApi("/Licenses", licenseSchema, {
     method: HttpMethodType.Post,
     body: input,
@@ -110,6 +113,7 @@ export const licenseUpdateSchema = z
   .object({
     LicenseCategoryId: licenseCategoryIdSchema.optional(),
     LicensePackageId: z.number().int().positive().nullable().optional(),
+    ResellerId: z.number().int().positive().nullable().optional(),
     ProductVersion: z.string().trim().min(1).max(64).optional(),
     IsActive: z.boolean().optional(),
     ExpiresAt: z.string().datetime().nullable().optional(),
@@ -257,6 +261,121 @@ async function fetchLicenseWithEtag(
   return { license, etag };
 }
 
+const EXPIRY_DAYS_BY_CATEGORY: Partial<Record<LicenseCategoryIdValue, number>> = {
+  [LicenseCategoryIdType.Daily]: 1,
+  [LicenseCategoryIdType.Weekly]: 7,
+  [LicenseCategoryIdType.Monthly]: 30,
+  [LicenseCategoryIdType.Yearly]: 365,
+};
+
+function computeExpiresAt(categoryId: LicenseCategoryIdValue): string | null {
+  const days = EXPIRY_DAYS_BY_CATEGORY[categoryId];
+  if (!days) return null;
+
+  return new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+}
+
+function resolveCustomerName(productVersion: string): string {
+  const trimmed = productVersion.trim();
+
+  return trimmed.length > 0 ? `License (${trimmed})` : "Standard License";
+}
+
+function overlayLicenseInput(adapted: License, input: LicenseCreateInput): License {
+  return {
+    ...adapted,
+    LicenseCategoryId: input.LicenseCategoryId,
+    LicenseTierId: input.LicenseTierId,
+    EnvironmentId: input.EnvironmentId,
+    LicensePackageId: input.LicensePackageId ?? null,
+    ResellerId: input.ResellerId ?? null,
+    ProductVersion: input.ProductVersion || adapted.ProductVersion,
+    UserCount: input.UserCount ?? null,
+    MachineCount: input.MachineCount ?? null,
+    IsSingleUse: input.IsSingleUse,
+  };
+}
+
+async function resolveResellerUlid(
+  resellerId: number,
+  signal?: AbortSignal,
+): Promise<string | undefined> {
+  const existing = await ulidFor("resellers", resellerId);
+  if (existing) return existing;
+  const list = await apiClient.call("admin.resellers.list", { Cursor: null }, { signal });
+  for (const r of list.Items) {
+    if ((await assignNumeric("resellers", r.Id)) === resellerId) return r.Id;
+  }
+
+  return undefined;
+}
+
+async function createPreviewLicense(input: LicenseCreateInput): Promise<License> {
+  const resellerUlid = input.ResellerId ? await resolveResellerUlid(input.ResellerId) : null;
+  const maxActivations = input.IsSingleUse ? 1 : (input.MachineCount ?? 5);
+  const res = await apiClient.call("admin.licenses.create", {
+    CustomerName: resolveCustomerName(input.ProductVersion),
+    CustomerEmail: "licensee@example.com",
+    ResellerId: resellerUlid ?? null,
+    Features: ["core"],
+    MaxActivations: maxActivations,
+    ExpiresAt: computeExpiresAt(input.LicenseCategoryId),
+  });
+  const adapted = await adaptPreviewLicense(res);
+
+  return overlayLicenseInput(adapted, input);
+}
+
+function overlayLicenseUpdate(adapted: License, input: LicenseUpdateInput): License {
+  return {
+    ...adapted,
+    ...(input.LicenseCategoryId !== undefined && { LicenseCategoryId: input.LicenseCategoryId }),
+    ...(input.LicenseTierId !== undefined && { LicenseTierId: input.LicenseTierId }),
+    ...(input.LicensePackageId !== undefined && { LicensePackageId: input.LicensePackageId }),
+    ...(input.ProductVersion !== undefined && { ProductVersion: input.ProductVersion }),
+    ...(input.UserCount !== undefined && { UserCount: input.UserCount }),
+    ...(input.MachineCount !== undefined && { MachineCount: input.MachineCount }),
+    ...(input.IsSingleUse !== undefined && { IsSingleUse: input.IsSingleUse }),
+    ...(input.ResellerId !== undefined && { ResellerId: input.ResellerId }),
+  };
+}
+
+async function updatePreviewLicense(
+  licenseId: number,
+  input: LicenseUpdateInput,
+  ifMatch: string,
+): Promise<License> {
+  const ulid = await ulidFor("licenses", licenseId);
+  if (!ulid) throw new Error(`License ${licenseId} not found in preview id-map.`);
+  const maxActs = input.IsSingleUse !== undefined ? (input.IsSingleUse ? 1 : 5) : input.MachineCount;
+  const resellerUlid = input.ResellerId
+    ? await resolveResellerUlid(input.ResellerId)
+    : input.ResellerId === null
+      ? null
+      : undefined;
+  const res = await apiClient.call("admin.licenses.update", {
+    Id: ulid,
+    IfMatch: ifMatch,
+    ExpiresAt: input.ExpiresAt ?? undefined,
+    MaxActivations: maxActs ?? undefined,
+    Status: input.IsActive !== undefined ? (input.IsActive ? "active" : "suspended") : undefined,
+    ...(resellerUlid !== undefined && { ResellerId: resellerUlid }),
+  } as never);
+
+  return overlayLicenseUpdate(await adaptPreviewLicense(res), input);
+}
+
+async function deletePreviewLicense(
+  licenseId: number,
+  ifMatch: string,
+): Promise<LicenseDeleteResult> {
+  const ulid = await ulidFor("licenses", licenseId);
+  if (!ulid) throw new Error(`License ${licenseId} not found in preview id-map.`);
+  await apiClient.call("admin.licenses.delete", { Id: ulid, IfMatch: ifMatch });
+
+  return { LicenseId: licenseId, IsDeleted: true };
+}
+
 // Reserved for the list-bridge in Plan 17 Step 7 (row-level `numericFor` lookups).
 void numericFor;
 
@@ -279,6 +398,9 @@ export async function updateLicense(
   idempotencyKey: string,
   ifMatch: string,
 ): Promise<License> {
+  if (getRuntimeMode().Mode === "preview") {
+    return updatePreviewLicense(licenseId, input, ifMatch);
+  }
   const [updated] = await requestLaraApi(`/Licenses/${licenseId}`, licenseSchema, {
     method: HttpMethodType.Patch,
     body: input,
@@ -299,6 +421,9 @@ export async function deleteLicense(
   idempotencyKey: string,
   ifMatch: string,
 ): Promise<LicenseDeleteResult> {
+  if (getRuntimeMode().Mode === "preview") {
+    return deletePreviewLicense(licenseId, ifMatch);
+  }
   const [deleted] = await requestLaraApi(`/Licenses/${licenseId}`, licenseDeleteSchema, {
     method: HttpMethodType.Delete,
     headers: { "Idempotency-Key": idempotencyKey, "If-Match": ifMatch },
@@ -313,3 +438,59 @@ export const licenseQueryOptions = (licenseId: number) =>
     queryFn: ({ signal }) => fetchLicenseWithEtag(licenseId, signal),
     retry: false,
   });
+
+export interface AdminLicenseFilter {
+  ResellerId?: number;
+  Query?: string;
+  Status?: string;
+}
+
+async function fetchPreviewAdminLicenses(
+  filter?: AdminLicenseFilter,
+  signal?: AbortSignal,
+): Promise<License[]> {
+  const resellerUlid = filter?.ResellerId
+    ? await resolveResellerUlid(filter.ResellerId, signal)
+    : undefined;
+  const res = await apiClient.call(
+    "admin.licenses.list",
+    {
+      ResellerId: resellerUlid,
+      Query: filter?.Query,
+      Status: filter?.Status as never,
+    },
+    { signal },
+  );
+
+  return Promise.all(res.Items.map(adaptPreviewLicense));
+}
+
+async function fetchLiveAdminLicenses(
+  filter?: AdminLicenseFilter,
+  signal?: AbortSignal,
+): Promise<License[]> {
+  const path = filter?.ResellerId
+    ? `/Reseller/Licenses?Limit=100`
+    : `/Licenses?Limit=100`;
+
+  return requestLaraApi(path, licenseSchema, { signal });
+}
+
+export async function fetchAdminLicenses(
+  filter?: AdminLicenseFilter,
+  signal?: AbortSignal,
+): Promise<License[]> {
+  if (getRuntimeMode().Mode === "preview") {
+    return fetchPreviewAdminLicenses(filter, signal);
+  }
+
+  return fetchLiveAdminLicenses(filter, signal);
+}
+
+export function adminLicensesQueryOptions(filter?: AdminLicenseFilter) {
+  return queryOptions({
+    queryKey: ["LaraApi", "AdminLicenses", filter],
+    queryFn: ({ signal }) => fetchAdminLicenses(filter, signal),
+    retry: false,
+  });
+}

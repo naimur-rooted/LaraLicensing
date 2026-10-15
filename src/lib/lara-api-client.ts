@@ -178,7 +178,7 @@ async function performRefresh(): Promise<boolean> {
 
       return false;
     }
-    pushLaraApiError(new Error());
+    console.error("Lara API refresh failed transiently; session preserved", { error });
     throw error;
   }
 }
@@ -231,7 +231,7 @@ export const PREVIEW_BYPASS_REQUEST_MESSAGE =
 
 function assertRequestNotPreview(path: string): void {
   if (getRuntimeMode().Mode !== "preview") return;
-  pushLaraApiError(new Error());
+  console.error("requestLaraApi preview bypass", { path });
   throw new LaraApiError(
     `${PREVIEW_BYPASS_REQUEST_MESSAGE} (path=${path})`,
     ApiErrorCodeType.ServerError,

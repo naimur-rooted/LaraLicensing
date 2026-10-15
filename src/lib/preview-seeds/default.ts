@@ -814,10 +814,15 @@ async function primeLegacyIdMap(): Promise<void> {
     "01H00000000000000LIC00002",
     "01H00000000000000LIC00003",
   ]);
-  if (RESELLER_USER.ResellerId) {
-    await resetIdMap("resellers");
-    await primeIdMap("resellers", [RESELLER_USER.ResellerId]);
-  }
+  await resetIdMap("resellers");
+  await primeIdMap("resellers", [
+    "01H000000000000000RSLLR1",
+    "01H000000000000000RSLLR2",
+    "01H000000000000000RSLLR3",
+    "01H000000000000000RSLLR4",
+    "01H000000000000000RSLLR5",
+    "01H000000000000000RSLLR6",
+  ]);
 }
 
 async function seedResellers(): Promise<void> {

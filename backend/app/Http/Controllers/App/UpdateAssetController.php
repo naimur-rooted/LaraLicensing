@@ -81,7 +81,7 @@ final class UpdateAssetController
             throw ValidationException::custom('ValidationInputInvalid',
                 'Platform is not in the closed enum.',
                 [['Field' => 'Platform', 'Rule' => 'PlatformEnum']],
-            )
+            );
         }
     }
 

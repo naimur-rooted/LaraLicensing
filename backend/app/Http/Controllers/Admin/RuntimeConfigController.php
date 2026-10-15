@@ -87,7 +87,7 @@ public function update(RuntimeConfigUpdateRequest $request): JsonResponse
             throw DomainConflictException::custom('RuntimeConfigForbidden',
                 'Only SuperAdmin may mutate runtime configuration.',
                 [['Field' => 'Role', 'Rule' => 'SuperAdminRequired']],
-            )
+            );
         }
     }
 
@@ -98,7 +98,7 @@ public function update(RuntimeConfigUpdateRequest $request): JsonResponse
             throw ValidationException::custom('PreconditionRequired',
                 'If-Match header is required for runtime-config writes.',
                 [['Field' => 'If-Match', 'Rule' => 'Missing']],
-            )
+            );
         }
 
         return $ifMatch;

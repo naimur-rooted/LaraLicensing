@@ -16,6 +16,7 @@ import {
   resellerLicenseSchema,
 } from "@/lib/lara-reseller-license";
 import { freezeRuntimeMode } from "@/lib/runtime-mode";
+import { createLicense } from "@/lib/lara-license";
 import { registerAllPreviewHandlers } from "@/lib/preview-fixtures";
 import { resetIdMap } from "@/lib/preview-id-map";
 import { resetAll as resetPreviewStore } from "@/lib/preview-store";
@@ -65,5 +66,25 @@ describe("resellerLicenseListQueryOptions preview bridge", () => {
     expect(rows[0].LicenseKey).toBe("LARA-AAAA-0001");
     const missing = await resellerLicenseDetailQueryOptions(1, "LARA-XXXX-9999").queryFn!({} as never);
     expect(missing).toEqual([]);
+  });
+
+  it("creates a license for reseller 2 and sees it in resellerLicenseListQueryOptions(2)", async () => {
+    const initialRows = await resellerLicenseListQueryOptions(2).queryFn!({} as never);
+    expect(initialRows).toHaveLength(1); // LIC00005 in default seed
+
+    await createLicense(
+      {
+        LicenseCategoryId: 1,
+        LicenseTierId: 1,
+        EnvironmentId: 1,
+        ProductVersion: "v1.0.0",
+        ResellerId: 2,
+        IsSingleUse: false,
+      },
+      "idem-test-reseller-2",
+    );
+
+    const updatedRows = await resellerLicenseListQueryOptions(2).queryFn!({} as never);
+    expect(updatedRows).toHaveLength(2);
   });
 });

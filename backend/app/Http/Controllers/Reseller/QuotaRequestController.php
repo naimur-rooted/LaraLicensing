@@ -173,7 +173,7 @@ final class QuotaRequestController
             throw InternalException::custom('IdempotencyKeyRequired',
                 'Idempotency-Key header is required on this endpoint.',
                 [['Field' => self::IDEMPOTENCY_KEY_HEADER, 'Rule' => 'Missing']],
-            )
+            );
         }
         if (strlen($key) !== self::IDEMPOTENCY_KEY_LEN) {
             throw ValidationException::validationFailed(
@@ -253,7 +253,7 @@ final class QuotaRequestController
             throw DomainConflictException::custom('IdempotencyConflict',
                 'Quota request is not in Pending state and cannot be cancelled.',
                 [['Field' => 'Status', 'Rule' => 'NotPending', 'Value' => (string) $row->Status]],
-            )
+            );
         }
         $row->Status = self::STATUS_CANCELLED;
         $row->DecidedByUserId = $actorId;
@@ -285,7 +285,7 @@ final class QuotaRequestController
             throw NotFoundException::custom('ResourceRoleNotAssigned',
                 'Quota request not found on this reseller shard.',
                 [['Field' => 'QuotaRequestId', 'Rule' => 'NotFound', 'Value' => $requestId]],
-            )
+            );
         }
 
         return $row;

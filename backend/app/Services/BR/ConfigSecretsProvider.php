@@ -30,7 +30,7 @@ final class ConfigSecretsProvider implements SecretsProviderContract
 
     public function getKekMaterial(string $ref): string
     {
-        $map = Config::get(self::CONFIG_KEY, [])
+        $map = Config::get(self::CONFIG_KEY, []);
         $encoded = is_array($map) ? ($map[$ref] ?? null) : null;
         if (!is_string($encoded) || $encoded === '') {
             throw $this->fail(BrCryptoConstants::RULE_KEK_UNRESOLVED, $ref);

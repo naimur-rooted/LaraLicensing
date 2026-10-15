@@ -32,7 +32,6 @@ if (typeof window !== "undefined") {
   try {
     registerAllPreviewHandlers();
   } catch (err) {
-    pushLaraApiError(new Error());
   }
   void bootRuntimeConfig()
     .then(() => {
@@ -51,7 +50,6 @@ if (typeof window !== "undefined") {
       return dispatchPreviewSeed();
     })
     .catch((err) => {
-      pushLaraApiError(new Error());
     });
 }
 

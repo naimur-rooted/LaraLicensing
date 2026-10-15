@@ -143,7 +143,7 @@ final class QuotaService
             throw DomainConflictException::custom('QuotaLedgerConflict',
                 'Cannot restore quota: LicensesConsumed is already zero.',
                 [['Field' => 'LicensesConsumed', 'Rule' => 'Underflow', 'Value' => (string) $row->LicensesConsumed]],
-            )
+            );
         }
         $this->bumpConsumedBy($row, -1, $now);
         $ledgerId = $this->insertLedgerRow(
@@ -241,7 +241,7 @@ final class QuotaService
             throw DomainConflictException::custom('QuotaLedgerConflict',
                 'Cannot restore quota: funding row LicensesConsumed is already zero.',
                 [['Field' => 'LicensesConsumed', 'Rule' => 'Underflow', 'Value' => (string) $locked->LicensesConsumed]],
-            )
+            );
         }
         $this->bumpConsumedBy($locked, -1, $now);
         try {
@@ -309,7 +309,7 @@ final class QuotaService
             throw DomainConflictException::custom('QuotaLedgerConflict',
                 'Original QuotaConsumed ledger row missing for license restore.',
                 [['Field' => 'ResellerQuotaLedgerId', 'Rule' => 'NotFound', 'Value' => (string) $ledgerId]],
-            )
+            );
         }
 
         return $row;
@@ -331,7 +331,7 @@ final class QuotaService
             throw DomainConflictException::custom('QuotaLedgerConflict',
                 'Funding Quotas row missing for license restore.',
                 [['Field' => 'Quotas', 'Rule' => 'NotFound', 'Value' => $resellerId . '/' . $categoryId . '/' . $tierId]],
-            )
+            );
         }
 
         return $row;
@@ -359,7 +359,7 @@ final class QuotaService
             throw DomainConflictException::custom('QuotaLedgerConflict',
                 'Funding Quotas row disappeared under lock.',
                 [['Field' => 'Quotas', 'Rule' => 'RaceLost']],
-            )
+            );
         }
 
         return $locked;

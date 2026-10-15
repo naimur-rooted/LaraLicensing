@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { requestLaraApi } from "./lara-api-client";
+import { isPreview } from "./runtime-mode";
 
 /**
  * Plan 09 step 31 (frontend half). Transport for
@@ -33,6 +34,16 @@ export interface ShardStatusSnapshot {
 }
 
 export async function fetchShardStatus(signal?: AbortSignal): Promise<ShardStatusSnapshot> {
+  if (isPreview()) {
+    return {
+      rows: [
+        { ResellerSlug: "alim-tv", Reachable: true, Error: null },
+        { ResellerSlug: "alpha-media", Reachable: true, Error: null },
+      ],
+      checkedAt: new Date().toISOString(),
+      unreachableCount: 0,
+    };
+  }
   let checkedAt = "";
   let unreachableCount = 0;
   const rows = await requestLaraApi("/Metrics/ShardStatus", shardStatusRowSchema, {

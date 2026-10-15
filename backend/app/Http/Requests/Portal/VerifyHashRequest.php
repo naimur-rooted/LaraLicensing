@@ -47,7 +47,7 @@ final class VerifyHashRequest extends FormRequest
             throw InternalException::custom('ServerConfigurationError',
                 'Environments closed set is not configured.',
                 [['Field' => 'Environments', 'Rule' => 'Empty']],
-            )
+            );
         }
     }
 

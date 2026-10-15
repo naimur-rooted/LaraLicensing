@@ -105,7 +105,7 @@ final class RuntimeConfigService
                 throw DomainConflictException::custom('RuntimeConfigInvalidField',
                     "Field '{$k}' is not mutable at runtime.",
                     [['Field' => (string) $k, 'Rule' => 'ImmutableAtRuntime']],
-                )
+                );
             }
         }
     }
@@ -117,7 +117,7 @@ final class RuntimeConfigService
             throw DomainConflictException::custom('RuntimeConfigLocked',
                 'AllowRuntimeToggle is false; deploy a new version.json to unlock.',
                 [['Field' => 'AllowRuntimeToggle', 'Rule' => 'Locked']],
-            )
+            );
         }
     }
 
@@ -128,7 +128,7 @@ final class RuntimeConfigService
             throw DomainConflictException::custom('RuntimeConfigConflict',
                 'version.json was modified since it was last read.',
                 [['Field' => 'If-Match', 'Rule' => 'Stale', 'Value' => $current]],
-            )
+            );
         }
     }
 
@@ -177,7 +177,7 @@ final class RuntimeConfigService
             throw DomainConflictException::custom('RuntimeConfigForbidden',
                 'Switching a production host to preview mode is disabled on this environment.',
                 [['Field' => 'Mode', 'Rule' => 'ProdToPreviewDisabled']],
-            )
+            );
         }
     }
 
@@ -191,7 +191,7 @@ final class RuntimeConfigService
             throw DomainConflictException::custom('RuntimeConfigForbidden',
                 'Re-enabling AllowRuntimeToggle requires a deploy, not a runtime write.',
                 [['Field' => 'AllowRuntimeToggle', 'Rule' => 'ReenableViaDeployOnly']],
-            )
+            );
         }
     }
 
@@ -200,7 +200,7 @@ final class RuntimeConfigService
         throw DomainConflictException::custom('RuntimeConfigModeMismatch',
             "Conditional field '{$field}' violates the Mode invariant.",
             [['Field' => $field, 'Rule' => $rule]],
-        )
+        );
     }
 
     /**

@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import { toast } from "sonner";
 
@@ -13,6 +14,7 @@ import {
   type LicenseDeleteResult,
   type LicenseRestoreSkippedReason,
 } from "../../lib/lara-license";
+import { resellersQueryOptions } from "../../lib/lara-reseller";
 
 interface Props {
   license: License;
@@ -53,6 +55,11 @@ function describeRevokeOutcome(result: LicenseDeleteResult): string {
 
 export function LicenseDetailActions({ license, etag }: Props) {
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const { data: resellers = [] } = useQuery(resellersQueryOptions);
+  const [resellerId, setResellerId] = useState(
+    license.ResellerId ? String(license.ResellerId) : "",
+  );
   const [expiresAt, setExpiresAt] = useState(license.ExpiresAt ?? "");
   const [isActive, setIsActive] = useState(license.IsActive);
   const [error, setError] = useState<string | null>(null);
@@ -97,11 +104,14 @@ export function LicenseDetailActions({ license, etag }: Props) {
         {
           IsActive: isActive,
           ExpiresAt: trimmed === "" ? null : trimmed,
+          ResellerId: resellerId ? Number(resellerId) : null,
         },
         crypto.randomUUID(),
         etag,
       );
+      await queryClient.invalidateQueries({ queryKey: ["LaraApi"] });
       await router.invalidate();
+      toast.success("License updated successfully");
     } catch (saveError) {
       const description = describeError(saveError);
       setError(description);
@@ -157,6 +167,21 @@ export function LicenseDetailActions({ license, etag }: Props) {
         noValidate
       >
         <h2 className="text-lg font-semibold">Update license</h2>
+        <label className="block">
+          <span className="mb-1 block text-sm font-medium">Assigned Reseller</span>
+          <select
+            value={resellerId}
+            onChange={(e) => setResellerId(e.target.value)}
+            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+          >
+            <option value="">Admin-issued (no reseller / global)</option>
+            {resellers.map((r) => (
+              <option key={r.ResellerId} value={String(r.ResellerId)}>
+                {r.ResellerName} (ID: {r.ResellerId})
+              </option>
+            ))}
+          </select>
+        </label>
         <label className="block">
           <span className="mb-1 block text-sm font-medium">
             ExpiresAt (ISO 8601, blank for never)

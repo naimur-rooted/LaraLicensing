@@ -2,6 +2,7 @@ import { queryOptions } from "@tanstack/react-query";
 import { z } from "zod";
 
 import { requestLaraApi } from "./lara-api-client";
+import { isPreview } from "./runtime-mode";
 
 /**
  * Plan 09 steps 30 and 29b. Transport for `GET /Api/Admin/Metrics`.
@@ -39,6 +40,18 @@ const METRICS_STALE_MS = 30_000;
 export const adminMetricsQueryOptions = queryOptions({
   queryKey: ["LaraApi", "Admin", "Metrics"],
   queryFn: async ({ signal }): Promise<AdminMetricsSnapshot> => {
+    if (isPreview()) {
+      return {
+        metrics: {
+          ResellersActive: 4,
+          SessionsActive: 8,
+          LicensesTotal: 128,
+          QuotaRequestsPending: 3,
+          GeneratedAt: new Date().toISOString(),
+        },
+        warnings: [],
+      };
+    }
     let warnings: AdminMetricsWarning[] = [];
     const [metrics] = await requestLaraApi("/Metrics", adminMetricsSchema, {
       signal,

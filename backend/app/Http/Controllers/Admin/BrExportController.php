@@ -73,7 +73,7 @@ public function store(BrExportRequest $request): JsonResponse
             throw InternalException::custom('IdempotencyKeyRequired',
                 'Idempotency-Key header is required on this endpoint.',
                 [['Field' => self::HEADER_IDEMPOTENCY, 'Rule' => 'Missing']],
-            )
+            );
         }
 
         return $key;

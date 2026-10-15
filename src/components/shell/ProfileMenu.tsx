@@ -44,15 +44,15 @@ export function ProfileMenu({ onSignOut }: ProfileMenuProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        className="focus-ring inline-flex h-9 items-center gap-2 rounded-md border border-input bg-background px-3 text-sm font-medium surface-hover"
+        className="focus-ring inline-flex h-9 items-center gap-1.5 sm:gap-2 rounded-md border border-input bg-background px-2.5 sm:px-3 text-sm font-medium surface-hover shrink-0"
         aria-label="Open profile menu"
       >
-        <UserIcon aria-hidden="true" className="size-4 text-muted-foreground" />
-        <span className="max-w-[16ch] truncate">{trigger.primary}</span>
+        <UserIcon aria-hidden="true" className="size-4 text-muted-foreground shrink-0" />
+        <span className="max-w-[12ch] sm:max-w-[16ch] truncate hidden sm:inline">{trigger.primary}</span>
         {trigger.secondary !== null ? (
-          <span className="text-xs font-normal text-muted-foreground">{trigger.secondary}</span>
+          <span className="text-xs font-normal text-muted-foreground hidden md:inline">{trigger.secondary}</span>
         ) : null}
-        <ChevronDown aria-hidden="true" className="size-3 text-muted-foreground" />
+        <ChevronDown aria-hidden="true" className="size-3 text-muted-foreground hidden sm:block shrink-0" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[220px]">
         <DropdownMenuLabel className="flex flex-col gap-0.5">

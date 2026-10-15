@@ -100,7 +100,7 @@ final class SelfUpdateService
             throw ValidationException::custom('ValidationInputInvalid',
                 'Product value is not in the closed enum.',
                 [['Field' => 'Product', 'Rule' => 'ProductEnum']],
-            )
+            );
         }
     }
 
@@ -111,7 +111,7 @@ final class SelfUpdateService
             throw ValidationException::custom('UpdateChannelUnknown',
                 'Channel is not a member of the closed enum.',
                 [['Field' => 'Channel', 'Rule' => 'ChannelEnum']],
-            )
+            );
         }
     }
 
@@ -122,7 +122,7 @@ final class SelfUpdateService
             throw ValidationException::custom('ValidationInputInvalid',
                 'Platform value is not in the closed enum.',
                 [['Field' => 'Platform', 'Rule' => 'PlatformEnum']],
-            )
+            );
         }
     }
 
@@ -180,7 +180,7 @@ final class SelfUpdateService
                     ['Field' => 'CurrentVersion', 'Rule' => 'DowngradeBlocked'],
                     ['LatestVersion' => $latest, 'CurrentVersion' => $current],
                 ],
-            )
+            );
         }
     }
 }

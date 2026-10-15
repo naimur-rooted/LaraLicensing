@@ -186,7 +186,7 @@ public function destroy(Request $request, string $PrefixValue): JsonResponse
                 'Prefix in-use check against shard failed.',
                 [['Field' => 'ShardBinding', 'Rule' => 'Unavailable']],
                 $e,
-            )
+            );
         }
         if ($count > 0) {
             throw DomainConflictException::conflict('PrefixInUse',
@@ -229,7 +229,7 @@ public function destroy(Request $request, string $PrefixValue): JsonResponse
                 'Prefix value is already registered.',
                 [['Field' => 'PrefixValue', 'Rule' => 'UniqueViolation']],
                 $e,
-            )
+            );
         }
     }
 }
