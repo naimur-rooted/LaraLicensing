@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Core Unit & Bridge Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Run Preview Bridge & Unit Tests
+        run: pnpm test tests/lara-license-preview-bridge.test.ts tests/lara-reseller-license-preview-bridge.test.ts
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, intl, pdo, pdo_sqlite, bcmath
+
+      - name: Verify Backend Artisan & Health
+        working-directory: backend
+        run: |
+          php artisan --version
+          php artisan route:list --compact
