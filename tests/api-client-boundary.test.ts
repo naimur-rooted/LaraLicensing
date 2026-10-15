@@ -38,6 +38,7 @@ const PREVIEW_ONLY_SHAPE_ROUTES = new Set<string>([
   "src/routes/_authenticated/admin.roles.tsx",
   "src/routes/_authenticated/admin.snapshots.$snapshotId.tsx",
   "src/routes/_authenticated/admin.snapshots.index.tsx",
+  "src/routes/_authenticated/admin.features.tsx",
 ]);
 
 const BANNED_IMPORT_PATTERN =

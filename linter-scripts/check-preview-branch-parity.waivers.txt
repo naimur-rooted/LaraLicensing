@@ -21,7 +21,5 @@ src/lib/lara-impersonation.ts
 src/lib/lara-metrics.ts
 src/lib/lara-password-reset.ts
 src/lib/lara-prefix.ts
-src/lib/lara-reseller.ts
 src/lib/lara-self-update.ts
-src/lib/lara-serial.ts
 src/lib/lara-shard-status.ts

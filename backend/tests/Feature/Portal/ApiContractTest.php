@@ -7,6 +7,7 @@ namespace Tests\Feature\Portal;
 use App\Exceptions\LaraException;
 use App\Models\User;
 use App\Support\ApiEnvelope;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Tests\Support\AssertsLaraException;
 use Tests\TestCase;
@@ -43,9 +44,9 @@ final class ApiContractTest extends TestCase
     {
         // 1. Verify strong ETag on GET
         // We use a real in-scope route that doesn't need much state
-        $response = $this->getJson('/Api/App/Health');
+        $response = $this->getJson('/Api/Public/Health');
         $response->assertStatus(200);
-        $etag = $response->header('ETag');
+        $etag = $response->headers->get('ETag');
         
         $this->assertNotNull($etag);
         $this->assertStringStartsNotWith('W/', $etag, 'ETag must be strong (no W/ prefix)');
@@ -55,24 +56,18 @@ final class ApiContractTest extends TestCase
         // We need a route in IF_MATCH_SCOPES. PATCH /Api/Reseller/Licenses/{Key}
         $user = User::create(['Email' => 'a@test.com', 'PasswordHash' => 'hash', 'TenantId' => 1]);
         
-        $this->assertLaraException('ValidationFailed', function() use ($user) {
-            $this->actingAs($user, 'sanctum')
-                ->withHeader('If-Match', 'W/"weak-one"')
-                ->patchJson('/Api/Reseller/Licenses/LARA-KEY-1')
-                ->assertStatus(400);
-        }, function($e) {
-            $this->assertEquals('WeakForbidden', $e['Details'][0]['Rule']);
-        });
+        $res1 = $this->actingAs($user, 'sanctum')
+            ->withHeader('Idempotency-Key', 'test-idemp-key-16ch1')
+            ->withHeader('If-Match', 'W/"weak-one"')
+            ->patchJson('/Api/Reseller/Licenses/LARA-KEY-1');
+        $this->assertLaraException($res1, 'ValidationFailed', 400, [['Field' => 'If-Match', 'Rule' => 'WeakForbidden']]);
 
         // 3. Verify rejection of wildcard
-        $this->assertLaraException('ValidationFailed', function() use ($user) {
-            $this->actingAs($user, 'sanctum')
-                ->withHeader('If-Match', '*')
-                ->patchJson('/Api/Reseller/Licenses/LARA-KEY-1')
-                ->assertStatus(400);
-        }, function($e) {
-            $this->assertEquals('WildcardForbidden', $e['Details'][0]['Rule']);
-        });
+        $res2 = $this->actingAs($user, 'sanctum')
+            ->withHeader('Idempotency-Key', 'test-idemp-key-16ch2')
+            ->withHeader('If-Match', '*')
+            ->patchJson('/Api/Reseller/Licenses/LARA-KEY-1');
+        $this->assertLaraException($res2, 'ValidationFailed', 400, [['Field' => 'If-Match', 'Rule' => 'WildcardForbidden']]);
     }
 
     /**
@@ -108,7 +103,39 @@ final class ApiContractTest extends TestCase
 
     private function migrateRoot(): void
     {
-        $m = require base_path('database/migrations/root/2026_07_18_000001_create_root_identity_tables.php');
-        $m->up();
+        DB::connection('root')->statement('CREATE TABLE IF NOT EXISTS "Users" (
+            "UserId" INTEGER PRIMARY KEY AUTOINCREMENT,
+            "Email" VARCHAR(255) NOT NULL UNIQUE,
+            "PasswordHash" VARCHAR(255) NOT NULL,
+            "TenantId" INTEGER NULL,
+            "IsActive" BOOLEAN NOT NULL DEFAULT 1
+        )');
+
+        DB::connection('root')->statement('CREATE TABLE IF NOT EXISTS "personal_access_tokens" (
+            "id" INTEGER PRIMARY KEY AUTOINCREMENT,
+            "tokenable_type" VARCHAR(255) NOT NULL,
+            "tokenable_id" INTEGER NOT NULL,
+            "name" VARCHAR(255) NOT NULL,
+            "token" VARCHAR(64) NOT NULL UNIQUE,
+            "abilities" TEXT NULL,
+            "last_used_at" TEXT NULL,
+            "expires_at" TEXT NULL,
+            "created_at" TEXT NULL,
+            "updated_at" TEXT NULL
+        )');
+
+        DB::connection('root')->statement('CREATE TABLE IF NOT EXISTS "IdempotencyRecords" (
+            "IdempotencyRecordId" INTEGER PRIMARY KEY AUTOINCREMENT,
+            "IdempotencyKey" VARCHAR(128) NOT NULL,
+            "Endpoint" VARCHAR(255) NOT NULL,
+            "ActorId" VARCHAR(128) NOT NULL,
+            "RequestHash" VARCHAR(64) NOT NULL,
+            "StatusCode" INTEGER NOT NULL,
+            "ResponseHeaders" TEXT NOT NULL,
+            "ResponseBody" TEXT NOT NULL,
+            "CreatedAt" DATETIME NOT NULL,
+            "ExpiresAt" DATETIME NOT NULL,
+            "LockedUntil" DATETIME NULL
+        )');
     }
 }

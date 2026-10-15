@@ -50,7 +50,7 @@ use Throwable;
  *
  * 15-line function cap held via helper splits.
  */
-final class BrImportPreflight
+class BrImportPreflight
 {
     private const ERR_CORRUPT = C::ERR_BACKUP_CORRUPT;
     private const RULE_DRIFT = 'ScopeContentDrift';

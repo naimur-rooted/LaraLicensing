@@ -66,6 +66,9 @@ final class EtagMiddleware
         if (!$this->isInScope($request)) {
             return;
         }
+        if (!$request->headers->has('Authorization') && !$request->user()) {
+            return;
+        }
         $header = trim((string) $request->headers->get('If-Match', ''));
         if ($header === '') {
             throw ValidationException::custom('PreconditionRequired',

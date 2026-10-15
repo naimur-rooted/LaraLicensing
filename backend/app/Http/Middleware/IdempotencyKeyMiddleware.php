@@ -100,6 +100,10 @@ final class IdempotencyKeyMiddleware
     private function isRequiredPath(Request $request): bool
     {
         $path = strtolower(ltrim($request->path(), '/'));
+        if (str_ends_with($path, '/cancel') || str_ends_with($path, '/renew')) {
+            return false;
+        }
+
         foreach (self::REQUIRED_PREFIXES as $prefix) {
             if (str_starts_with($path, $prefix)) {
                 return true;

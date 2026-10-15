@@ -172,7 +172,7 @@ final class QuotaRequestController
         $row = DB::connection('shard')->transaction(
             fn (): QuotaRequest => $this->applyApprove($request, (int) $reseller->ResellerId, $requestId, $payload),
         );
-        AuditWriter::write($request, 'QuotaRequestApproved', 'QuotaRequests', (int) $row->RequestId, [
+        AuditWriter::write($request, 'QuotaRequestApproved', 'QuotaRequests', (int) $row->QuotaRequestId, [
             'ResellerId' => (int) $reseller->ResellerId,
             'ResellerSlug' => (string) $reseller->ResellerSlug,
             'ApprovedDelta' => (int) $row->ApprovedDelta,
@@ -189,7 +189,7 @@ final class QuotaRequestController
         $row = DB::connection('shard')->transaction(
             fn (): QuotaRequest => $this->applyDeny($request, (int) $reseller->ResellerId, $requestId, $reason),
         );
-        AuditWriter::write($request, 'QuotaRequestDenied', 'QuotaRequests', (int) $row->RequestId, [
+        AuditWriter::write($request, 'QuotaRequestDenied', 'QuotaRequests', (int) $row->QuotaRequestId, [
             'ResellerId' => (int) $reseller->ResellerId,
             'ResellerSlug' => (string) $reseller->ResellerSlug,
             'DenyReason' => (string) $reason,

@@ -47,7 +47,7 @@ use Throwable;
  *   step 5 (Root commit) triggers a best-effort compensating DELETE of
  *   the shard row, with the anomaly logged at ERROR for reconcile.
  */
-final class ImpersonationService
+class ImpersonationService
 {
     private const ROOT = 'root';
     private const SQLSTATE_UNIQUE = '23505';

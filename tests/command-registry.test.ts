@@ -28,6 +28,6 @@ describe("command-registry", () => {
 
   it("hides deferred (status D) sidebar items from the Palette", () => {
     const rows = commandsForRole("Admin", null);
-    expect(rows.find((r) => r.label === "Overview")).toBeUndefined();
+    expect(rows.find((r) => r.label === "Categories")).toBeUndefined();
   });
 });

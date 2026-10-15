@@ -36,7 +36,7 @@ use Illuminate\Support\Facades\Log;
  * the tuple in hand. Contract is stable so the wire-in is a mechanical
  * follow-up, not a rewrite.
  */
-final class QuotaService
+class QuotaService
 {
     private const SHARD_CONNECTION = 'shard';
     private const QUOTAS_TABLE = 'Quotas';

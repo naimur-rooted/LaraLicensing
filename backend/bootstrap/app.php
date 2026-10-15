@@ -18,6 +18,11 @@ return Application::configure(basePath: dirname(__DIR__))
         api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
+        then: function () {
+            \Illuminate\Support\Facades\Route::middleware('api')
+                ->prefix('Api')
+                ->group(__DIR__.'/../routes/api.php');
+        },
     )
     ->withSchedule(function (Schedule $schedule): void {
         // Plan 06 step 44 (AC-IMP-006, spec 47 §4). Fixed 15s cadence.
@@ -182,7 +187,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // converts to responses via its own renderer; we intercept both and
         // route them through ApiEnvelope::failure.
         $exceptions->render(function (\Illuminate\Validation\ValidationException $e, Request $request) {
-            if (! $request->expectsJson() && ! $request->is('Api/*', 'App/*')) {
+            if (! $request->expectsJson() && ! $request->is('Api/*', 'App/*', 'api/*', 'app/*')) {
                 return null;
             }
             $requestId = (string) ($request->attributes->get('lara.request_id') ?: ($request->headers->get('X-Request-Id') ?? ''));
@@ -198,12 +203,15 @@ return Application::configure(basePath: dirname(__DIR__))
                 requestId: $requestId,
                 httpCode: 400,
                 message: 'ValidationInputInvalid',
+                extraAttributes: [
+                    'Category' => 'Validation',
+                ],
                 details: $details,
             );
         });
 
         $exceptions->render(function (\Illuminate\Auth\AuthenticationException $e, Request $request) {
-            if (! $request->expectsJson() && ! $request->is('Api/*', 'App/*')) {
+            if (! $request->expectsJson() && ! $request->is('Api/*', 'App/*', 'api/*', 'app/*')) {
                 return null;
             }
             $requestId = (string) ($request->attributes->get('lara.request_id') ?: ($request->headers->get('X-Request-Id') ?? ''));
@@ -213,6 +221,9 @@ return Application::configure(basePath: dirname(__DIR__))
                 requestId: $requestId,
                 httpCode: 401,
                 message: 'AuthUnauthorized',
+                extraAttributes: [
+                    'Category' => 'Auth',
+                ],
             );
         });
 

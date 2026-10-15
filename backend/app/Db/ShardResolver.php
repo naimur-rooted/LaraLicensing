@@ -30,7 +30,7 @@ use Illuminate\Support\Facades\Log;
  *    handler cannot accidentally read a prior tenant's rows.
  *  - Unknown or missing route -> LaraException('ResellerNotFound', 404).
  */
-final class ShardResolver
+class ShardResolver
 {
     private const CONNECTION_ALIAS = 'shard';
     private const TEMPLATE_ALIAS = 'shard_template';

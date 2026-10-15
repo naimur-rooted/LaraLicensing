@@ -361,13 +361,15 @@ final class LicenseRenewTest extends TestCase
             "updated_at" TEXT NULL
         )');
         $root->statement('CREATE TABLE IF NOT EXISTS "AuditLogs" (
-            "AuditId" INTEGER PRIMARY KEY AUTOINCREMENT,
-            "ActorUserId" INTEGER NULL,
+            "AuditLogId" INTEGER PRIMARY KEY AUTOINCREMENT,
+            "ActorType" TEXT NOT NULL,
+            "ActorId" INTEGER NULL,
             "Action" TEXT NOT NULL,
-            "Subject" TEXT NOT NULL,
-            "SubjectId" INTEGER NULL,
-            "Payload" TEXT NULL,
-            "RequestId" TEXT NULL,
+            "TargetType" TEXT NOT NULL,
+            "TargetId" TEXT NULL,
+            "SubjectId" INTEGER GENERATED ALWAYS AS (CAST("TargetId" AS INTEGER)) STORED,
+            "RequestId" TEXT NOT NULL,
+            "PayloadJson" TEXT NULL,
             "CreatedAt" TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         )');
         $root->statement('CREATE TABLE IF NOT EXISTS "Resellers" (
@@ -379,6 +381,19 @@ final class LicenseRenewTest extends TestCase
             "CreatedAt" TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
             "UpdatedAt" TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
             "DeletedAt" TEXT NULL
+        )');
+        $root->statement('CREATE TABLE IF NOT EXISTS "IdempotencyRecords" (
+            "IdempotencyRecordId" INTEGER PRIMARY KEY AUTOINCREMENT,
+            "IdempotencyKey" VARCHAR(128) NOT NULL,
+            "Endpoint" VARCHAR(255) NOT NULL,
+            "ActorId" VARCHAR(128) NOT NULL,
+            "RequestHash" VARCHAR(64) NOT NULL,
+            "StatusCode" INTEGER NOT NULL,
+            "ResponseHeaders" TEXT NOT NULL,
+            "ResponseBody" TEXT NOT NULL,
+            "CreatedAt" DATETIME NOT NULL,
+            "ExpiresAt" DATETIME NOT NULL,
+            "LockedUntil" DATETIME NULL
         )');
     }
 

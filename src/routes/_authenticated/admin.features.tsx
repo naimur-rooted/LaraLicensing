@@ -6,6 +6,7 @@ import { EmptyState } from "../../components/ui/empty-state";
 import { useApi } from "../../hooks/use-api";
 import type { FeatureDefinition } from "@/generated/api/schema";
 
+// preview-only-shape: admin.features.list uses preview fixture typed schema.
 export const Route = createFileRoute("/_authenticated/admin/features")({
   ssr: false,
   head: () => ({

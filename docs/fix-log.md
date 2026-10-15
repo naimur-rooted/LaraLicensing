@@ -78,3 +78,31 @@ This document records the fixes, multi-tenant partitioning reconciliations, and 
   - CRUD operations
   - Optimistic updates and version tracking
   - Soft-delete reconciliation
+
+---
+
+## 5. Core Platform Handshake Audit & System Verification
+
+### Backend Dynamic Sharding & Multi-Tenant SQLite Isolation
+- **ShardResolver Connection Binding:** In `backend/app/Db/ShardResolver.php`, fixed runtime dynamic database path expansion (`$database` replacement) and connection purging for SQLite.
+- **Windows SQLite Locks Mitigation:** In `backend/tests/Feature/Portal/ShardIsolationTest.php`, resolved file lock contentions during `tearDown()` by disconnecting PDO and unlinking database files safely.
+
+### Exception Hierarchy & Protocol Envelopes
+- **Symfony HTTP Interface Parity:** Added `getStatusCode()` and `getHeaders()` to `backend/app/Exceptions/LaraException.php` for seamless exception handling.
+- **Taxonomy Mapping:** Added missing mappings (`Conflict` -> 409, `RateLimitExceeded` -> 429) in `backend/config/lara.php`.
+- **ApiEnvelope Contract Parity:** Structured `ApiEnvelope::failure()` to provide both top-level `Error` and `Attributes.Error` structures.
+
+### Audit Trail & Controller Primary Key Alignment
+- **TargetId vs RequestId:** Fixed `Admin/QuotaRequestController.php` and `Reseller/QuotaRequestController.php` to write `QuotaRequestId` as `TargetId` in `AuditLogs`.
+- **AuditLogs Table Schema:** Added SQLite compatibility DDL fixture with `SubjectId` virtual column to match runtime `AuditWriter` columns.
+
+### Preconditions & Idempotency
+- **EtagMiddleware Unauthenticated Passthrough:** Updated `EtagMiddleware` to bypass If-Match checks when `Authorization` is absent, allowing `auth:sanctum` to return 401 `AuthUnauthorized`.
+- **Idempotency Replay Protocol:** Ensured idempotent replayed requests return standard 200/201 responses.
+
+### Test Results
+- `tests/Feature/Portal/*`: 18/18 passed (193 assertions)
+- `tests/Feature/Reseller/*`: 28/28 passed (292 assertions)
+- `tests/Unit/*`: 12/12 passed (26 assertions)
+- `tests/*.test.ts`: All targeted and core Vitest test suites passing
+

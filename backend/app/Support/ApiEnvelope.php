@@ -63,6 +63,12 @@ final class ApiEnvelope
             'ErrorCode' => $errorCode,
             'ErrorMessage' => $errorMessage,
         ];
+        if (isset($extraAttributes['Category'])) {
+            $errorBlock['Category'] = $extraAttributes['Category'];
+        }
+        if (isset($extraAttributes['ErrorId'])) {
+            $errorBlock['ErrorId'] = $extraAttributes['ErrorId'];
+        }
         if ($details !== []) {
             // Plan 11 step 33 (02-spec/03-error-manage §4.2, AC-ERR-005). Redact
             // sensitive `Value`/`Message` entries (password, token, otp, ...)
@@ -105,6 +111,10 @@ final class ApiEnvelope
             ),
             'Results' => $results,
         ];
+
+        if (! $isSuccess && isset($extraAttributes['Error'])) {
+            $payload['Error'] = $extraAttributes['Error'];
+        }
 
         return new JsonResponse(
             data: $payload,

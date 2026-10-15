@@ -18,7 +18,7 @@ use InvalidArgumentException;
  *
  * Function bodies capped at 15 lines (coding-guidelines.md).
  */
-final class HasRolePolicy
+class HasRolePolicy
 {
     /** Root connection name (see backend/config/database.php). */
     private const ROOT = 'root';

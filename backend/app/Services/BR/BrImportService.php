@@ -37,7 +37,7 @@ use Throwable;
  * Function bodies capped at 15 lines (project memory Core rule).
  * No magic strings: table/action/state are `private const`.
  */
-final class BrImportService
+class BrImportService
 {
     private const CONN = 'root';
     private const TABLE_JOBS = 'BackupJobs';

@@ -14,3 +14,10 @@
 
 ## 3. Test Suites
 - All 9 unit tests across `tests/lara-license-preview-bridge.test.ts` and `tests/lara-reseller-license-preview-bridge.test.ts` pass cleanly (100% green).
+
+## 4. Platform Audit, Handshake & Test Suite Remediation
+- **Multi-Tenant Shard Resolver:** Dynamic SQLite path expansion and connection purging in `backend/app/Db/ShardResolver.php`.
+- **Exception & Envelope Parity:** `LaraException.php` implements Symfony HTTP exception interfaces; `config/lara.php` tax mappings expanded; `ApiEnvelope.php` provides both top-level and attribute-level error envelopes.
+- **Audit Logging Keys:** Corrected `QuotaRequestId` assignment in `QuotaRequestController.php` audit log writes.
+- **Preconditions:** Updated `EtagMiddleware.php` to pass unauthenticated requests to route authentication guards before precondition validation.
+- **Test Results:** 18/18 Portal tests, 28/28 Reseller tests, 12/12 Unit tests, and frontend test suite passing.

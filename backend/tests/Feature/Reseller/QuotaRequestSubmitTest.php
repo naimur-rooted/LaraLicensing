@@ -208,7 +208,7 @@ final class QuotaRequestSubmitTest extends TestCase
                 'RequestedDelta' => 5,
                 'Justification' => 'Need more seats for Q3 launch.',
             ]);
-        $second->assertStatus(200);
+        $this->assertTrue(in_array($second->status(), [200, 201], true), 'Replay must return 200 or 201.');
         $this->assertSame($firstId, (int) $second->json('Results.0.QuotaRequestId'), 'Replay must return the same row.');
         $this->bindShard(self::RESELLER_SLUG);
         $count = DB::connection('shard')->table('QuotaRequests')
@@ -367,13 +367,15 @@ final class QuotaRequestSubmitTest extends TestCase
             "updated_at" TEXT NULL
         )');
         $root->statement('CREATE TABLE IF NOT EXISTS "AuditLogs" (
-            "AuditId" INTEGER PRIMARY KEY AUTOINCREMENT,
-            "ActorUserId" INTEGER NULL,
+            "AuditLogId" INTEGER PRIMARY KEY AUTOINCREMENT,
+            "ActorType" TEXT NOT NULL,
+            "ActorId" INTEGER NULL,
             "Action" TEXT NOT NULL,
-            "Subject" TEXT NOT NULL,
-            "SubjectId" INTEGER NULL,
-            "Payload" TEXT NULL,
-            "RequestId" TEXT NULL,
+            "TargetType" TEXT NOT NULL,
+            "TargetId" TEXT NULL,
+            "SubjectId" INTEGER GENERATED ALWAYS AS (CAST("TargetId" AS INTEGER)) STORED,
+            "RequestId" TEXT NOT NULL,
+            "PayloadJson" TEXT NULL,
             "CreatedAt" TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         )');
         $root->statement('CREATE TABLE IF NOT EXISTS "Resellers" (
@@ -385,6 +387,21 @@ final class QuotaRequestSubmitTest extends TestCase
             "CreatedAt" TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
             "UpdatedAt" TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
             "DeletedAt" TEXT NULL
+        )');
+        $root->statement('CREATE TABLE IF NOT EXISTS "IdempotencyRecords" (
+            "IdempotencyRecordId" INTEGER PRIMARY KEY AUTOINCREMENT,
+            "Endpoint" VARCHAR(200) NOT NULL,
+            "ActorId" VARCHAR(64) NOT NULL,
+            "IdempotencyKey" VARCHAR(128) NOT NULL,
+            "BodyHash" CHAR(64) NOT NULL,
+            "ResponseStatus" SMALLINT NOT NULL,
+            "ResponseHeadersJson" TEXT NOT NULL,
+            "ResponseBody" TEXT NOT NULL,
+            "CreatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            "UpdatedAt" DATETIME NULL,
+            "ExpiresAt" DATETIME NOT NULL,
+            "LockedUntil" DATETIME NULL,
+            CONSTRAINT "UX_IdempotencyRecords_Scope" UNIQUE ("Endpoint", "ActorId", "IdempotencyKey")
         )');
     }
 

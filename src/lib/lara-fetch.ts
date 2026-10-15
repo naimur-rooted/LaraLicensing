@@ -69,6 +69,7 @@ export const PREVIEW_BYPASS_MESSAGE =
 
 function assertNotPreview(path: string): void {
   if (getRuntimeMode().Mode !== "preview") return;
+  console.error("laraFetch preview bypass", { path });
   throw new LaraApiError(
     `${PREVIEW_BYPASS_MESSAGE} (path=${path})`,
     ApiErrorCodeType.ServerError,

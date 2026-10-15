@@ -203,7 +203,7 @@ final class LicenseIndexTest extends TestCase
             "UpdatedAt"            TEXT NULL,
             "DeletedAt"            TEXT NULL
         )');
-        DB::connection('shard')->table('Licenses')->truncate();
+        DB::connection('shard')->table('Licenses')->delete();
     }
 
     private function seedShardLicense(int $id, string $key, int $resellerId): void

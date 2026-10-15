@@ -56,6 +56,11 @@ class LaraException extends RuntimeException
         return new static($errorCode, $status, $message, self::newErrorId(), $details, $previous, $headers);
     }
 
+    public static function custom(string $errorCode, string $message = '', array $details = [], ?Throwable $previous = null, array $headers = []): static
+    {
+        return static::make($errorCode, $message, $details, $previous, $headers);
+    }
+
 
     private static function resolveStatus(string $errorCode): int
     {
@@ -91,5 +96,15 @@ class LaraException extends RuntimeException
         }
 
         return 'Internal';
+    }
+
+    public function getStatusCode(): int
+    {
+        return $this->httpStatus;
+    }
+
+    public function getHeaders(): array
+    {
+        return $this->headers;
     }
 }

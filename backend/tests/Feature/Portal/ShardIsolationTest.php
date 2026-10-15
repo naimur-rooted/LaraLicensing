@@ -32,8 +32,7 @@ final class ShardIsolationTest extends TestCase
     private Reseller $resellerB;
     private User $userA;
     private User $userB;
-    private string $dbPathA;
-    private string $dbPathB;
+    private string $testId;
 
     protected function setUp(): void
     {
@@ -46,19 +45,29 @@ final class ShardIsolationTest extends TestCase
             'foreign_key_constraints' => false,
         ]);
 
-        $this->dbPathA = sys_get_temp_dir() . '/lara_shard_a_' . uniqid() . '.sqlite';
-        $this->dbPathB = sys_get_temp_dir() . '/lara_shard_b_' . uniqid() . '.sqlite';
+        $this->testId = uniqid('', true);
+        $this->dbPathA = sys_get_temp_dir() . '/lara_shard_' . $this->testId . '_reseller-a.sqlite';
+        $this->dbPathB = sys_get_temp_dir() . '/lara_shard_' . $this->testId . '_reseller-b.sqlite';
         touch($this->dbPathA);
         touch($this->dbPathB);
 
         $this->migrateRoot();
         $this->seedTenants();
+
+        $this->app->instance(\App\Policies\HasRolePolicy::class, new class extends \App\Policies\HasRolePolicy {
+            public function hasRole(string $userId, string $role): bool { return true; }
+            public function hasAnyRole(string $userId, array $roles): bool { return true; }
+        });
     }
 
     protected function tearDown(): void
     {
-        if (file_exists($this->dbPathA)) unlink($this->dbPathA);
-        if (file_exists($this->dbPathB)) unlink($this->dbPathB);
+        DB::disconnect('shard');
+        DB::purge('shard');
+        DB::disconnect('temp_shard');
+        DB::purge('temp_shard');
+        if (isset($this->dbPathA) && file_exists($this->dbPathA)) @unlink($this->dbPathA);
+        if (isset($this->dbPathB) && file_exists($this->dbPathB)) @unlink($this->dbPathB);
         parent::tearDown();
     }
 
@@ -73,7 +82,8 @@ final class ShardIsolationTest extends TestCase
         $this->seedLicense($this->resellerB, $this->dbPathB, 'LARA-BBBB-BBBB');
 
         // 3. Act as User A
-        $response = $this->actingAs($this->userA, 'sanctum')
+        $tokenA = $this->openToken($this->userA);
+        $response = $this->withHeader('Authorization', 'Bearer ' . $tokenA)
             ->getJson('/Api/Reseller/Licenses');
 
         $response->assertStatus(200);
@@ -82,7 +92,9 @@ final class ShardIsolationTest extends TestCase
         $this->assertEquals('LARA-AAAA-AAAA', $results[0]['LicenseKey']);
         
         // 4. Act as User B
-        $response = $this->actingAs($this->userB, 'sanctum')
+        $this->app['auth']->forgetGuards();
+        $tokenB = $this->openToken($this->userB);
+        $response = $this->withHeader('Authorization', 'Bearer ' . $tokenB)
             ->getJson('/Api/Reseller/Licenses');
 
         $response->assertStatus(200);
@@ -96,27 +108,78 @@ final class ShardIsolationTest extends TestCase
      */
     public function it_returns_404_when_reseller_probes_license_in_another_shard(): void
     {
+        $this->seedLicense($this->resellerA, $this->dbPathA, 'LARA-OWN-KEY');
         $this->seedLicense($this->resellerB, $this->dbPathB, 'LARA-FORGED-KEY');
 
-        $this->assertLaraException('LicenseNotFound', function() {
-            $this->actingAs($this->userA, 'sanctum')
-                ->getJson('/Api/Reseller/Licenses/LARA-FORGED-KEY')
-                ->assertStatus(404);
-        });
+        $tokenA = $this->openToken($this->userA);
+        $response = $this->withHeader('Authorization', 'Bearer ' . $tokenA)
+            ->getJson('/Api/Reseller/Licenses/LARA-FORGED-KEY');
+        $this->assertLaraException($response, 'LicenseNotFound', 404);
+    }
+
+    private function openToken(User $user): string
+    {
+        $sessionId = \Ramsey\Uuid\Uuid::uuid4()->toString();
+        $now = \Illuminate\Support\Carbon::now();
+        DB::connection(self::ROOT)->table('AuthSessions')->insert([
+            'SessionId' => $sessionId,
+            'UserId' => (int) $user->getKey(),
+            'Kind' => 'Normal',
+            'CreatedAt' => $now->toIso8601String(),
+            'ExpiresAt' => $now->copy()->addHour()->toIso8601String(),
+        ]);
+        return $user->createToken($sessionId)->plainTextToken;
     }
 
     private function migrateRoot(): void
     {
-        $files = [
-            '2026_07_18_000001_create_root_identity_tables.php',
-            '2026_07_18_000002_create_root_reseller_tables.php',
-            '2026_07_18_000006_create_root_auth_sessions_table.php',
-            '2026_07_18_000008_create_root_personal_access_tokens_table.php',
-        ];
-        foreach ($files as $file) {
-            $m = require base_path('database/migrations/root/' . $file);
-            $m->up();
-        }
+        DB::connection(self::ROOT)->statement('CREATE TABLE IF NOT EXISTS "Users" (
+            "UserId" INTEGER PRIMARY KEY AUTOINCREMENT,
+            "Email" VARCHAR(255) NOT NULL UNIQUE,
+            "PasswordHash" VARCHAR(255) NOT NULL,
+            "TenantId" INTEGER NULL,
+            "IsActive" BOOLEAN NOT NULL DEFAULT 1
+        )');
+
+        DB::connection(self::ROOT)->statement('CREATE TABLE IF NOT EXISTS "Resellers" (
+            "ResellerId" INTEGER PRIMARY KEY AUTOINCREMENT,
+            "ResellerName" VARCHAR(128) NOT NULL,
+            "ResellerSlug" VARCHAR(64) NOT NULL UNIQUE,
+            "ContactEmail" VARCHAR(255) NOT NULL,
+            "IsActive" BOOLEAN NOT NULL DEFAULT 1
+        )');
+
+        DB::connection(self::ROOT)->statement('CREATE TABLE IF NOT EXISTS "ResellerShardRoutes" (
+            "ResellerShardRouteId" INTEGER PRIMARY KEY AUTOINCREMENT,
+            "ResellerId" INTEGER NOT NULL,
+            "AppDbPath" VARCHAR(512) NOT NULL,
+            "ShardStatus" VARCHAR(32) NOT NULL DEFAULT "Active"
+        )');
+
+        DB::connection(self::ROOT)->statement('CREATE TABLE IF NOT EXISTS "personal_access_tokens" (
+            "id" INTEGER PRIMARY KEY AUTOINCREMENT,
+            "tokenable_type" VARCHAR(255) NOT NULL,
+            "tokenable_id" INTEGER NOT NULL,
+            "name" VARCHAR(255) NOT NULL,
+            "token" VARCHAR(64) NOT NULL UNIQUE,
+            "abilities" TEXT NULL,
+            "last_used_at" TEXT NULL,
+            "expires_at" TEXT NULL,
+            "created_at" TEXT NULL,
+            "updated_at" TEXT NULL
+        )');
+
+        DB::connection(self::ROOT)->statement('CREATE TABLE IF NOT EXISTS "AuthSessions" (
+            "SessionId" TEXT PRIMARY KEY,
+            "UserId" INTEGER NOT NULL,
+            "Kind" TEXT NOT NULL,
+            "ImpersonatorUserId" INTEGER NULL,
+            "ParentSessionId" TEXT NULL,
+            "CreatedAt" TEXT NOT NULL,
+            "ExpiresAt" TEXT NOT NULL,
+            "EndedAt" TEXT NULL,
+            "RevokeReason" TEXT NULL
+        )');
     }
 
     private function seedTenants(): void
@@ -160,7 +223,7 @@ final class ShardIsolationTest extends TestCase
         // Setup shard template for SQLite path substitution
         config()->set('database.connections.shard_template', [
             'driver' => 'sqlite',
-            'database' => '{reseller}', // ShardResolver replaces this
+            'database' => sys_get_temp_dir() . '/lara_shard_' . $this->testId . '_{reseller}.sqlite',
             'prefix' => '',
             'foreign_key_constraints' => false,
         ]);
@@ -174,9 +237,26 @@ final class ShardIsolationTest extends TestCase
             'prefix' => '',
             'foreign_key_constraints' => false,
         ]);
+        DB::purge('temp_shard');
         
-        $m = require base_path('database/migrations/shard/2026_07_18_000001_create_shard_licenses_table.php');
-        $m->up();
+        DB::connection('temp_shard')->statement('CREATE TABLE IF NOT EXISTS "Licenses" (
+            "LicenseId" INTEGER PRIMARY KEY AUTOINCREMENT,
+            "LicenseKey" VARCHAR(64) NOT NULL UNIQUE,
+            "PrefixValue" VARCHAR(12) NOT NULL,
+            "ResellerId" BIGINT NULL,
+            "IssuedByUserId" BIGINT NOT NULL,
+            "IssuerActorType" VARCHAR(16) NOT NULL DEFAULT "Reseller",
+            "LicenseCategoryId" BIGINT NULL,
+            "TierName" VARCHAR(16) NOT NULL,
+            "EnvironmentName" VARCHAR(16) NOT NULL,
+            "ProductVersion" VARCHAR(16) NOT NULL DEFAULT "V1",
+            "Status" VARCHAR(16) NOT NULL DEFAULT "Active",
+            "IssuedAt" TEXT NOT NULL,
+            "ExpiresAt" TEXT NULL,
+            "Version" INTEGER NOT NULL DEFAULT 1,
+            "CreatedAt" TEXT NULL,
+            "UpdatedAt" TEXT NULL
+        )');
 
         DB::connection('temp_shard')->table('Licenses')->insert([
             'LicenseKey' => $key,

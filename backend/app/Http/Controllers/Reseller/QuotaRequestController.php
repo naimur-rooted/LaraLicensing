@@ -92,7 +92,7 @@ final class QuotaRequestController
         $row = DB::connection(self::SHARD_CONNECTION)->transaction(
             fn (): QuotaRequest => $this->insertPending($request, $resellerId, $payload, $idem)
         );
-        AuditWriter::write($request, 'QuotaRequestSubmitted', 'QuotaRequests', (int) $row->RequestId, [
+        AuditWriter::write($request, 'QuotaRequestSubmitted', 'QuotaRequests', (int) $row->QuotaRequestId, [
             'ResellerId' => (int) $resellerId,
             'RequestedDelta' => (int) $row->RequestedDelta,
         ]);
@@ -106,7 +106,7 @@ final class QuotaRequestController
         $row = DB::connection(self::SHARD_CONNECTION)->transaction(
             fn (): QuotaRequest => $this->applyCancel($request, $resellerId, $requestId)
         );
-        AuditWriter::write($request, 'QuotaRequestCanceled', 'QuotaRequests', (int) $row->RequestId, [
+        AuditWriter::write($request, 'QuotaRequestCanceled', 'QuotaRequests', (int) $row->QuotaRequestId, [
             'ResellerId' => (int) $resellerId,
         ]);
 

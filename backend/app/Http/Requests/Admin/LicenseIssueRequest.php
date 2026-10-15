@@ -26,7 +26,7 @@ use Illuminate\Foundation\Http\FormRequest;
  * not see a FormRequest parameter and the route was flagged
  * `missing-request` by the audit.
  */
-final class LicenseIssueRequest extends FormRequest
+class LicenseIssueRequest extends FormRequest
 {
     public function authorize(): bool
     {

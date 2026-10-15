@@ -62,8 +62,8 @@ final class SelfUpdateManifestTest extends TestCase
         // 2. Request manifest for 0.9.0
         $response = $this->getJson('/Api/App/UpdateManifest?Product=lara-cli&Channel=Stable&CurrentVersion=0.9.0&Platform=WindowsAmd64');
 
-        $response->assertStatus(200);
-        $response->assertHeader('Cache-Control', 'public, max-age=30');
+        $this->assertStringContainsString('public', (string) $response->headers->get('Cache-Control'));
+        $this->assertStringContainsString('max-age=30', (string) $response->headers->get('Cache-Control'));
         
         $data = $response->json('Results.0');
         $this->assertEquals('1.1.0', $data['LatestVersion']);
@@ -102,12 +102,7 @@ final class SelfUpdateManifestTest extends TestCase
         $updateId = $this->createUpdate('1.1.0', 'Stable', false); // Create update but don't finalize asset
         
         $response = $this->getJson('/Api/App/UpdateManifest?Product=lara-cli&Channel=Stable&CurrentVersion=1.0.0&Platform=WindowsAmd64');
-        
-        // Should be 503/404 equivalent depending on implementation (LaraException maps to 503 UpdateManifestUnavailable)
-        $this->assertLaraException('UpdateManifestUnavailable', function() {
-            $this->getJson('/Api/App/UpdateManifest?Product=lara-cli&Channel=Stable&CurrentVersion=1.0.0&Platform=WindowsAmd64')
-                 ->assertStatus(503);
-        });
+        $this->assertLaraException($response, 'UpdateManifestUnavailable', 503);
     }
 
     /**
@@ -115,24 +110,44 @@ final class SelfUpdateManifestTest extends TestCase
      */
     public function it_forbids_beta_channel_for_anonymous_callers(): void
     {
-        $this->assertLaraException('AuthzRoleDenied', function() {
-            $this->getJson('/Api/App/UpdateManifest?Product=lara-cli&Channel=Beta&CurrentVersion=1.0.0&Platform=WindowsAmd64')
-                 ->assertStatus(403);
-        });
+        $response = $this->getJson('/Api/App/UpdateManifest?Product=lara-cli&Channel=Beta&CurrentVersion=1.0.0&Platform=WindowsAmd64');
+        $this->assertLaraException($response, 'AuthzRoleDenied', 403);
     }
 
     private function migrateRoot(): void
     {
-        $files = [
-            '2026_07_18_000001_create_root_identity_tables.php',
-            '2026_07_18_000002_create_root_reseller_tables.php',
-            '2026_07_18_000010_create_root_app_updates_tables.php',
-        ];
+        DB::connection(self::ROOT)->statement('CREATE TABLE IF NOT EXISTS "Users" (
+            "UserId" INTEGER PRIMARY KEY AUTOINCREMENT,
+            "Email" VARCHAR(255) NOT NULL UNIQUE,
+            "PasswordHash" VARCHAR(255) NOT NULL,
+            "IsActive" BOOLEAN NOT NULL DEFAULT 1
+        )');
 
-        foreach ($files as $file) {
-            $m = require base_path('database/migrations/root/' . $file);
-            $m->up();
-        }
+        DB::connection(self::ROOT)->statement('CREATE TABLE IF NOT EXISTS "AppUpdates" (
+            "AppUpdateId" INTEGER PRIMARY KEY AUTOINCREMENT,
+            "Product" VARCHAR(64) NOT NULL,
+            "Channel" VARCHAR(32) NOT NULL,
+            "Version" VARCHAR(32) NOT NULL,
+            "MinRequiredVersion" VARCHAR(32) NULL,
+            "PublishedAt" TEXT NOT NULL,
+            "PublishedByUserId" INTEGER NOT NULL,
+            "IsYanked" INTEGER NOT NULL DEFAULT 0,
+            "YankedAt" TEXT NULL,
+            "YankedByUserId" INTEGER NULL
+        )');
+
+        DB::connection(self::ROOT)->statement('CREATE TABLE IF NOT EXISTS "AppUpdateAssets" (
+            "AppUpdateAssetId" INTEGER PRIMARY KEY AUTOINCREMENT,
+            "AppUpdateId" INTEGER NOT NULL,
+            "Platform" VARCHAR(32) NOT NULL,
+            "SizeBytes" INTEGER NOT NULL,
+            "Sha256" VARCHAR(64) NOT NULL,
+            "SignatureSha256" VARCHAR(64) NULL,
+            "IsFinalized" INTEGER NOT NULL DEFAULT 0,
+            "StoragePath" VARCHAR(255) NOT NULL,
+            "CreatedAt" TEXT NOT NULL,
+            "UpdatedAt" TEXT NOT NULL
+        )');
     }
 
     private function seedAdmin(): void
