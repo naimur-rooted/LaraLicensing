@@ -41,6 +41,11 @@ jobs:
         working-directory: backend
         run: |
           cp .env.example .env
+          sed -i 's/DB_ROOT_CONNECTION=pgsql/DB_ROOT_CONNECTION=sqlite/g' .env
+          sed -i 's/DB_SHARD_TEMPLATE_CONNECTION=pgsql/DB_SHARD_TEMPLATE_CONNECTION=sqlite/g' .env
+          sed -i 's/CACHE_STORE=database/CACHE_STORE=array/g' .env
+          sed -i 's/SESSION_DRIVER=database/SESSION_DRIVER=array/g' .env
+          echo "DB_ROOT_DATABASE=:memory:" >> .env
           composer install --no-interaction --prefer-dist --optimize-autoloader --no-progress
           php artisan key:generate
 
@@ -48,4 +53,4 @@ jobs:
         working-directory: backend
         run: |
           php artisan --version
-          php artisan route:list --compact
+          php artisan route:list
