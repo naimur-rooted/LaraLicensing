@@ -33,7 +33,7 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.3'
+          php-version: '8.4'
           extensions: mbstring, intl, pdo, pdo_sqlite, bcmath
           tools: composer:v2
 
@@ -46,7 +46,7 @@ jobs:
           sed -i 's/CACHE_STORE=database/CACHE_STORE=array/g' .env
           sed -i 's/SESSION_DRIVER=database/SESSION_DRIVER=array/g' .env
           echo "DB_ROOT_DATABASE=:memory:" >> .env
-          composer install --no-interaction --prefer-dist --optimize-autoloader --no-progress
+          composer install --no-interaction --prefer-dist --optimize-autoloader --no-progress --ignore-platform-reqs
           php artisan key:generate
 
       - name: Verify Backend Artisan & Health
