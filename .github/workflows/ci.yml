@@ -35,6 +35,14 @@ jobs:
         with:
           php-version: '8.3'
           extensions: mbstring, intl, pdo, pdo_sqlite, bcmath
+          tools: composer:v2
+
+      - name: Install Backend Dependencies
+        working-directory: backend
+        run: |
+          cp .env.example .env
+          composer install --no-interaction --prefer-dist --optimize-autoloader --no-progress
+          php artisan key:generate
 
       - name: Verify Backend Artisan & Health
         working-directory: backend
