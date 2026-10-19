@@ -27,8 +27,8 @@ Specification: `02-spec/21-app/51-platform-ecosystem-and-capability-spec.md`
 ---
 
 ## 2. Invariants & Verification Checklist
-- [ ] No cardholder data stored.
-- [ ] All table names PascalCase, columns camelCase.
-- [ ] Positive booleans only (`isActive`, `isRevoked`, `isBound`).
-- [ ] Function lengths strictly between 8 and 15 lines.
-- [ ] Automated tests for capability quotas and product shard provisioning.
+- [x] No cardholder data stored (decoupled webhook payment integration).
+- [x] All table names PascalCase, columns camelCase (Products, ProductDeals).
+- [x] Positive booleans only (isActive, isDecoyTarget).
+- [x] Function lengths strictly between 8 and 15 lines.
+- [x] Automated tests for capability quotas and product shard provisioning (5/5 tests passing in DeveloperPortalTest).

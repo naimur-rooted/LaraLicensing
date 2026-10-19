@@ -1,21 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-
 import { useState } from "react";
 import { PageHeader } from "@/components/shell/PageHeader";
 import { SerialLookupPanel } from "@/components/portal/serial-lookup-panel";
 import { CustomerRequestForm } from "@/components/portal/CustomerRequestForm";
 import { CustomerRequestsHistory } from "@/components/portal/CustomerRequestsHistory";
+import { DeveloperProductsDashboard } from "@/components/developer/DeveloperProductsDashboard";
 import { meQueryOptions } from "@/lib/lara-me";
+import { clearLaraSession } from "@/lib/lara-api-session";
+import { LogOut, LayoutGrid, KeyRound } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
-/**
- * End-user portal home per Plan 09 step 49 and step 50.
- *
- * Renders the reusable `<SerialLookupPanel>` (step 50) so the same widget can
- * be embedded in future reseller/admin surfaces without copy-paste. The panel
- * owns the three-state result rendering and the recent-lookups persistence;
- * this route supplies the greeting + description + license request capability.
- */
 export const Route = createFileRoute("/_authenticated/portal/home")({
   ssr: false,
   head: () => ({
@@ -23,17 +18,13 @@ export const Route = createFileRoute("/_authenticated/portal/home")({
       { title: "Portal | Licensing Portal" },
       {
         name: "description",
-        content: "Verify a license serial and view its authorization status.",
+        content: "Developer Product Studio and Client License Verification.",
       },
       { name: "robots", content: "noindex,nofollow" },
     ],
   }),
   component: PortalHome,
 });
-
-import { clearLaraSession } from "@/lib/lara-api-session";
-import { LogOut } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 function PortalHome() {
   const meQuery = useQuery(meQueryOptions());
@@ -42,6 +33,7 @@ function PortalHome() {
   const customerEmail = me?.Email ?? "user@licensingportal.local";
   const customerName = me?.DisplayName ?? "Valued Customer";
   const [selectedSerial, setSelectedSerial] = useState("");
+  const [activeTab, setActiveTab] = useState<"developer" | "client">("developer");
 
   const handleSignOut = () => {
     clearLaraSession();
@@ -58,13 +50,13 @@ function PortalHome() {
 
   return (
     <main
-      className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-[clamp(1rem,0.75rem+1vw,1.5rem)] py-[clamp(1.25rem,1rem+1vw,2rem)]"
+      className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-[clamp(1rem,0.75rem+1vw,1.5rem)] py-[clamp(1.25rem,1rem+1vw,2rem)]"
       data-page-region="portal-home"
     >
       <div className="flex items-center justify-between">
         <PageHeader
           title={`Hello, ${displayName}`}
-          description="Verify a license serial or request a new license directly from your authorized reseller."
+          description="Manage software products, configure deal tiers & machine limits, or verify license serials."
         />
         <Button
           variant="outline"
@@ -77,29 +69,57 @@ function PortalHome() {
         </Button>
       </div>
 
-      <CustomerRequestForm
-        customerEmail={customerEmail}
-        customerName={customerName}
-        isOpen={isFormOpen}
-        onOpenChange={setIsFormOpen}
-        initialNotes={formNotes}
-      />
+      {/* Surface Selector Navigation */}
+      <div className="flex items-center gap-2 border-b border-border/80 pb-2">
+        <Button
+          variant={activeTab === "developer" ? "default" : "ghost"}
+          size="sm"
+          onClick={() => setActiveTab("developer")}
+          className="gap-2 text-xs font-medium"
+        >
+          <LayoutGrid className="size-4" />
+          Developer Product Studio (Tier 2)
+        </Button>
+        <Button
+          variant={activeTab === "client" ? "default" : "ghost"}
+          size="sm"
+          onClick={() => setActiveTab("client")}
+          className="gap-2 text-xs font-medium"
+        >
+          <KeyRound className="size-4" />
+          Client License Portal (Tier 3)
+        </Button>
+      </div>
 
-      <CustomerRequestsHistory
-        customerEmail={customerEmail}
-        onApplySerial={(serial) => setSelectedSerial(serial)}
-        onRenew={handleRenew}
-      />
+      {activeTab === "developer" ? (
+        <DeveloperProductsDashboard />
+      ) : (
+        <div className="flex flex-col gap-6">
+          <CustomerRequestForm
+            customerEmail={customerEmail}
+            customerName={customerName}
+            isOpen={isFormOpen}
+            onOpenChange={setIsFormOpen}
+            initialNotes={formNotes}
+          />
 
-      <SerialLookupPanel
-        key={selectedSerial}
-        initialSerial={selectedSerial}
-        testIdPrefix="portal-home-serial"
-        onRequestRenewal={(serial) => {
-          setFormNotes(`Renewal for ${serial}`);
-          setIsFormOpen(true);
-        }}
-      />
+          <CustomerRequestsHistory
+            customerEmail={customerEmail}
+            onApplySerial={(serial) => setSelectedSerial(serial)}
+            onRenew={handleRenew}
+          />
+
+          <SerialLookupPanel
+            key={selectedSerial}
+            initialSerial={selectedSerial}
+            testIdPrefix="portal-home-serial"
+            onRequestRenewal={(serial) => {
+              setFormNotes(`Renewal for ${serial}`);
+              setIsFormOpen(true);
+            }}
+          />
+        </div>
+      )}
     </main>
   );
 }

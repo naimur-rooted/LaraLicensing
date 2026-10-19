@@ -598,5 +598,15 @@ Route::post('/Serials/OfflineToken', function (\Illuminate\Http\Request $request
     return response()->json(['IsSuccess' => true, 'Data' => ['OfflineToken' => $token, 'SerialValue' => $serial, 'HardwareDigest' => $hwid]]);
 })->name('api.serials.offline_token');
 
+// Developer Portal Product Management & AI Integration Endpoints
+Route::prefix('v1/developer')->group(function (): void {
+    Route::get('/products', [\App\Http\Controllers\Developer\ProductController::class, 'index'])->name('api.developer.products.index');
+    Route::post('/products', [\App\Http\Controllers\Developer\ProductController::class, 'store'])->name('api.developer.products.store');
+    Route::get('/products/{slug}', [\App\Http\Controllers\Developer\ProductController::class, 'show'])->name('api.developer.products.show');
+    Route::post('/products/{slug}/deals', [\App\Http\Controllers\Developer\ProductController::class, 'addDeal'])->name('api.developer.products.deals.store');
+    Route::get('/products/{slug}/blueprint', [\App\Http\Controllers\Developer\ProductController::class, 'aiBlueprint'])->name('api.developer.products.blueprint');
+});
 
-
+// Decoupled Payment Gateway Webhook Callback (Zero card data stored)
+Route::post('/v1/products/{slug}/licenses/issue', [\App\Http\Controllers\Developer\ProductController::class, 'webhookIssue'])
+    ->name('api.products.licenses.issue');
