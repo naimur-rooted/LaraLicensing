@@ -294,8 +294,9 @@ Route::middleware(['require.signature'])
             ->name('verify.final');
     });
 
-// Plan 09 / Reseller / Admin serial lookup
-Route::get('/Serials/{SerialValue}', function (string $serialValue) {
+// Plan 09 / Reseller / Admin serial lookup with leaky-bucket rate limiting
+Route::middleware(\App\Http\Middleware\ThrottleLicenseLookups::class)
+    ->get('/Serials/{SerialValue}', function (string $serialValue) {
     $clean = trim(strtoupper($serialValue));
     $file = database_path('registered_serials.json');
     if (file_exists($file)) {
@@ -576,8 +577,26 @@ Route::match(['GET', 'HEAD'], '/App/UpdateAsset/{Version}/{Platform}', \App\Http
 // Anonymous on Stable channel (v1.0). Only finalised, non-yanked rows
 // with a persisted signature blob are visible; otherwise 404
 // UpdateSignatureUnavailable.
-Route::match(['GET', 'HEAD'], '/App/UpdateAsset/{Version}/{Platform}.sig', \App\Http\Controllers\App\UpdateAssetSignatureController::class)
-    ->where(['Version' => '[0-9]+\.[0-9]+\.[0-9]+([-+][0-9A-Za-z.\-]+)?', 'Platform' => '[A-Za-z0-9]+'])
-    ->name('app.update_asset_signature');
+// Commercial Pricing Plans endpoint (Root DB)
+Route::get('/Pricing/Plans', function () {
+    $plans = \App\Models\PricingPlan::where('isActive', true)->get();
+    return response()->json(['IsSuccess' => true, 'Data' => $plans]);
+})->name('api.pricing.plans');
+
+// Cryptographic Offline Token verification / generation endpoint
+Route::post('/Serials/OfflineToken', function (\Illuminate\Http\Request $request, \App\Services\JwtTokenService $jwt) {
+    $serial = strtoupper(trim((string) $request->input('SerialValue', '')));
+    $hwid = strtoupper(trim((string) $request->input('HardwareDigest', '')));
+    $tier = (string) $request->input('Tier', 'PLAN_2Y');
+    $slots = (int) $request->input('AllowedSlots', 10);
+
+    if (empty($serial) || empty($hwid)) {
+        return response()->json(['IsSuccess' => false, 'ErrorCode' => 'InvalidInput', 'Message' => 'SerialValue and HardwareDigest required'], 422);
+    }
+
+    $token = $jwt->issueOfflineToken($serial, $hwid, $tier, $slots);
+    return response()->json(['IsSuccess' => true, 'Data' => ['OfflineToken' => $token, 'SerialValue' => $serial, 'HardwareDigest' => $hwid]]);
+})->name('api.serials.offline_token');
+
 
 

@@ -5,6 +5,7 @@ import { Send, CheckCircle2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { submitCustomerLicenseRequest } from "@/lib/lara-customer-request";
+import { PricingDecoyCards } from "@/components/portal/PricingDecoyCards";
 
 interface CustomerRequestFormProps {
   customerEmail: string;
@@ -28,11 +29,29 @@ export function CustomerRequestForm({
     setInternalIsOpen(val);
     onOpenChange?.(val);
   };
+  const [selectedPlan, setSelectedPlan] = useState<string>("PLAN_2Y");
   const [resellerId, setResellerId] = useState(1);
-  const [categoryId, setCategoryId] = useState(3); // Monthly default
-  const [tierId, setTierId] = useState(2); // Growth default
-  const [notes, setNotes] = useState(initialNotes);
+  const [categoryId, setCategoryId] = useState(4); // Default to Biennial/Yearly
+  const [tierId, setTierId] = useState(3); // Default to Best Value
+  const [notes, setNotes] = useState(initialNotes || "2 Years + 3 Months Free ($2.39/mo, 10 seats - 82% OFF)");
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  const handlePlanSelect = (code: string) => {
+    setSelectedPlan(code);
+    if (code === "PLAN_1M") {
+      setCategoryId(3);
+      setTierId(1);
+      setNotes("1 Month Plan ($12.99/mo, 1 machine slot)");
+    } else if (code === "PLAN_1Y") {
+      setCategoryId(4);
+      setTierId(2);
+      setNotes("1 Year Plan ($4.99/mo, 3 machine slots - Save 61%)");
+    } else {
+      setCategoryId(4);
+      setTierId(3);
+      setNotes("2 Years + 3 Months Free ($2.39/mo, 10 floating seats - Save 82% Best Value)");
+    }
+  };
 
   React.useEffect(() => {
     if (initialNotes) setNotes(initialNotes);
@@ -101,6 +120,13 @@ export function CustomerRequestForm({
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div>
+            <label className="text-xs font-semibold text-foreground uppercase tracking-wider">
+              Choose Subscription Tier
+            </label>
+            <PricingDecoyCards selectedPlan={selectedPlan} onSelectPlan={handlePlanSelect} />
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium text-foreground">Select Reseller</label>

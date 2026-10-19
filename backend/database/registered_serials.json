@@ -146,5 +146,23 @@
         "MaxActivations": 5,
         "IsRevoked": false,
         "RegisteredAt": "2026-10-19T07:06:41.926794Z"
+    },
+    "LARA-CGX3-0001": {
+        "SerialId": 2463316801,
+        "SerialValue": "LARA-CGX3-0001",
+        "Category": "Yearly",
+        "TierName": "Scale",
+        "CustomerName": "Jane Doe",
+        "CustomerEmail": "approve-test@domain.com",
+        "Status": "active",
+        "ExpiresAt": "2027-10-19T07:43:55.466Z",
+        "Features": [
+            "core.reports",
+            "core.dashboards",
+            "addon.exports"
+        ],
+        "MaxActivations": 5,
+        "IsRevoked": false,
+        "RegisteredAt": "2026-10-19T07:43:55.732143Z"
     }
 }

@@ -59,7 +59,17 @@ class ShardResolver
         $template['database'] = str_replace('{reseller}', $resellerSlug, (string) $template['database']);
         $this->config->set('database.connections.' . self::CONNECTION_ALIAS, $template);
         $this->db->purge(self::CONNECTION_ALIAS);
+        $this->applySqlitePragmas($template);
         Log::info('shard.bind', ['ResellerSlug' => $resellerSlug, 'Database' => $template['database']]);
+    }
+
+    /** Apply SQLite concurrency pragmas when driver is sqlite. */
+    private function applySqlitePragmas(array $template): void
+    {
+        if (($template['driver'] ?? '') === 'sqlite') {
+            $this->db->connection(self::CONNECTION_ALIAS)->statement('PRAGMA journal_mode = WAL;');
+            $this->db->connection(self::CONNECTION_ALIAS)->statement('PRAGMA busy_timeout = 5000;');
+        }
     }
 
     /** @return array<string, mixed> */

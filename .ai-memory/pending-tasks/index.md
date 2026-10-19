@@ -20,6 +20,7 @@ Last updated: 2026-08-07
 | PT-010 | Plan 18 SS-10 Steps 191-200: Coverage matrix + release ceremony | Plan 18 | 10 | pending |
 | PT-011 | Plan 13 Steps 1-30: Backup/Restore spec authoring | Plan 13 | 30 | pending |
 | PT-012 | Plan 14 Steps 1-30: Backup/Restore implementation | Plan 14 | 30 | pending |
+| PT-013 | Task 002: Developer Portal & Capability Licensing Engine | Plan 21 | 5 | pending |
 
 ## Completed Tasks
 

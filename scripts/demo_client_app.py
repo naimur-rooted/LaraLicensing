@@ -121,7 +121,52 @@ def build_signed_headers(method, path, body_bytes):
     }
 
 # ------------------------------------------------------------------------------
-# 3. Server Verification Engine
+# 2.4. Cryptographic Offline Activation Token Subsystem
+# ------------------------------------------------------------------------------
+def issue_offline_token(serial_key, hwid, tier="PLAN_2Y", seats=10, valid_days=365):
+    """Generates an HMAC-SHA256 offline token matching backend/app/Services/JwtTokenService.php"""
+    header = {"alg": "HS256", "typ": "JWT"}
+    now = int(time.time())
+    payload = {
+        "sub": serial_key,
+        "hwid": hwid,
+        "tier": tier,
+        "seats": seats,
+        "iat": now,
+        "exp": now + (valid_days * 86400),
+    }
+    def b64url(b):
+        return base64.urlsafe_b64encode(b).decode("utf-8").rstrip("=")
+    h_b64 = b64url(json.dumps(header).encode("utf-8"))
+    p_b64 = b64url(json.dumps(payload).encode("utf-8"))
+    secret = base64.b64decode(SIGNING_SECRET_B64)
+    sig = b64url(hmac.new(secret, f"{h_b64}.{p_b64}".encode("utf-8"), hashlib.sha256).digest())
+    return f"{h_b64}.{p_b64}.{sig}"
+
+def verify_offline_token(token, machine_hwid=None):
+    """Verifies an offline activation token against machine HWID."""
+    if not machine_hwid:
+        machine_hwid = get_machine_fingerprint()["HardwareDigest"]
+    try:
+        parts = token.split(".")
+        if len(parts) != 3:
+            return {"Valid": False, "Error": "MalformedToken"}
+        h_b64, p_b64, sig = parts
+        secret = base64.b64decode(SIGNING_SECRET_B64)
+        expected_sig = base64.urlsafe_b64encode(hmac.new(secret, f"{h_b64}.{p_b64}".encode("utf-8"), hashlib.sha256).digest()).decode("utf-8").rstrip("=")
+        if not hmac.compare_digest(expected_sig, sig):
+            return {"Valid": False, "Error": "InvalidSignature"}
+        rem = len(p_b64) % 4
+        padded = p_b64 + ("=" * (4 - rem) if rem else "")
+        payload = json.loads(base64.urlsafe_b64decode(padded.encode("utf-8")).decode("utf-8"))
+        if payload.get("hwid") != machine_hwid:
+            return {"Valid": False, "Error": "HwidMismatch", "Payload": payload}
+        if payload.get("exp", 0) < time.time():
+            return {"Valid": False, "Error": "TokenExpired", "Payload": payload}
+        return {"Valid": True, "Payload": payload}
+    except Exception as e:
+        return {"Valid": False, "Error": str(e)}
+
 # ------------------------------------------------------------------------------
 # 2.5. Real-Time Server Binding & Device Health Checker
 # ------------------------------------------------------------------------------
@@ -146,6 +191,10 @@ def check_server_binding(serial_key, machine_fingerprint=None):
             data = json.loads(resp.read().decode("utf-8"))
             if data.get("IsSuccess") and data.get("Data"):
                 rec = data["Data"]
+    except urllib.error.HTTPError as he:
+        if he.code == 429:
+            retry_after = int(he.headers.get("Retry-After", 10))
+            return {"Valid": True, "IsThrottled": True, "RetryAfter": retry_after}
     except Exception:
         pass
 
@@ -888,6 +937,18 @@ def run_all_tests():
         "Test 11: Real-time Machine Unbind Detection from Customer Web Portal",
         passed_unbound,
         f"Server returned IsUnbound={res_unbound.get('IsUnbound')} ({res_unbound.get('Message')})"
+    )
+
+    # Test 12: Cryptographic Offline Activation Token Verification
+    offline_hw = "OFFLINE-TEST-HWID-01"
+    token = issue_offline_token("LARA-OFFLINE-TEST", offline_hw, tier="PLAN_2Y", seats=10)
+    tok_res = verify_offline_token(token, offline_hw)
+    wrong_hw_res = verify_offline_token(token, "DIFFERENT-HWID-99")
+    passed_offline = tok_res.get("Valid") is True and wrong_hw_res.get("Valid") is False
+    log_result(
+        "Test 12: Cryptographic Offline Token Issuance & HWID Binding Verification",
+        passed_offline,
+        f"Verified valid matching token (Tier: {tok_res.get('Payload', {}).get('tier')}, Seats: {tok_res.get('Payload', {}).get('seats')}) and rejected spoofed machine."
     )
 
     # Summary Table
