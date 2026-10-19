@@ -186,16 +186,28 @@ const mod: PreviewFixtureModule = {
         };
 
         const targetEmail = emailMap[identityId];
-        const match = users.find((u) => u.Email === targetEmail);
+        const match = users.find((u) => u.Email === targetEmail || (identityId === "portal" && u.Email === "portal@licensingportal.local"));
         if (match) {
+          const roles = identityId === "portal" ? ["portal", "enduser"] : match.Roles;
           return {
             Id: match.Id,
             Email: match.Email,
             DisplayName: match.DisplayName,
-            Roles: match.Roles,
+            Roles: roles,
             ResellerId: match.ResellerId,
             CreatedAt: match.CreatedAt,
             UpdatedAt: match.UpdatedAt,
+          };
+        }
+        if (identityId === "portal") {
+          return {
+            Id: "01H0000000000000000PORT01",
+            Email: "user@licensingportal.local",
+            DisplayName: "End User",
+            Roles: ["portal", "enduser"],
+            ResellerId: null,
+            CreatedAt: new Date().toISOString(),
+            UpdatedAt: new Date().toISOString(),
           };
         }
       }

@@ -102,9 +102,9 @@ async function seedUsers(): Promise<void> {
     },
     {
       Id: "01H0000000000000000PORT01",
-      Email: "portal@licensingportal.local",
+      Email: "user@licensingportal.local",
       DisplayName: "Portal User",
-      Roles: ["portal"],
+      Roles: ["portal", "enduser"],
       ResellerId: null,
       CreatedAt: T0,
       UpdatedAt: T2,

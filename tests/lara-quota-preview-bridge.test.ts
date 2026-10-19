@@ -45,4 +45,32 @@ describe("resellerQuotasQueryOptions preview bridge", () => {
     const rows = await resellerQuotasQueryOptions(999).queryFn!({} as never);
     expect(rows).toEqual([]);
   });
+
+  it("approveQuotaRequest updates the quota-requests preview store to Approved", async () => {
+    const { approveQuotaRequest } = await import("@/lib/lara-quota");
+    const { read } = await import("@/lib/preview-store");
+    const res = await approveQuotaRequest(1001, "preview-reseller", { ApprovedDelta: 25 }, "idem-preview-approve");
+    expect(res.Status).toBe("Approved");
+    expect(res.ApprovedDelta).toBe(25);
+    expect(res.DecidedByUserId).toBe(1);
+    expect(res.DecidedAt).toBeTruthy();
+
+    const stored = await read<any>("quota-requests", "1001");
+    expect(stored?.Status).toBe("Approved");
+    expect(stored?.ApprovedDelta).toBe(25);
+  });
+
+  it("denyQuotaRequest updates the quota-requests preview store to Denied", async () => {
+    const { denyQuotaRequest } = await import("@/lib/lara-quota");
+    const { read } = await import("@/lib/preview-store");
+    const res = await denyQuotaRequest(1002, "preview-reseller", { Reason: "Out of scope" }, "idem-preview-deny");
+    expect(res.Status).toBe("Denied");
+    expect(res.DenialReason).toBe("Out of scope");
+    expect(res.DecidedByUserId).toBe(1);
+    expect(res.DecidedAt).toBeTruthy();
+
+    const stored = await read<any>("quota-requests", "1002");
+    expect(stored?.Status).toBe("Denied");
+    expect(stored?.DenialReason).toBe("Out of scope");
+  });
 });

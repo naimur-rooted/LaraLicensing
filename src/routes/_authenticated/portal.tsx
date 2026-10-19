@@ -1,5 +1,5 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { Navigate, createFileRoute } from "@tanstack/react-router";
+import { Navigate, Outlet, createFileRoute, useRouterState } from "@tanstack/react-router";
 
 import { meQueryOptions } from "../../lib/lara-me";
 
@@ -25,6 +25,7 @@ export const Route = createFileRoute("/_authenticated/portal")({
 });
 
 function PortalRedirect() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { data } = useSuspenseQuery(meQueryOptions());
   const [me] = data;
   const isFailed = !me;
@@ -33,24 +34,30 @@ function PortalRedirect() {
       "Users.Me returned an empty envelope; server invariant break per AC-API-USR-001",
     );
   }
-  if (me.RoleName === "Reseller") {
-    if (typeof me.ResellerId !== "number") {
-      throw new Error(
-        `Reseller user ${me.UserId} has no ResellerId binding; refusing to redirect (02-spec/21-app/40-permissions.md Row-scope)`,
+
+  // Only perform landing redirection when accessing /portal directly
+  if (pathname === "/portal" || pathname === "/portal/") {
+    if (me.RoleName === "Reseller") {
+      if (typeof me.ResellerId !== "number") {
+        throw new Error(
+          `Reseller user ${me.UserId} has no ResellerId binding; refusing to redirect (02-spec/21-app/40-permissions.md Row-scope)`,
+        );
+      }
+
+      return (
+        <Navigate
+          to="/reseller/$resellerId/licenses"
+          params={{ resellerId: me.ResellerId }}
+          replace
+        />
       );
     }
+    if (me.RoleName === "EndUser") {
+      return <Navigate to="/portal/home" replace />;
+    }
 
-    return (
-      <Navigate
-        to="/reseller/$resellerId/quota-requests"
-        params={{ resellerId: me.ResellerId }}
-        replace
-      />
-    );
-  }
-  if (me.RoleName === "EndUser") {
-    return <Navigate to="/portal/home" replace />;
+    return <Navigate to="/admin" replace />;
   }
 
-  return <Navigate to="/admin" replace />;
+  return <Outlet />;
 }

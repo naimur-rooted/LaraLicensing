@@ -1,0 +1,150 @@
+{
+    "LARA-WYJD-0001": {
+        "SerialId": 10001,
+        "SerialValue": "LARA-WYJD-0001",
+        "Category": "Yearly",
+        "TierName": "Enterprise",
+        "CustomerName": "Robert Downey Jr.",
+        "CustomerEmail": "ironman@starkindustries.com",
+        "Status": "active",
+        "ExpiresAt": "2027-10-19T01:50:00.000Z",
+        "Features": [
+            "core.reports",
+            "core.dashboards",
+            "addon.exports",
+            "addon.sso",
+            "addon.api"
+        ],
+        "MaxActivations": 5,
+        "IsRevoked": false,
+        "BoundDevices": [
+            {
+                "DeviceId": "0EC44613143060FB",
+                "HardwareDigest": "0EC44613143060FB",
+                "Hostname": "Nahid",
+                "Os": "Windows 11",
+                "ActivatedAt": "2026-10-19T02:46:29.545706Z",
+                "LastActiveAt": "2026-10-19T02:46:29.546050Z"
+            }
+        ],
+        "RegisteredAt": "2026-10-19T01:50:00.000Z"
+    },
+    "LARA-QRDO-0001": {
+        "SerialId": 4162868729,
+        "SerialValue": "LARA-QRDO-0001",
+        "Category": "Yearly",
+        "TierName": "Scale",
+        "CustomerName": "Jane Doe",
+        "CustomerEmail": "approve-test@domain.com",
+        "Status": "active",
+        "ExpiresAt": "2027-10-19T02:04:39.859Z",
+        "Features": [
+            "core.reports",
+            "core.dashboards",
+            "addon.exports"
+        ],
+        "MaxActivations": 5,
+        "IsRevoked": false,
+        "RegisteredAt": "2026-10-19T02:04:40.207388Z"
+    },
+    "LARA-F0JQ-0001": {
+        "SerialId": 3417097521,
+        "SerialValue": "LARA-F0JQ-0001",
+        "Category": "Yearly",
+        "TierName": "Scale",
+        "CustomerName": "Jane Doe",
+        "CustomerEmail": "approve-test@domain.com",
+        "Status": "active",
+        "ExpiresAt": "2027-10-19T02:09:42.055Z",
+        "Features": [
+            "core.reports",
+            "core.dashboards",
+            "addon.exports"
+        ],
+        "MaxActivations": 5,
+        "IsRevoked": false,
+        "RegisteredAt": "2026-10-19T02:09:42.348258Z"
+    },
+    "LARA-3SEV-0001": {
+        "SerialId": 3299976354,
+        "SerialValue": "LARA-3SEV-0001",
+        "Category": "Yearly",
+        "TierName": "Scale",
+        "CustomerName": "Jane Doe",
+        "CustomerEmail": "approve-test@domain.com",
+        "Status": "active",
+        "ExpiresAt": "2027-10-19T02:25:12.036Z",
+        "Features": [
+            "core.reports",
+            "core.dashboards",
+            "addon.exports"
+        ],
+        "MaxActivations": 5,
+        "IsRevoked": false,
+        "RegisteredAt": "2026-10-19T02:25:12.298679Z"
+    },
+    "LARA-1PEH-0001": {
+        "SerialId": 1561651244,
+        "SerialValue": "LARA-1PEH-0001",
+        "Category": "Yearly",
+        "TierName": "Scale",
+        "CustomerName": "Jane Doe",
+        "CustomerEmail": "approve-test@domain.com",
+        "Status": "active",
+        "ExpiresAt": "2027-10-19T02:45:17.538Z",
+        "Features": [
+            "core.reports",
+            "core.dashboards",
+            "addon.exports"
+        ],
+        "MaxActivations": 5,
+        "IsRevoked": false,
+        "RegisteredAt": "2026-10-19T02:45:17.859359Z"
+    },
+    "LARA-7ZH7-0001": {
+        "SerialId": 611144634,
+        "SerialValue": "LARA-7ZH7-0001",
+        "Category": "Monthly",
+        "TierName": "Growth",
+        "CustomerName": "Portal User",
+        "CustomerEmail": "portal@licensingportal.local",
+        "Status": "active",
+        "ExpiresAt": "2026-11-18T02:50:54.833Z",
+        "Features": [
+            "core.reports",
+            "core.dashboards",
+            "addon.exports"
+        ],
+        "MaxActivations": 5,
+        "IsRevoked": false,
+        "RegisteredAt": "2026-10-19T02:50:55.329608Z",
+        "BoundDevices": [
+            {
+                "DeviceId": "0EC44613143060FB",
+                "HardwareDigest": "0EC44613143060FB",
+                "Hostname": "Nahid",
+                "Os": "Windows 11",
+                "ActivatedAt": "2026-10-19T03:33:25.437222Z",
+                "LastActiveAt": "2026-10-19T03:33:25.455225Z"
+            }
+        ]
+    },
+    "LARA-T42F-0001": {
+        "SerialId": 209980755,
+        "SerialValue": "LARA-T42F-0001",
+        "Category": "Yearly",
+        "TierName": "Scale",
+        "CustomerName": "Jane Doe",
+        "CustomerEmail": "approve-test@domain.com",
+        "Status": "active",
+        "ExpiresAt": "2027-10-19T07:06:41.542Z",
+        "Features": [
+            "core.reports",
+            "core.dashboards",
+            "addon.exports"
+        ],
+        "MaxActivations": 5,
+        "IsRevoked": false,
+        "RegisteredAt": "2026-10-19T07:06:41.926794Z"
+    }
+}

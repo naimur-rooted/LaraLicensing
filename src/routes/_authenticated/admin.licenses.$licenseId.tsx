@@ -37,7 +37,19 @@ export const Route = createFileRoute("/_authenticated/admin/licenses/$licenseId"
     <RoutePending title="License" description="Loading license detail." rows={4} />
   ),
   errorComponent: ({ error, reset }) => (
-    <RouteErrorState title="License" error={error} reset={reset} />
+    <RouteErrorState
+      title="License"
+      error={error}
+      reset={reset}
+      actions={
+        <Link
+          to="/admin/licenses"
+          className="focus-ring inline-flex h-9 items-center gap-2 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+        >
+          Back to Licenses
+        </Link>
+      }
+    />
   ),
   notFoundComponent: DetailNotFound,
   component: LicenseDetailPage,

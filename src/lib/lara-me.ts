@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { apiClient } from "./api-client";
 import { requestLaraApi } from "./lara-api-client";
+import { assignNumeric } from "./preview-id-map";
 import { getRuntimeMode } from "./runtime-mode";
 import type { MeUser } from "@/generated/api/schema";
 
@@ -38,6 +39,7 @@ const RoleMap: Record<string, MeResource["RoleName"]> = {
   support: "Support",
   auditor: "Auditor",
   enduser: "EndUser",
+  portal: "EndUser",
 };
 
 function mapRole(roles: string[]): MeResource["RoleName"] {
@@ -57,19 +59,28 @@ function ulidToPositiveInt(id: string): number {
   return Math.abs(h) + 1;
 }
 
-function adaptMe(u: MeUser): MeResource {
+async function adaptMe(u: MeUser): Promise<MeResource> {
+  let resellerId: number | null = null;
+  if (u.ResellerId) {
+    try {
+      resellerId = (await assignNumeric("resellers", u.ResellerId)) ?? ulidToPositiveInt(u.ResellerId);
+    } catch {
+      resellerId = ulidToPositiveInt(u.ResellerId);
+    }
+  }
+
   return {
     UserId: ulidToPositiveInt(u.Id),
     Email: u.Email,
     RoleName: mapRole(u.Roles),
-    ResellerId: u.ResellerId ? ulidToPositiveInt(u.ResellerId) : null,
+    ResellerId: resellerId,
     DisplayName: u.DisplayName,
   };
 }
 
 async function fetchPreview(signal?: AbortSignal): Promise<MeResource[]> {
   const res = await apiClient.call("auth.me", {}, { signal });
-  const adapted = adaptMe(res);
+  const adapted = await adaptMe(res);
   console.info("lara-me:preview-bridge", {
     UserId: adapted.UserId,
     RoleName: adapted.RoleName,

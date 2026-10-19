@@ -1,10 +1,12 @@
 import { useState, type FormEvent } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { CheckCircle2 } from "lucide-react";
 
 import { RetryAfterBanner } from "../retry-after-banner";
 import { useSubmitLock } from "../../lib/use-submit-lock";
 import { formatLaraApiErrorOptional } from "../../lib/lara-api-error";
 import { useLaraErrorToast } from "../../lib/use-lara-error-toast";
+import { useAppToast } from "../../hooks/use-app-toast";
 import {
   quotaRequestListQueryOptions,
   quotaRequestSubmitSchema,
@@ -14,6 +16,16 @@ import {
 import { LICENSE_CATEGORY_IDS } from "../../lib/lara-license";
 
 const TIER_IDS = [1, 2, 3, 4] as const;
+
+const CATEGORY_LABELS: Record<number, string> = {
+  1: "1 - Daily (1 day)",
+  2: "2 - Weekly (7 days)",
+  3: "3 - Monthly (30 days)",
+  4: "4 - Yearly (1 year)",
+  5: "5 - Lifetime (Never expires)",
+  6: "6 - Dev (Testing)",
+  7: "7 - Key (Hardware)",
+};
 
 /**
  * POST /Resellers/{id}/QuotaRequests submit form (Step 47).
@@ -25,13 +37,21 @@ export function QuotaRequestSubmitForm({ resellerId }: { resellerId: number }) {
   const [delta, setDelta] = useState<string>("1");
   const [justification, setJustification] = useState<string>("");
   const [validationError, setValidationError] = useState<string | undefined>();
+  const [successBanner, setSuccessBanner] = useState<string | null>(null);
+  const toast = useAppToast();
   const client = useQueryClient();
   const mutation = useMutation({
     mutationFn: (input: QuotaRequestSubmitInput) =>
       submitQuotaRequest(resellerId, input, crypto.randomUUID()),
     onSuccess: () => {
-      setDelta("1");
+      toast.success("Quota request submitted successfully!", {
+        description: "Your request is now pending admin approval in 'Your requests' below.",
+      });
+      setSuccessBanner("Quota request submitted successfully! Pending admin approval.");
+      setDelta("");
       setJustification("");
+      setCategoryId(1);
+      setTierId(1);
       void client.invalidateQueries({
         queryKey: quotaRequestListQueryOptions(resellerId).queryKey,
       });
@@ -44,6 +64,7 @@ export function QuotaRequestSubmitForm({ resellerId }: { resellerId: number }) {
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setValidationError(undefined);
+    setSuccessBanner(null);
     const parsed = quotaRequestSubmitSchema.safeParse({
       LicenseCategoryId: categoryId,
       LicenseTierId: tierId,
@@ -65,7 +86,7 @@ export function QuotaRequestSubmitForm({ resellerId }: { resellerId: number }) {
       className="mt-4 grid gap-3 rounded-md border border-border bg-card p-4"
     >
       <div className="grid gap-3 md:grid-cols-3">
-        <Field label="LicenseCategoryId">
+        <Field label="License Category">
           <select
             value={categoryId}
             onChange={(e) => setCategoryId(Number(e.target.value))}
@@ -73,12 +94,12 @@ export function QuotaRequestSubmitForm({ resellerId }: { resellerId: number }) {
           >
             {LICENSE_CATEGORY_IDS.map((id) => (
               <option key={id} value={id}>
-                {id}
+                {CATEGORY_LABELS[id] ?? id}
               </option>
             ))}
           </select>
         </Field>
-        <Field label="LicenseTierId">
+        <Field label="License Tier">
           <select
             value={tierId}
             onChange={(e) => setTierId(Number(e.target.value))}
@@ -86,14 +107,15 @@ export function QuotaRequestSubmitForm({ resellerId }: { resellerId: number }) {
           >
             {TIER_IDS.map((id) => (
               <option key={id} value={id}>
-                Tier{id}
+                Tier {id}
               </option>
             ))}
           </select>
         </Field>
-        <Field label="RequestedDelta">
+        <Field label="Requested Amount (Quantity)">
           <input
             value={delta}
+            placeholder="e.g. 25"
             onChange={(e) => setDelta(e.target.value)}
             inputMode="numeric"
             className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
@@ -103,12 +125,22 @@ export function QuotaRequestSubmitForm({ resellerId }: { resellerId: number }) {
       <Field label="Justification (optional)">
         <textarea
           value={justification}
+          placeholder="Reason for request (e.g. Need stock for retail customers)"
           onChange={(e) => setJustification(e.target.value)}
           maxLength={1000}
           rows={2}
           className="w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
         />
       </Field>
+      {successBanner ? (
+        <div
+          role="status"
+          className="flex items-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm font-medium text-emerald-600 dark:text-emerald-400"
+        >
+          <CheckCircle2 className="size-4 shrink-0" />
+          <span>{successBanner}</span>
+        </div>
+      ) : null}
       <RetryAfterBanner error={mutation.error} onRetry={() => mutation.reset()} />
       {validationError ? (
         <p role="alert" className="text-sm text-destructive">

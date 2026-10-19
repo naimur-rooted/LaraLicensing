@@ -30,7 +30,8 @@ import { useHydrated } from "../../hooks/use-hydrated";
 const LOG_PREFIX = "runtime-mode-flip";
 
 function resolveProdApiBaseUrl(): string | null {
-  const raw = import.meta.env.VITE_LARA_API_BASE_URL;
+  const host = typeof window !== "undefined" && window.location.hostname ? window.location.hostname : "127.0.0.1";
+  const raw = import.meta.env.VITE_LARA_API_BASE_URL || `http://${host}:8000`;
   if (typeof raw !== "string" || raw.length === 0) return null;
   if (!/^https?:\/\//.test(raw)) return null;
 
@@ -131,10 +132,10 @@ export function RuntimeModeFlipButton({
   const isFailed = !hydrated;
   if (isFailed) return null;
   const positional =
-    variant === "floating" ? "fixed bottom-4 left-4 z-50 shadow-md" : "relative shadow-sm";
+    variant === "floating" ? "fixed bottom-4 right-4 z-50 shadow-md" : "relative shadow-sm";
 
   return (
-    <div className={variant === "floating" ? "fixed bottom-4 left-4 z-50" : "relative"}>
+    <div className={variant === "floating" ? "fixed bottom-4 right-4 z-50" : "relative"}>
       <button
         type="button"
         onClick={onClick}

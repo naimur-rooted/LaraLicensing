@@ -15,6 +15,11 @@ AI-first project. Every AI session starts with amnesia, so all durable knowledge
 [![release-smoke](https://github.com/OWNER/REPO/actions/workflows/release-smoke.yml/badge.svg)](https://github.com/OWNER/REPO/actions/workflows/release-smoke.yml)
 ![version](https://img.shields.io/badge/version-0.691.0-blue)
 
+## Documentation
+
+- **Master Technical & Architecture Guide:** [COMPREHENSIVE_SYSTEM_DOCUMENTATION.md](file:///c:/Users/naimu/Desktop/Licensing/docs/COMPREHENSIVE_SYSTEM_DOCUMENTATION.md) (Full system architecture, APIs, Split-DB, security protocols, desktop client simulator, and testing guide)
+- **Documentation Index & Runbooks:** [docs/README.md](file:///c:/Users/naimu/Desktop/Licensing/docs/README.md)
+
 ## Folder Structure
 
 ```

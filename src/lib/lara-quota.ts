@@ -213,6 +213,65 @@ export const quotaRequestSubmitSchema = z.object({
 });
 export type QuotaRequestSubmitInput = z.infer<typeof quotaRequestSubmitSchema>;
 
+function buildPreviewQuotaRequestRow(
+  nextId: number,
+  resellerId: number,
+  input: QuotaRequestSubmitInput,
+): AdminQuotaRequestRow {
+  return {
+    QuotaRequestId: nextId,
+    ResellerId: resellerId,
+    ResellerSlug: "preview-reseller",
+    LicenseCategoryId: input.LicenseCategoryId,
+    LicenseTierId: input.LicenseTierId,
+    RequestedDelta: input.RequestedDelta,
+    ApprovedDelta: null,
+    Status: "Pending",
+    SubmittedByUserId: 2,
+    SubmittedAt: new Date().toISOString(),
+    DecidedByUserId: null,
+    DecidedAt: null,
+    DenialReason: null,
+    Justification: input.Justification ?? null,
+  };
+}
+
+async function submitPreviewQuotaRequest(
+  resellerId: number,
+  input: QuotaRequestSubmitInput,
+): Promise<QuotaRequest> {
+  const { list, write } = await import("./preview-store");
+  const entries = await list<AdminQuotaRequestRow>("quota-requests");
+  const maxId = entries.reduce((max, [, v]) => Math.max(max, v.QuotaRequestId), 1000);
+  const row = buildPreviewQuotaRequestRow(maxId + 1, resellerId, input);
+  await write<AdminQuotaRequestRow>("quota-requests", String(row.QuotaRequestId), row);
+
+  return row;
+}
+
+async function fetchPreviewQuotaRequests(
+  resellerId: number,
+  status?: QuotaRequestStatusValue,
+): Promise<QuotaRequest[]> {
+  const { list } = await import("./preview-store");
+  const entries = await list<AdminQuotaRequestRow>("quota-requests");
+  const filtered = entries
+    .map(([, v]) => v)
+    .filter((r) => r.ResellerId === resellerId && (!status || r.Status === status));
+
+  return filtered.sort((a, b) => b.SubmittedAt.localeCompare(a.SubmittedAt));
+}
+
+async function fetchPreviewQuotaRequestById(requestId: number): Promise<QuotaRequest[]> {
+  const { read } = await import("./preview-store");
+  const existing = await read<AdminQuotaRequestRow>("quota-requests", String(requestId));
+  if (!existing) {
+    throw new LaraApiError("Quota request not found", ApiErrorCodeType.ValidationFailed, 404);
+  }
+
+  return [existing];
+}
+
 /**
  * Submit: POST /Resellers/{ResellerId}/QuotaRequests. Mutating, so
  * Idempotency-Key is REQUIRED per 08-idempotency-envelope-hardening.md.
@@ -224,6 +283,10 @@ export async function submitQuotaRequest(
   input: QuotaRequestSubmitInput,
   idempotencyKey: string,
 ): Promise<QuotaRequest> {
+  if (getRuntimeMode().Mode === "preview") {
+    return submitPreviewQuotaRequest(resellerId, input);
+  }
+
   const [row] = await requestLaraApi(`/Resellers/${resellerId}/QuotaRequests`, quotaRequestSchema, {
     method: HttpMethodType.Post,
     body: input,
@@ -238,10 +301,15 @@ export function quotaRequestListQueryOptions(resellerId: number, status?: QuotaR
 
   return queryOptions({
     queryKey: ["LaraApi", "Resellers", resellerId, "QuotaRequests", status ?? "All"],
-    queryFn: ({ signal }) =>
-      requestLaraApi(`/Resellers/${resellerId}/QuotaRequests${query}`, quotaRequestSchema, {
+    queryFn: ({ signal }) => {
+      if (getRuntimeMode().Mode === "preview") {
+        return fetchPreviewQuotaRequests(resellerId, status);
+      }
+
+      return requestLaraApi(`/Resellers/${resellerId}/QuotaRequests${query}`, quotaRequestSchema, {
         signal,
-      }),
+      });
+    },
     retry: false,
   });
 }
@@ -249,8 +317,13 @@ export function quotaRequestListQueryOptions(resellerId: number, status?: QuotaR
 export function quotaRequestQueryOptions(requestId: number) {
   return queryOptions({
     queryKey: ["LaraApi", "QuotaRequests", requestId],
-    queryFn: ({ signal }) =>
-      requestLaraApi(`/QuotaRequests/${requestId}`, quotaRequestSchema, { signal }),
+    queryFn: ({ signal }) => {
+      if (getRuntimeMode().Mode === "preview") {
+        return fetchPreviewQuotaRequestById(requestId);
+      }
+
+      return requestLaraApi(`/QuotaRequests/${requestId}`, quotaRequestSchema, { signal });
+    },
     retry: false,
   });
 }
@@ -311,6 +384,28 @@ export const quotaRequestApproveSchema = z.object({
 });
 export type QuotaRequestApproveInput = z.infer<typeof quotaRequestApproveSchema>;
 
+async function approvePreviewQuotaRequest(
+  requestId: number,
+  input: QuotaRequestApproveInput,
+): Promise<QuotaRequest> {
+  const { read, write } = await import("./preview-store");
+  const existing = await read<AdminQuotaRequestRow>("quota-requests", String(requestId));
+  if (!existing) {
+    throw new LaraApiError("Quota request not found", ApiErrorCodeType.ValidationFailed, 404);
+  }
+  const approvedDelta = input.ApprovedDelta ?? existing.RequestedDelta;
+  const updated: AdminQuotaRequestRow = {
+    ...existing,
+    Status: "Approved",
+    ApprovedDelta: approvedDelta,
+    DecidedAt: new Date().toISOString(),
+    DecidedByUserId: 1,
+  };
+  await write<AdminQuotaRequestRow>("quota-requests", String(requestId), updated);
+
+  return updated;
+}
+
 /**
  * Approve a Pending quota request. Admin surface (spec 42 §Endpoints):
  * `POST /Api/Admin/QuotaRequests/{RequestId}/Approve?ResellerSlug=...`.
@@ -330,8 +425,11 @@ export async function approveQuotaRequest(
   if (slug.length === 0) {
     throw new Error("approveQuotaRequest requires a non-empty resellerSlug for shard binding.");
   }
+  if (getRuntimeMode().Mode === "preview") {
+    return approvePreviewQuotaRequest(requestId, input);
+  }
   const [row] = await requestLaraApi(
-    `/QuotaRequests/${requestId}/Approve?ResellerSlug=${encodeURIComponent(slug)}`,
+    `/Admin/QuotaRequests/${requestId}/Approve?ResellerSlug=${encodeURIComponent(slug)}`,
     quotaRequestSchema,
     {
       method: HttpMethodType.Post,
@@ -347,6 +445,27 @@ export const quotaRequestDenySchema = z.object({
   Reason: z.string().trim().min(1).max(500),
 });
 export type QuotaRequestDenyInput = z.infer<typeof quotaRequestDenySchema>;
+
+async function denyPreviewQuotaRequest(
+  requestId: number,
+  input: QuotaRequestDenyInput,
+): Promise<QuotaRequest> {
+  const { read, write } = await import("./preview-store");
+  const existing = await read<AdminQuotaRequestRow>("quota-requests", String(requestId));
+  if (!existing) {
+    throw new LaraApiError("Quota request not found", ApiErrorCodeType.ValidationFailed, 404);
+  }
+  const updated: AdminQuotaRequestRow = {
+    ...existing,
+    Status: "Denied",
+    DenialReason: input.Reason,
+    DecidedAt: new Date().toISOString(),
+    DecidedByUserId: 1,
+  };
+  await write<AdminQuotaRequestRow>("quota-requests", String(requestId), updated);
+
+  return updated;
+}
 
 /**
  * Deny a Pending quota request. Admin surface (spec 42 §Endpoints):
@@ -364,8 +483,11 @@ export async function denyQuotaRequest(
   if (slug.length === 0) {
     throw new Error("denyQuotaRequest requires a non-empty resellerSlug for shard binding.");
   }
+  if (getRuntimeMode().Mode === "preview") {
+    return denyPreviewQuotaRequest(requestId, input);
+  }
   const [row] = await requestLaraApi(
-    `/QuotaRequests/${requestId}/Deny?ResellerSlug=${encodeURIComponent(slug)}`,
+    `/Admin/QuotaRequests/${requestId}/Deny?ResellerSlug=${encodeURIComponent(slug)}`,
     quotaRequestSchema,
     {
       method: HttpMethodType.Post,
@@ -377,10 +499,26 @@ export async function denyQuotaRequest(
   return row;
 }
 
+async function cancelPreviewQuotaRequest(requestId: number): Promise<QuotaRequest> {
+  const { read, write } = await import("./preview-store");
+  const existing = await read<AdminQuotaRequestRow>("quota-requests", String(requestId));
+  if (!existing) {
+    throw new LaraApiError("Quota request not found", ApiErrorCodeType.ValidationFailed, 404);
+  }
+  const updated: AdminQuotaRequestRow = { ...existing, Status: "Cancelled" };
+  await write<AdminQuotaRequestRow>("quota-requests", String(requestId), updated);
+
+  return updated;
+}
+
 export async function cancelQuotaRequest(
   requestId: number,
   idempotencyKey: string,
 ): Promise<QuotaRequest> {
+  if (getRuntimeMode().Mode === "preview") {
+    return cancelPreviewQuotaRequest(requestId);
+  }
+
   const [row] = await requestLaraApi(`/QuotaRequests/${requestId}/Cancel`, quotaRequestSchema, {
     method: HttpMethodType.Post,
     body: {},

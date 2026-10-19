@@ -1,3 +1,4 @@
+import "fake-indexeddb/auto";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
@@ -74,6 +75,57 @@ describe("SerialLookupPanel", () => {
     await waitFor(() => {
       const stored = JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "[]");
       expect(stored).toHaveLength(1);
+    });
+  });
+
+  it("removes a serial from history when verify fails with SerialNotFound", async () => {
+    // Seed initial history
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify([
+        { Serial: "REVOKED-1234", IsValid: true, CheckedAt: new Date().toISOString() },
+      ]),
+    );
+
+    const { LaraApiError, ApiErrorCodeType } = await import("@/lib/lara-api-error");
+    vi.spyOn(laraSerial, "verifySerial").mockRejectedValue(
+      new LaraApiError("Serial not found.", ApiErrorCodeType.SerialNotFound, 404),
+    );
+
+    renderPanel();
+    expect(screen.getByText("REVOKED-1234")).toBeTruthy();
+
+    const replayBtn = screen.getByTestId("test-serial-history-replay");
+    fireEvent.click(replayBtn);
+
+    await waitFor(() => {
+      expect(screen.queryByText("REVOKED-1234")).toBeNull();
+      const stored = JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "[]");
+      expect(stored).toHaveLength(0);
+    });
+  });
+
+  it("clears all recent lookups when clicking Clear", async () => {
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify([
+        { Serial: "KEY-1", IsValid: true, CheckedAt: new Date().toISOString() },
+        { Serial: "KEY-2", IsValid: false, CheckedAt: new Date().toISOString() },
+      ]),
+    );
+
+    renderPanel();
+    expect(screen.getByText("KEY-1")).toBeTruthy();
+    expect(screen.getByText("KEY-2")).toBeTruthy();
+
+    const clearBtn = screen.getByTitle("Clear all recent lookups");
+    fireEvent.click(clearBtn);
+
+    await waitFor(() => {
+      expect(screen.queryByText("KEY-1")).toBeNull();
+      expect(screen.queryByText("KEY-2")).toBeNull();
+      const stored = JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "[]");
+      expect(stored).toHaveLength(0);
     });
   });
 });

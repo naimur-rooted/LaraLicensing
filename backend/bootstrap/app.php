@@ -56,6 +56,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
 
         // Global middleware registered in Plan 06 steps 7-9.
+        $middleware->append(\Illuminate\Http\Middleware\HandleCors::class);
         $middleware->append(\App\Http\Middleware\RequestIdMiddleware::class);
 
         $middleware->append(\App\Http\Middleware\IdempotencyKeyMiddleware::class);
@@ -253,7 +254,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 'Previous' => optional($e->getPrevious())?->getMessage(),
             ]);
             // Plan 06 step 77: same web/JSON split as the LaraException renderer.
-            if (! $request->expectsJson() && ! $request->is('Api/*', 'App/*')) {
+            if (! $request->expectsJson() && ! $request->is('Api/*', 'App/*', 'api/*', 'app/*')) {
                 return \Inertia\Inertia::render('Error', [
                     'status' => 500,
                     'errorCode' => 'ServerError',

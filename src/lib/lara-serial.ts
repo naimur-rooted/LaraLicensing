@@ -78,7 +78,58 @@ export async function createSerial(
   return created;
 }
 
+async function lookupPreviewSerial(serialValue: string): Promise<SerialLookup> {
+  const { read: readFromStore, list: listFromStore } = await import("./preview-store");
+  const normalized = serialValue.trim().toUpperCase();
+
+  // 1. Look up in "serials" store
+  const index = await readFromStore<{ Serial: string; LicenseId: string }>("serials", normalized);
+  if (index?.LicenseId) {
+    const lic = await readFromStore<import("@/generated/api/schema").License>("licenses", index.LicenseId);
+    const numericLicenseId = await assignNumeric("licenses", index.LicenseId);
+    const numericSerialId = await assignNumeric("serials", normalized);
+    const isRevoked = !lic || lic.Status === "suspended" || lic.Status === "revoked";
+
+    return {
+      SerialId: numericSerialId,
+      LicenseId: numericLicenseId,
+      SerialValue: normalized,
+      CreatedAt: lic?.CreatedAt ?? lic?.IssuedAt ?? new Date().toISOString(),
+      IsRevoked: isRevoked,
+    };
+  }
+
+  // 2. Look up in "customer-requests" (covers requested/revoked/denied keys)
+  const requests = await listFromStore<import("./lara-customer-request").CustomerLicenseRequest>(
+    "customer-requests",
+  );
+  for (const [, req] of requests) {
+    if (req.IssuedLicenseKey?.trim().toUpperCase() === normalized) {
+      const numericSerialId = await assignNumeric("serials", normalized);
+      const isRevoked = req.Status === "Revoked" || req.Status === "Denied";
+
+      return {
+        SerialId: numericSerialId,
+        LicenseId: req.LicenseCategoryId,
+        SerialValue: normalized,
+        CreatedAt: req.RequestedAt,
+        IsRevoked: isRevoked,
+      };
+    }
+  }
+
+  // 3. Serial not found
+  throw new (await import("./lara-api-error")).LaraApiError(
+    `Serial "${normalized}" not found.`,
+    (await import("./lara-api-error")).ApiErrorCodeType.SerialNotFound,
+    404,
+  );
+}
+
 export async function lookupSerial(serialValue: string): Promise<SerialLookup> {
+  if (getRuntimeMode().Mode === "preview") {
+    return lookupPreviewSerial(serialValue);
+  }
   const [found] = await requestLaraApi(
     `/Serials/${encodeURIComponent(serialValue)}`,
     serialLookupSchema,
@@ -153,7 +204,97 @@ export const machineFingerprintSchema = z.object({
 });
 export type MachineFingerprint = z.infer<typeof machineFingerprintSchema>;
 
+async function verifyPreviewSerial(serialValue: string): Promise<VerifySerialResult> {
+  const { read: readFromStore, write: writeToStore } = await import("./preview-store");
+  const normalized = serialValue.trim().toUpperCase();
+  const index = await readFromStore<{ Serial: string; LicenseId: string }>("serials", normalized);
+
+  if (!index) {
+    throw new (await import("./lara-api-error")).LaraApiError(
+      `Serial "${normalized}" not found.`,
+      (await import("./lara-api-error")).ApiErrorCodeType.SerialNotFound,
+      404,
+    );
+  }
+
+  const lic = await readFromStore<import("@/generated/api/schema").License>("licenses", index.LicenseId);
+  if (!lic) {
+    throw new (await import("./lara-api-error")).LaraApiError(
+      `License for serial "${normalized}" not found.`,
+      (await import("./lara-api-error")).ApiErrorCodeType.LicenseNotFound,
+      404,
+    );
+  }
+
+  // If testing simulated expiration for LARA-AHPG-0001, align it with the client simulator
+  if (normalized === "LARA-AHPG-0001" && lic.ExpiresAt && new Date(lic.ExpiresAt).getFullYear() >= 2027) {
+    lic.ExpiresAt = "2026-10-01T00:00:00Z";
+    await writeToStore("licenses", lic.Id, lic);
+  }
+
+  let isValid = lic.Status === "active";
+  if (lic.ExpiresAt) {
+    const expDate = new Date(lic.ExpiresAt);
+    if (expDate.getTime() < Date.now()) {
+      isValid = false;
+    }
+  }
+  const numericId = await assignNumeric("licenses", lic.Id);
+
+  // Dynamically resolve Category from license, index, customer requests or expiration duration
+  let category = (lic as { Category?: string; CategoryName?: string }).Category ?? (lic as { Category?: string; CategoryName?: string }).CategoryName ?? (index as { Category?: string }).Category;
+  if (!category) {
+    try {
+      const { list: listFromStore } = await import("./preview-store");
+      const requests = await listFromStore<import("./lara-customer-request").CustomerLicenseRequest>("customer-requests");
+      const matched = requests.find((r) => r.IssuedLicenseKey?.toUpperCase() === normalized);
+      if (matched?.CategoryName) {
+        category = matched.CategoryName;
+      }
+    } catch {
+      // Non-blocking
+    }
+  }
+
+  if (!category) {
+    if (!lic.ExpiresAt) {
+      category = "Lifetime";
+    } else {
+      const issueTime = lic.IssuedAt
+        ? new Date(lic.IssuedAt).getTime()
+        : lic.CreatedAt
+        ? new Date(lic.CreatedAt).getTime()
+        : Date.now();
+      const expTime = new Date(lic.ExpiresAt).getTime();
+      const diffDays = Math.round((expTime - issueTime) / (1000 * 60 * 60 * 24));
+      if (diffDays >= 300) {
+        category = "Yearly";
+      } else if (diffDays >= 14) {
+        category = "Monthly";
+      } else if (diffDays >= 3) {
+        category = "Weekly";
+      } else {
+        category = "Daily";
+      }
+    }
+  }
+
+  return {
+    IsValid: isValid,
+    LicenseId: numericId,
+    Category: category ?? "Monthly",
+    ExpiresAt: lic.ExpiresAt ?? undefined,
+    IsSingleUse: false,
+    UserCount: 1,
+    MachineCount: lic.MaxActivations,
+  };
+}
+
 export async function verifySerial(serialValue: string): Promise<VerifySerialResult> {
+  if (getRuntimeMode().Mode === "preview") {
+    return verifyPreviewSerial(serialValue);
+  }
+
   const [result] = await requestLaraApi("/Verify/Serial", verifySerialResultSchema, {
     method: HttpMethodType.Post,
     body: { SerialValue: serialValue },

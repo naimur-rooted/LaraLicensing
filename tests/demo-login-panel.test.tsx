@@ -1,6 +1,6 @@
-// removed jest-dom import to avoid resolution error
 import { describe, it, expect, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { DemoLoginPanel } from "@/components/auth/DemoLoginPanel";
 import { getRuntimeMode } from "@/lib/runtime-mode";
 import { useHydrated } from "@/hooks/use-hydrated";
@@ -38,6 +38,11 @@ vi.mock("sonner", () => ({
   },
 }));
 
+function renderWithClient(ui: React.ReactElement) {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+}
+
 describe("DemoLoginPanel", () => {
   const onSuccess = vi.fn();
 
@@ -46,14 +51,14 @@ describe("DemoLoginPanel", () => {
   });
 
   it("renders all demo identities", () => {
-    render(<DemoLoginPanel onSuccess={onSuccess} />);
+    renderWithClient(<DemoLoginPanel onSuccess={onSuccess} />);
     
     expect(screen.getByText("Super Admin")).toBeTruthy();
     expect(screen.getByText("Full platform control")).toBeTruthy();
   });
 
   it("calls signInWithSeedIdentity and onSuccess when Quick Sign-in is clicked", async () => {
-    render(<DemoLoginPanel onSuccess={onSuccess} />);
+    renderWithClient(<DemoLoginPanel onSuccess={onSuccess} />);
     
     const signInButton = screen.getByTestId("demo-login-admin");
     fireEvent.click(signInButton);
@@ -73,7 +78,7 @@ describe("DemoLoginPanel", () => {
       },
     });
 
-    render(<DemoLoginPanel onSuccess={onSuccess} />);
+    renderWithClient(<DemoLoginPanel onSuccess={onSuccess} />);
     
     const copyButton = screen.getByTitle("Copy email");
     fireEvent.click(copyButton);

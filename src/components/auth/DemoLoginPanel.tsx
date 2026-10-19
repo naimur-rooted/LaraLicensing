@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Copy, ShieldCheck, User, Users, UserRound, Loader2, Check } from "lucide-react";
 import { toast } from "sonner";
 import { DEMO_IDENTITIES, signInWithSeedIdentity, type DemoIdentity } from "@/lib/preview-auth";
@@ -14,6 +15,7 @@ interface DemoLoginPanelProps {
  * Plan 18 Phase C (Steps 43-47, 80).
  */
 export function DemoLoginPanel({ onSuccess, disabled }: DemoLoginPanelProps) {
+  const queryClient = useQueryClient();
   const [signingIn, setSigningIn] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
 
@@ -31,12 +33,13 @@ export function DemoLoginPanel({ onSuccess, disabled }: DemoLoginPanelProps) {
 
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
-
   const handleSignIn = async (id: string) => {
     if (disabled || signingIn) return;
     setSigningIn(id);
     try {
       await signInWithSeedIdentity(id);
+      await queryClient.invalidateQueries({ queryKey: ["LaraApi", "Users", "Me"] });
+      await queryClient.refetchQueries({ queryKey: ["LaraApi", "Users", "Me"] });
       toast.success(`Signed in as ${id}`);
       onSuccess();
     } catch (err) {

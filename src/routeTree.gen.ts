@@ -19,6 +19,7 @@ import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedPortalRouteImport } from './routes/_authenticated/portal'
 import { Route as AdminLoginRouteImport } from './routes/admin.login'
 import { Route as E2eErrorHarnessRouteImport } from './routes/e2e.error-harness'
+import { Route as AuthenticatedAccountProfileRouteImport } from './routes/_authenticated/account.profile'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
 import { Route as AuthenticatedAdminApiDocsRouteImport } from './routes/_authenticated/admin.api-docs'
 import { Route as AuthenticatedAdminAppUpdatesRouteImport } from './routes/_authenticated/admin.app-updates'
@@ -37,6 +38,7 @@ import { Route as AuthenticatedAdminSnapshotsRouteImport } from './routes/_authe
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin.users'
 import { Route as AuthenticatedPortalHomeRouteImport } from './routes/_authenticated/portal.home'
 import { Route as AuthenticatedPortalUpdatesRouteImport } from './routes/_authenticated/portal.updates'
+import { Route as AuthenticatedResellerResellerIdRouteImport } from './routes/_authenticated/reseller.$resellerId'
 import { Route as AuthenticatedAdminBackupExportRouteImport } from './routes/_authenticated/admin.backup.export'
 import { Route as AuthenticatedAdminBackupImportRouteImport } from './routes/_authenticated/admin.backup.import'
 import { Route as AuthenticatedAdminLicensesIndexRouteImport } from './routes/_authenticated/admin.licenses.index'
@@ -50,6 +52,7 @@ import { Route as AuthenticatedAdminUsersUserIdRouteImport } from './routes/_aut
 import { Route as AuthenticatedAdminUsersNewRouteImport } from './routes/_authenticated/admin.users.new'
 import { Route as AuthenticatedResellerResellerIdIndexRouteImport } from './routes/_authenticated/reseller.$resellerId.index'
 import { Route as AuthenticatedResellerResellerIdQuotaRequestsRouteImport } from './routes/_authenticated/reseller.$resellerId.quota-requests'
+import { Route as AuthenticatedResellerResellerIdSerialsRouteImport } from './routes/_authenticated/reseller.$resellerId.serials'
 import { Route as AuthenticatedResellerResellerIdLicensesIndexRouteImport } from './routes/_authenticated/reseller.$resellerId.licenses.index'
 import { Route as AuthenticatedResellerResellerIdLicensesLicenseKeyRouteImport } from './routes/_authenticated/reseller.$resellerId.licenses.$licenseKey'
 
@@ -102,6 +105,12 @@ const E2eErrorHarnessRoute = E2eErrorHarnessRouteImport.update({
   path: '/e2e/error-harness',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAccountProfileRoute =
+  AuthenticatedAccountProfileRouteImport.update({
+    id: '/account/profile',
+    path: '/account/profile',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -205,6 +214,12 @@ const AuthenticatedPortalUpdatesRoute =
     path: '/updates',
     getParentRoute: () => AuthenticatedPortalRoute,
   } as any)
+const AuthenticatedResellerResellerIdRoute =
+  AuthenticatedResellerResellerIdRouteImport.update({
+    id: '/reseller/$resellerId',
+    path: '/reseller/$resellerId',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedAdminBackupExportRoute =
   AuthenticatedAdminBackupExportRouteImport.update({
     id: '/export',
@@ -273,27 +288,33 @@ const AuthenticatedAdminUsersNewRoute =
   } as any)
 const AuthenticatedResellerResellerIdIndexRoute =
   AuthenticatedResellerResellerIdIndexRouteImport.update({
-    id: '/reseller/$resellerId/',
-    path: '/reseller/$resellerId/',
-    getParentRoute: () => AuthenticatedRoute,
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedResellerResellerIdRoute,
   } as any)
 const AuthenticatedResellerResellerIdQuotaRequestsRoute =
   AuthenticatedResellerResellerIdQuotaRequestsRouteImport.update({
-    id: '/reseller/$resellerId/quota-requests',
-    path: '/reseller/$resellerId/quota-requests',
-    getParentRoute: () => AuthenticatedRoute,
+    id: '/quota-requests',
+    path: '/quota-requests',
+    getParentRoute: () => AuthenticatedResellerResellerIdRoute,
+  } as any)
+const AuthenticatedResellerResellerIdSerialsRoute =
+  AuthenticatedResellerResellerIdSerialsRouteImport.update({
+    id: '/serials',
+    path: '/serials',
+    getParentRoute: () => AuthenticatedResellerResellerIdRoute,
   } as any)
 const AuthenticatedResellerResellerIdLicensesIndexRoute =
   AuthenticatedResellerResellerIdLicensesIndexRouteImport.update({
-    id: '/reseller/$resellerId/licenses/',
-    path: '/reseller/$resellerId/licenses/',
-    getParentRoute: () => AuthenticatedRoute,
+    id: '/licenses/',
+    path: '/licenses/',
+    getParentRoute: () => AuthenticatedResellerResellerIdRoute,
   } as any)
 const AuthenticatedResellerResellerIdLicensesLicenseKeyRoute =
   AuthenticatedResellerResellerIdLicensesLicenseKeyRouteImport.update({
-    id: '/reseller/$resellerId/licenses/$licenseKey',
-    path: '/reseller/$resellerId/licenses/$licenseKey',
-    getParentRoute: () => AuthenticatedRoute,
+    id: '/licenses/$licenseKey',
+    path: '/licenses/$licenseKey',
+    getParentRoute: () => AuthenticatedResellerResellerIdRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -306,6 +327,7 @@ export interface FileRoutesByFullPath {
   '/portal': typeof AuthenticatedPortalRouteWithChildren
   '/admin/login': typeof AdminLoginRoute
   '/e2e/error-harness': typeof E2eErrorHarnessRoute
+  '/account/profile': typeof AuthenticatedAccountProfileRoute
   '/admin/api-docs': typeof AuthenticatedAdminApiDocsRoute
   '/admin/app-updates': typeof AuthenticatedAdminAppUpdatesRoute
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
@@ -323,6 +345,7 @@ export interface FileRoutesByFullPath {
   '/admin/users': typeof AuthenticatedAdminUsersRouteWithChildren
   '/portal/home': typeof AuthenticatedPortalHomeRoute
   '/portal/updates': typeof AuthenticatedPortalUpdatesRoute
+  '/reseller/$resellerId': typeof AuthenticatedResellerResellerIdRouteWithChildren
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/admin/backup/export': typeof AuthenticatedAdminBackupExportRoute
   '/admin/backup/import': typeof AuthenticatedAdminBackupImportRoute
@@ -334,6 +357,7 @@ export interface FileRoutesByFullPath {
   '/admin/users/$userId': typeof AuthenticatedAdminUsersUserIdRoute
   '/admin/users/new': typeof AuthenticatedAdminUsersNewRoute
   '/reseller/$resellerId/quota-requests': typeof AuthenticatedResellerResellerIdQuotaRequestsRoute
+  '/reseller/$resellerId/serials': typeof AuthenticatedResellerResellerIdSerialsRoute
   '/admin/licenses/': typeof AuthenticatedAdminLicensesIndexRoute
   '/admin/snapshots/': typeof AuthenticatedAdminSnapshotsIndexRoute
   '/reseller/$resellerId/': typeof AuthenticatedResellerResellerIdIndexRoute
@@ -349,6 +373,7 @@ export interface FileRoutesByTo {
   '/portal': typeof AuthenticatedPortalRouteWithChildren
   '/admin/login': typeof AdminLoginRoute
   '/e2e/error-harness': typeof E2eErrorHarnessRoute
+  '/account/profile': typeof AuthenticatedAccountProfileRoute
   '/admin/api-docs': typeof AuthenticatedAdminApiDocsRoute
   '/admin/app-updates': typeof AuthenticatedAdminAppUpdatesRoute
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
@@ -376,6 +401,7 @@ export interface FileRoutesByTo {
   '/admin/users/$userId': typeof AuthenticatedAdminUsersUserIdRoute
   '/admin/users/new': typeof AuthenticatedAdminUsersNewRoute
   '/reseller/$resellerId/quota-requests': typeof AuthenticatedResellerResellerIdQuotaRequestsRoute
+  '/reseller/$resellerId/serials': typeof AuthenticatedResellerResellerIdSerialsRoute
   '/admin/licenses': typeof AuthenticatedAdminLicensesIndexRoute
   '/admin/snapshots': typeof AuthenticatedAdminSnapshotsIndexRoute
   '/reseller/$resellerId': typeof AuthenticatedResellerResellerIdIndexRoute
@@ -394,6 +420,7 @@ export interface FileRoutesById {
   '/_authenticated/portal': typeof AuthenticatedPortalRouteWithChildren
   '/admin/login': typeof AdminLoginRoute
   '/e2e/error-harness': typeof E2eErrorHarnessRoute
+  '/_authenticated/account/profile': typeof AuthenticatedAccountProfileRoute
   '/_authenticated/admin/api-docs': typeof AuthenticatedAdminApiDocsRoute
   '/_authenticated/admin/app-updates': typeof AuthenticatedAdminAppUpdatesRoute
   '/_authenticated/admin/audit': typeof AuthenticatedAdminAuditRoute
@@ -411,6 +438,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRouteWithChildren
   '/_authenticated/portal/home': typeof AuthenticatedPortalHomeRoute
   '/_authenticated/portal/updates': typeof AuthenticatedPortalUpdatesRoute
+  '/_authenticated/reseller/$resellerId': typeof AuthenticatedResellerResellerIdRouteWithChildren
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/admin/backup/export': typeof AuthenticatedAdminBackupExportRoute
   '/_authenticated/admin/backup/import': typeof AuthenticatedAdminBackupImportRoute
@@ -422,6 +450,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/users/$userId': typeof AuthenticatedAdminUsersUserIdRoute
   '/_authenticated/admin/users/new': typeof AuthenticatedAdminUsersNewRoute
   '/_authenticated/reseller/$resellerId/quota-requests': typeof AuthenticatedResellerResellerIdQuotaRequestsRoute
+  '/_authenticated/reseller/$resellerId/serials': typeof AuthenticatedResellerResellerIdSerialsRoute
   '/_authenticated/admin/licenses/': typeof AuthenticatedAdminLicensesIndexRoute
   '/_authenticated/admin/snapshots/': typeof AuthenticatedAdminSnapshotsIndexRoute
   '/_authenticated/reseller/$resellerId/': typeof AuthenticatedResellerResellerIdIndexRoute
@@ -440,6 +469,7 @@ export interface FileRouteTypes {
     | '/portal'
     | '/admin/login'
     | '/e2e/error-harness'
+    | '/account/profile'
     | '/admin/api-docs'
     | '/admin/app-updates'
     | '/admin/audit'
@@ -457,6 +487,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/portal/home'
     | '/portal/updates'
+    | '/reseller/$resellerId'
     | '/admin/'
     | '/admin/backup/export'
     | '/admin/backup/import'
@@ -468,6 +499,7 @@ export interface FileRouteTypes {
     | '/admin/users/$userId'
     | '/admin/users/new'
     | '/reseller/$resellerId/quota-requests'
+    | '/reseller/$resellerId/serials'
     | '/admin/licenses/'
     | '/admin/snapshots/'
     | '/reseller/$resellerId/'
@@ -483,6 +515,7 @@ export interface FileRouteTypes {
     | '/portal'
     | '/admin/login'
     | '/e2e/error-harness'
+    | '/account/profile'
     | '/admin/api-docs'
     | '/admin/app-updates'
     | '/admin/audit'
@@ -510,6 +543,7 @@ export interface FileRouteTypes {
     | '/admin/users/$userId'
     | '/admin/users/new'
     | '/reseller/$resellerId/quota-requests'
+    | '/reseller/$resellerId/serials'
     | '/admin/licenses'
     | '/admin/snapshots'
     | '/reseller/$resellerId'
@@ -527,6 +561,7 @@ export interface FileRouteTypes {
     | '/_authenticated/portal'
     | '/admin/login'
     | '/e2e/error-harness'
+    | '/_authenticated/account/profile'
     | '/_authenticated/admin/api-docs'
     | '/_authenticated/admin/app-updates'
     | '/_authenticated/admin/audit'
@@ -544,6 +579,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/users'
     | '/_authenticated/portal/home'
     | '/_authenticated/portal/updates'
+    | '/_authenticated/reseller/$resellerId'
     | '/_authenticated/admin/'
     | '/_authenticated/admin/backup/export'
     | '/_authenticated/admin/backup/import'
@@ -555,6 +591,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/users/$userId'
     | '/_authenticated/admin/users/new'
     | '/_authenticated/reseller/$resellerId/quota-requests'
+    | '/_authenticated/reseller/$resellerId/serials'
     | '/_authenticated/admin/licenses/'
     | '/_authenticated/admin/snapshots/'
     | '/_authenticated/reseller/$resellerId/'
@@ -644,6 +681,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/e2e/error-harness'
       preLoaderRoute: typeof E2eErrorHarnessRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/account/profile': {
+      id: '/_authenticated/account/profile'
+      path: '/account/profile'
+      fullPath: '/account/profile'
+      preLoaderRoute: typeof AuthenticatedAccountProfileRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/admin/': {
       id: '/_authenticated/admin/'
@@ -771,6 +815,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPortalUpdatesRouteImport
       parentRoute: typeof AuthenticatedPortalRoute
     }
+    '/_authenticated/reseller/$resellerId': {
+      id: '/_authenticated/reseller/$resellerId'
+      path: '/reseller/$resellerId'
+      fullPath: '/reseller/$resellerId'
+      preLoaderRoute: typeof AuthenticatedResellerResellerIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/admin/backup/export': {
       id: '/_authenticated/admin/backup/export'
       path: '/export'
@@ -850,31 +901,38 @@ declare module '@tanstack/react-router' {
     }
     '/_authenticated/reseller/$resellerId/': {
       id: '/_authenticated/reseller/$resellerId/'
-      path: '/reseller/$resellerId'
+      path: '/'
       fullPath: '/reseller/$resellerId/'
       preLoaderRoute: typeof AuthenticatedResellerResellerIdIndexRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedResellerResellerIdRoute
     }
     '/_authenticated/reseller/$resellerId/quota-requests': {
       id: '/_authenticated/reseller/$resellerId/quota-requests'
-      path: '/reseller/$resellerId/quota-requests'
+      path: '/quota-requests'
       fullPath: '/reseller/$resellerId/quota-requests'
       preLoaderRoute: typeof AuthenticatedResellerResellerIdQuotaRequestsRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedResellerResellerIdRoute
+    }
+    '/_authenticated/reseller/$resellerId/serials': {
+      id: '/_authenticated/reseller/$resellerId/serials'
+      path: '/serials'
+      fullPath: '/reseller/$resellerId/serials'
+      preLoaderRoute: typeof AuthenticatedResellerResellerIdSerialsRouteImport
+      parentRoute: typeof AuthenticatedResellerResellerIdRoute
     }
     '/_authenticated/reseller/$resellerId/licenses/': {
       id: '/_authenticated/reseller/$resellerId/licenses/'
-      path: '/reseller/$resellerId/licenses'
+      path: '/licenses'
       fullPath: '/reseller/$resellerId/licenses/'
       preLoaderRoute: typeof AuthenticatedResellerResellerIdLicensesIndexRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedResellerResellerIdRoute
     }
     '/_authenticated/reseller/$resellerId/licenses/$licenseKey': {
       id: '/_authenticated/reseller/$resellerId/licenses/$licenseKey'
-      path: '/reseller/$resellerId/licenses/$licenseKey'
+      path: '/licenses/$licenseKey'
       fullPath: '/reseller/$resellerId/licenses/$licenseKey'
       preLoaderRoute: typeof AuthenticatedResellerResellerIdLicensesLicenseKeyRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedResellerResellerIdRoute
     }
   }
 }
@@ -1009,26 +1067,46 @@ const AuthenticatedPortalRouteChildren: AuthenticatedPortalRouteChildren = {
 const AuthenticatedPortalRouteWithChildren =
   AuthenticatedPortalRoute._addFileChildren(AuthenticatedPortalRouteChildren)
 
-interface AuthenticatedRouteChildren {
-  AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
-  AuthenticatedPortalRoute: typeof AuthenticatedPortalRouteWithChildren
+interface AuthenticatedResellerResellerIdRouteChildren {
   AuthenticatedResellerResellerIdQuotaRequestsRoute: typeof AuthenticatedResellerResellerIdQuotaRequestsRoute
+  AuthenticatedResellerResellerIdSerialsRoute: typeof AuthenticatedResellerResellerIdSerialsRoute
   AuthenticatedResellerResellerIdIndexRoute: typeof AuthenticatedResellerResellerIdIndexRoute
   AuthenticatedResellerResellerIdLicensesLicenseKeyRoute: typeof AuthenticatedResellerResellerIdLicensesLicenseKeyRoute
   AuthenticatedResellerResellerIdLicensesIndexRoute: typeof AuthenticatedResellerResellerIdLicensesIndexRoute
 }
 
+const AuthenticatedResellerResellerIdRouteChildren: AuthenticatedResellerResellerIdRouteChildren =
+  {
+    AuthenticatedResellerResellerIdQuotaRequestsRoute:
+      AuthenticatedResellerResellerIdQuotaRequestsRoute,
+    AuthenticatedResellerResellerIdSerialsRoute:
+      AuthenticatedResellerResellerIdSerialsRoute,
+    AuthenticatedResellerResellerIdIndexRoute:
+      AuthenticatedResellerResellerIdIndexRoute,
+    AuthenticatedResellerResellerIdLicensesLicenseKeyRoute:
+      AuthenticatedResellerResellerIdLicensesLicenseKeyRoute,
+    AuthenticatedResellerResellerIdLicensesIndexRoute:
+      AuthenticatedResellerResellerIdLicensesIndexRoute,
+  }
+
+const AuthenticatedResellerResellerIdRouteWithChildren =
+  AuthenticatedResellerResellerIdRoute._addFileChildren(
+    AuthenticatedResellerResellerIdRouteChildren,
+  )
+
+interface AuthenticatedRouteChildren {
+  AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
+  AuthenticatedPortalRoute: typeof AuthenticatedPortalRouteWithChildren
+  AuthenticatedAccountProfileRoute: typeof AuthenticatedAccountProfileRoute
+  AuthenticatedResellerResellerIdRoute: typeof AuthenticatedResellerResellerIdRouteWithChildren
+}
+
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
   AuthenticatedPortalRoute: AuthenticatedPortalRouteWithChildren,
-  AuthenticatedResellerResellerIdQuotaRequestsRoute:
-    AuthenticatedResellerResellerIdQuotaRequestsRoute,
-  AuthenticatedResellerResellerIdIndexRoute:
-    AuthenticatedResellerResellerIdIndexRoute,
-  AuthenticatedResellerResellerIdLicensesLicenseKeyRoute:
-    AuthenticatedResellerResellerIdLicensesLicenseKeyRoute,
-  AuthenticatedResellerResellerIdLicensesIndexRoute:
-    AuthenticatedResellerResellerIdLicensesIndexRoute,
+  AuthenticatedAccountProfileRoute: AuthenticatedAccountProfileRoute,
+  AuthenticatedResellerResellerIdRoute:
+    AuthenticatedResellerResellerIdRouteWithChildren,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(

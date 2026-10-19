@@ -29,7 +29,7 @@ import {
 import { PREVIEW_FIXTURE_MODULE_NAMES, type PreviewFixtureModule } from "./preview-fixtures";
 import { recordPreviewStoreOp } from "./preview-store-metrics";
 
-export type PreviewDomain = (typeof PREVIEW_FIXTURE_MODULE_NAMES)[number];
+export type PreviewDomain = (typeof PREVIEW_FIXTURE_MODULE_NAMES)[number] | "customer-requests";
 
 const DB_NAME = "lara-preview-store";
 const DB_VERSION_TAG = "v1";
@@ -51,7 +51,7 @@ function storeFor(domain: string): AnyStore {
 }
 
 function assertKnownDomain(domain: PreviewDomain): void {
-  if (!(PREVIEW_FIXTURE_MODULE_NAMES as readonly string[]).includes(domain)) {
+  if (domain !== "customer-requests" && !(PREVIEW_FIXTURE_MODULE_NAMES as readonly string[]).includes(domain)) {
     throw new Error(`preview-store: unknown domain "${domain}"`);
   }
 }

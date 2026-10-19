@@ -287,7 +287,7 @@ function PendingActions({ row }: { row: AdminQuotaRequestRow }) {
       approveQuotaRequest(
         row.QuotaRequestId,
         row.ResellerSlug,
-        {},
+        { ApprovedDelta: row.RequestedDelta },
         `qr-approve-${row.QuotaRequestId}-${crypto.randomUUID()}`,
       ),
     onSuccess: () => {

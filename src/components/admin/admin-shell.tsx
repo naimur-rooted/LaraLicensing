@@ -20,7 +20,7 @@ import { LaraShellRoleContext } from "../../lib/lara-shell-role";
  * `Admin` shell-role context so cross-shell surfaces (UpdateBanner et al.)
  * gate correctly per 02-spec/21-app/16-ui-surfaces.md §3a.
  */
-export function AdminShell() {
+export function AdminShell({ children }: { children?: React.ReactNode } = {}) {
   const signOut = useAdminSignOut();
 
   return (
@@ -28,7 +28,7 @@ export function AdminShell() {
       <AppShell
         sidebar={<AdminSidebar onSignOut={signOut} />}
         topbar={<AdminTopbar onSignOut={signOut} />}
-        pageContent={<Outlet />}
+        pageContent={children ?? <Outlet />}
       />
       <AdminOverlays />
     </LaraShellRoleContext.Provider>

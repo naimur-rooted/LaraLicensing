@@ -117,3 +117,7 @@ docs/ui-baselines/*.png
 playwright-report/
 test-results/
 
+# Runtime client machine cache
+.demo_license_cache.json
+scripts/.demo_license_cache.json
+

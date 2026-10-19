@@ -371,7 +371,47 @@ async function deletePreviewLicense(
 ): Promise<LicenseDeleteResult> {
   const ulid = await ulidFor("licenses", licenseId);
   if (!ulid) throw new Error(`License ${licenseId} not found in preview id-map.`);
+
+  const { read: readFromStore, list: listFromStore, write: writeToStore } = await import("./preview-store");
+  const lic = await readFromStore<import("@/generated/api/schema").License>("licenses", ulid);
+
   await apiClient.call("admin.licenses.delete", { Id: ulid, IfMatch: ifMatch });
+
+  // Cascade revocation to customer requests in preview store and prune from recent lookups
+  if (lic?.Serial) {
+    try {
+      const requests = await listFromStore<import("./lara-customer-request").CustomerLicenseRequest>("customer-requests");
+      for (const [reqId, req] of requests) {
+        if (req.IssuedLicenseKey === lic.Serial) {
+          req.Status = "Revoked";
+          req.Notes = `${req.Notes ? req.Notes + " | " : ""}Revoked by administrator`;
+          await writeToStore("customer-requests", reqId, req);
+        }
+      }
+    } catch (err) {
+      console.warn("deletePreviewLicense: failed to cascade to customer-requests", err);
+    }
+
+    if (typeof window !== "undefined") {
+      try {
+        const STORAGE_KEY = "LicensingPortal.portalRecentSerials";
+        const raw = window.localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            const filtered = parsed.filter(
+              (entry: { Serial?: string }) =>
+                entry?.Serial?.trim().toUpperCase() !== lic.Serial.trim().toUpperCase(),
+            );
+            window.localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+            window.dispatchEvent(new Event("portal-history-updated"));
+          }
+        }
+      } catch (err) {
+        console.warn("deletePreviewLicense: failed to prune recent-serials", err);
+      }
+    }
+  }
 
   return { LicenseId: licenseId, IsDeleted: true };
 }

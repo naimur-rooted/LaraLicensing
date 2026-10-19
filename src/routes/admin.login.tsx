@@ -107,7 +107,7 @@ function AdminLoginPage() {
         CaptchaAnswer: captcha ? captchaAnswer : undefined,
       });
       persistRememberChoice(rememberMe, email);
-      await navigate({ to: "/admin", replace: true });
+      await navigate({ to: "/portal", replace: true });
     } catch (error) {
       if (error instanceof LaraApiError) {
         if (error.errorCode === ApiErrorCodeType.LoginCaptchaRequired) {
@@ -232,7 +232,7 @@ function AdminLoginPage() {
         </p>
         {isSeedMode && (
           <DemoLoginPanel
-            onSuccess={() => navigate({ to: "/admin", replace: true })}
+            onSuccess={() => navigate({ to: "/portal", replace: true })}
             disabled={submitting}
           />
         )}

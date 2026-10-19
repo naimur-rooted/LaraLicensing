@@ -76,6 +76,8 @@ function crumbsFor(resellerId: number) {
   ];
 }
 
+import { ResellerCustomerRequestsCard } from "../../components/reseller/ResellerCustomerRequestsCard";
+
 function ResellerLicensesPage() {
   const { resellerId } = Route.useParams();
   const { data: meRows } = useSuspenseQuery(meQueryOptions());
@@ -112,7 +114,10 @@ function ResellerLicensesPage() {
       {isMismatch ? (
         <ForbiddenGate callerResellerId={me.ResellerId ?? null} urlResellerId={resellerId} />
       ) : (
-        <LicensesTable resellerId={resellerId} />
+        <>
+          <ResellerCustomerRequestsCard resellerId={resellerId} />
+          <LicensesTable resellerId={resellerId} />
+        </>
       )}
     </>
   );

@@ -294,6 +294,261 @@ Route::middleware(['require.signature'])
             ->name('verify.final');
     });
 
+// Plan 09 / Reseller / Admin serial lookup
+Route::get('/Serials/{SerialValue}', function (string $serialValue) {
+    $clean = trim(strtoupper($serialValue));
+    $file = database_path('registered_serials.json');
+    if (file_exists($file)) {
+        $registry = json_decode((string) file_get_contents($file), true) ?: [];
+        if (isset($registry[$clean])) {
+            return response()->json([
+                'IsSuccess' => true,
+                'Data' => $registry[$clean],
+            ]);
+        }
+    }
+
+    try {
+        $serial = \App\Models\Serial::where('SerialValue', $clean)->first();
+        if ($serial) {
+            return response()->json([
+                'IsSuccess' => true,
+                'Data' => [
+                    'SerialId' => $serial->SerialId,
+                    'LicenseId' => $serial->LicenseId,
+                    'SerialValue' => $serial->SerialValue,
+                    'IsRevoked' => (bool) $serial->IsRevoked,
+                    'Category' => 'Subscription',
+                    'CreatedAt' => $serial->CreatedAt ? $serial->CreatedAt->toISOString() : \Illuminate\Support\Carbon::now()->toISOString(),
+                ],
+            ]);
+        }
+    } catch (\Throwable $e) {
+        // Shard not bound or DB unconfigured; gracefully fallback
+    }
+
+    return response()->json([
+        'IsSuccess' => false,
+        'ErrorCode' => 'SerialNotFound',
+        'Message' => "Serial \"{$clean}\" not found.",
+    ], 404);
+})->where('SerialValue', '[A-Za-z0-9-]+');
+
+Route::post('/Serials/Register', function (Request $request) {
+    $serialValue = strtoupper(trim((string) $request->input('SerialValue', '')));
+    if (empty($serialValue)) {
+        return response()->json(['IsSuccess' => false, 'ErrorCode' => 'InvalidSerial', 'Message' => 'SerialValue is required.'], 422);
+    }
+    $file = database_path('registered_serials.json');
+    $registry = [];
+    if (file_exists($file)) {
+        $registry = json_decode((string) file_get_contents($file), true) ?: [];
+    }
+
+    $category = (string) $request->input('Category', 'Monthly');
+    $expiresAt = $request->input('ExpiresAt');
+    if (!$expiresAt && $category !== 'Lifetime') {
+        $days = match (strtolower($category)) {
+            'daily' => 1,
+            'weekly' => 7,
+            'yearly' => 365,
+            default => 30,
+        };
+        $expiresAt = \Illuminate\Support\Carbon::now()->addDays($days)->toISOString();
+    }
+
+    $record = [
+        'SerialId' => crc32($serialValue),
+        'SerialValue' => $serialValue,
+        'Category' => $category,
+        'TierName' => $request->input('TierName', 'Enterprise'),
+        'CustomerName' => $request->input('CustomerName', 'Customer'),
+        'CustomerEmail' => $request->input('CustomerEmail', ''),
+        'Status' => $request->input('Status', 'active'),
+        'ExpiresAt' => $expiresAt,
+        'Features' => $request->input('Features', ['core.reports', 'core.dashboards', 'addon.exports']),
+        'MaxActivations' => (int) $request->input('MaxActivations', 5),
+        'IsRevoked' => (bool) $request->input('IsRevoked', false),
+        'RegisteredAt' => \Illuminate\Support\Carbon::now()->toISOString(),
+    ];
+
+    $registry[$serialValue] = $record;
+    file_put_contents($file, json_encode($registry, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+
+    return response()->json(['IsSuccess' => true, 'Data' => $record]);
+});
+
+Route::post('/Serials/Revoke', function (Request $request) {
+    $serialValue = strtoupper(trim((string) $request->input('SerialValue', '')));
+    if (empty($serialValue)) {
+        return response()->json(['IsSuccess' => false, 'ErrorCode' => 'InvalidSerial', 'Message' => 'SerialValue is required.'], 422);
+    }
+    $file = database_path('registered_serials.json');
+    $registry = [];
+    if (file_exists($file)) {
+        $registry = json_decode((string) file_get_contents($file), true) ?: [];
+    }
+
+    if (isset($registry[$serialValue])) {
+        $registry[$serialValue]['Status'] = 'suspended';
+        $registry[$serialValue]['IsRevoked'] = true;
+        $registry[$serialValue]['RevokedAt'] = \Illuminate\Support\Carbon::now()->toISOString();
+        file_put_contents($file, json_encode($registry, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+        return response()->json(['IsSuccess' => true, 'Data' => $registry[$serialValue]]);
+    }
+
+    $record = [
+        'SerialId' => crc32($serialValue),
+        'SerialValue' => $serialValue,
+        'Category' => 'Revoked',
+        'Status' => 'suspended',
+        'IsRevoked' => true,
+        'RevokedAt' => \Illuminate\Support\Carbon::now()->toISOString(),
+    ];
+    $registry[$serialValue] = $record;
+    file_put_contents($file, json_encode($registry, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+
+    return response()->json(['IsSuccess' => true, 'Data' => $record]);
+});
+
+Route::post('/Serials/BindDevice', function (Request $request) {
+    $serialValue = strtoupper(trim((string) $request->input('SerialValue', '')));
+    $digest = strtoupper(trim((string) ($request->input('HardwareDigest') ?? $request->input('DeviceId') ?? '')));
+    $hostname = trim((string) $request->input('Hostname', 'Client PC'));
+    $os = trim((string) $request->input('Os', 'Windows'));
+
+    if (empty($serialValue) || empty($digest)) {
+        return response()->json(['IsSuccess' => false, 'ErrorCode' => 'InvalidInput', 'Message' => 'SerialValue and HardwareDigest required.'], 422);
+    }
+
+    $file = database_path('registered_serials.json');
+    $registry = file_exists($file) ? (json_decode((string) file_get_contents($file), true) ?: []) : [];
+
+    if (!isset($registry[$serialValue])) {
+        // Auto-register active key with 30-day default if unknown
+        $registry[$serialValue] = [
+            'SerialId' => crc32($serialValue),
+            'SerialValue' => $serialValue,
+            'Category' => 'Subscription',
+            'TierName' => 'Standard',
+            'Status' => 'active',
+            'ExpiresAt' => \Illuminate\Support\Carbon::now()->addDays(30)->toISOString(),
+            'MaxActivations' => 5,
+            'IsRevoked' => false,
+            'BoundDevices' => [],
+        ];
+    }
+
+    $record = &$registry[$serialValue];
+    if (!empty($record['IsRevoked']) || ($record['Status'] ?? '') === 'suspended') {
+        return response()->json(['IsSuccess' => false, 'ErrorCode' => 'LicenseSuspended', 'Message' => 'License has been deactivated/revoked.'], 403);
+    }
+
+    $devices = $record['BoundDevices'] ?? [];
+    $max = (int) ($record['MaxActivations'] ?? 5);
+
+    // Check if device already bound
+    $found = false;
+    foreach ($devices as &$dev) {
+        if (($dev['HardwareDigest'] ?? '') === $digest || ($dev['DeviceId'] ?? '') === $digest) {
+            $dev['LastActiveAt'] = \Illuminate\Support\Carbon::now()->toISOString();
+            $dev['Hostname'] = $hostname ?: ($dev['Hostname'] ?? 'PC');
+            $dev['Os'] = $os ?: ($dev['Os'] ?? 'OS');
+            $found = true;
+            break;
+        }
+    }
+
+    if (!$found) {
+        if (count($devices) >= $max) {
+            return response()->json([
+                'IsSuccess' => false,
+                'ErrorCode' => 'MaxActivationsReached',
+                'Message' => "Maximum machine limit of {$max} reached. Please unbind an older device from your portal.",
+                'BoundDevices' => $devices,
+                'MaxActivations' => $max,
+            ], 409);
+        }
+
+        $devices[] = [
+            'DeviceId' => $digest,
+            'HardwareDigest' => $digest,
+            'Hostname' => $hostname,
+            'Os' => $os,
+            'ActivatedAt' => \Illuminate\Support\Carbon::now()->toISOString(),
+            'LastActiveAt' => \Illuminate\Support\Carbon::now()->toISOString(),
+        ];
+    }
+
+    $record['BoundDevices'] = $devices;
+    file_put_contents($file, json_encode($registry, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+
+    return response()->json([
+        'IsSuccess' => true,
+        'Data' => [
+            'SerialValue' => $serialValue,
+            'BoundDevices' => $devices,
+            'MaxActivations' => $max,
+            'Status' => $record['Status'] ?? 'active',
+        ],
+    ]);
+});
+
+Route::post('/Serials/UnbindDevice', function (Request $request) {
+    $serialValue = strtoupper(trim((string) $request->input('SerialValue', '')));
+    $digest = strtoupper(trim((string) ($request->input('HardwareDigest') ?? $request->input('DeviceId') ?? '')));
+
+    if (empty($serialValue) || empty($digest)) {
+        return response()->json(['IsSuccess' => false, 'ErrorCode' => 'InvalidInput', 'Message' => 'SerialValue and DeviceId required.'], 422);
+    }
+
+    $file = database_path('registered_serials.json');
+    $registry = file_exists($file) ? (json_decode((string) file_get_contents($file), true) ?: []) : [];
+
+    if (!isset($registry[$serialValue])) {
+        return response()->json(['IsSuccess' => false, 'ErrorCode' => 'SerialNotFound', 'Message' => 'Serial not found.'], 404);
+    }
+
+    $record = &$registry[$serialValue];
+    $devices = $record['BoundDevices'] ?? [];
+
+    $filtered = array_values(array_filter($devices, function ($dev) use ($digest) {
+        return ($dev['HardwareDigest'] ?? '') !== $digest && ($dev['DeviceId'] ?? '') !== $digest;
+    }));
+
+    $record['BoundDevices'] = $filtered;
+    file_put_contents($file, json_encode($registry, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+
+    return response()->json([
+        'IsSuccess' => true,
+        'Message' => 'Device released successfully.',
+        'Data' => [
+            'SerialValue' => $serialValue,
+            'BoundDevices' => $filtered,
+            'MaxActivations' => (int) ($record['MaxActivations'] ?? 5),
+            'Status' => $record['Status'] ?? 'active',
+        ],
+    ]);
+});
+
+Route::post('/Serials/CancelRenewal', function (Request $request) {
+    $serialValue = strtoupper(trim((string) $request->input('SerialValue', '')));
+    if (empty($serialValue)) {
+        return response()->json(['IsSuccess' => false, 'ErrorCode' => 'InvalidSerial', 'Message' => 'SerialValue is required.'], 422);
+    }
+    $file = database_path('registered_serials.json');
+    $registry = file_exists($file) ? (json_decode((string) file_get_contents($file), true) ?: []) : [];
+
+    if (isset($registry[$serialValue])) {
+        $registry[$serialValue]['AutoRenew'] = false;
+        $registry[$serialValue]['CancelAtPeriodEnd'] = true;
+        file_put_contents($file, json_encode($registry, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+        return response()->json(['IsSuccess' => true, 'Data' => $registry[$serialValue]]);
+    }
+
+    return response()->json(['IsSuccess' => false, 'ErrorCode' => 'SerialNotFound'], 404);
+});
+
 // Plan 06 steps 44 + 45. Self-update manifest read path per
 // 02-spec/21-app/17-self-update-endpoint.md v1.3.0. Stable is anonymous
 // (no auth guard). Beta is reserved and rejected in-controller with

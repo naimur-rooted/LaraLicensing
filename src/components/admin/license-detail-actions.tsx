@@ -140,8 +140,11 @@ export function LicenseDetailActions({ license, etag }: Props) {
     setBusy("revoke");
     try {
       const result = await deleteLicense(license.LicenseId, crypto.randomUUID(), etag);
-      await router.invalidate();
+      queryClient.removeQueries({ queryKey: ["LaraApi", "License", license.LicenseId] });
+      await queryClient.invalidateQueries({ queryKey: ["LaraApi"] });
+      await queryClient.invalidateQueries({ queryKey: ["CustomerRequests"] });
       toast.success("License revoked", { description: describeRevokeOutcome(result) });
+      window.location.href = "/admin/licenses";
     } catch (revokeError) {
       const description = describeError(revokeError);
       setError(description);

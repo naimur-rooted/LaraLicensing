@@ -1,6 +1,8 @@
 import { ApiErrorCodeType, LaraApiError } from "@/lib/lara-api-error";
 import { setLaraAccessToken, setLaraRefreshToken } from "@/lib/lara-api-session";
 import { DEMO_IDENTITIES, type DemoIdentity } from "@/lib/demo-identities";
+import { read, write, list } from "@/lib/preview-store";
+import type { AdminUser, MeUser } from "@/generated/api/schema";
 
 export { DEMO_IDENTITIES, type DemoIdentity };
 
@@ -27,7 +29,32 @@ export async function signInWithSeedIdentity(identityId: string): Promise<void> 
   setLaraAccessToken(syntheticAccessToken);
   setLaraRefreshToken(syntheticRefreshToken);
 
-  // Note: We don't perform a backend call. The preview transport handles
-  // GET /Api/Me by detecting the 'seed_access_' prefix in the bearer.
+  // Sync me::current in preview store so both synthetic and fallback auth.me paths match immediately
+  try {
+    const rows = await list<AdminUser>("admin-users");
+    const emailMap: Record<string, string> = {
+      admin: "admin@lara.local",
+      reseller: "reseller@lara.local",
+      portal: "user@licensingportal.local",
+    };
+    const targetEmail = emailMap[identity.id];
+    const match = rows.map(([, u]) => u).find((u) => u.Email === targetEmail);
+
+    if (match) {
+      const roles = identity.id === "portal" ? ["portal", "enduser"] : match.Roles;
+      await write<MeUser>("me", "current", {
+        Id: match.Id,
+        Email: match.Email,
+        DisplayName: match.DisplayName,
+        Roles: roles,
+        ResellerId: match.ResellerId,
+        CreatedAt: match.CreatedAt,
+        UpdatedAt: new Date().toISOString(),
+      });
+    }
+  } catch (err) {
+    console.warn("signInWithSeedIdentity: could not update me::current", err);
+  }
+
   console.info("auth.seed_signin_success", { identityId: identity.id });
 }

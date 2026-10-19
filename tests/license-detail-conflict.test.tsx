@@ -25,9 +25,10 @@ function render(ui: ReactElement) {
 import { ApiErrorCodeType, LaraApiError } from "@/lib/lara-api-error";
 
 const invalidateMock = vi.fn(async () => {});
+const navigateMock = vi.fn(async () => {});
 
 vi.mock("@tanstack/react-router", () => ({
-  useRouter: () => ({ invalidate: invalidateMock }),
+  useRouter: () => ({ invalidate: invalidateMock, navigate: navigateMock }),
 }));
 
 vi.mock("@/components/admin/serial-issue-form", () => ({
