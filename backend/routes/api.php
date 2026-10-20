@@ -610,3 +610,22 @@ Route::prefix('v1/developer')->group(function (): void {
 // Decoupled Payment Gateway Webhook Callback (Zero card data stored)
 Route::post('/v1/products/{slug}/licenses/issue', [\App\Http\Controllers\Developer\ProductController::class, 'webhookIssue'])
     ->name('api.products.licenses.issue');
+
+// Client License Handshake & Verification Endpoint (Periodic Cadence + Multi-Seat HWID)
+Route::post('/v1/products/{slug}/verify', [\App\Http\Controllers\Developer\AdvancedLicensingController::class, 'verifyClient'])
+    ->name('api.products.verify');
+
+// Reseller Wholesale Quotas & Custom Offers Endpoints
+Route::prefix('v1/reseller-wholesale/{resellerSlug}')->group(function (): void {
+    Route::get('/overview', [\App\Http\Controllers\Developer\AdvancedLicensingController::class, 'resellerOverview'])->name('api.reseller_wholesale.overview');
+    Route::post('/quota', [\App\Http\Controllers\Developer\AdvancedLicensingController::class, 'allocateQuota'])->name('api.reseller_wholesale.quota');
+    Route::post('/offers', [\App\Http\Controllers\Developer\AdvancedLicensingController::class, 'createResellerOffer'])->name('api.reseller_wholesale.offers');
+});
+
+// Fraud Alerts, Impossible Travel & 1-Click Quarantine Endpoints
+Route::prefix('v1/security/{productSlug}')->group(function (): void {
+    Route::get('/events', [\App\Http\Controllers\Developer\AdvancedLicensingController::class, 'securityEvents'])->name('api.security.events');
+    Route::post('/quarantine', [\App\Http\Controllers\Developer\AdvancedLicensingController::class, 'quarantine'])->name('api.security.quarantine');
+    Route::post('/unbind-hardware', [\App\Http\Controllers\Developer\AdvancedLicensingController::class, 'unbindHardware'])->name('api.security.unbind_hardware');
+});
+

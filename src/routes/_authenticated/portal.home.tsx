@@ -6,9 +6,11 @@ import { SerialLookupPanel } from "@/components/portal/serial-lookup-panel";
 import { CustomerRequestForm } from "@/components/portal/CustomerRequestForm";
 import { CustomerRequestsHistory } from "@/components/portal/CustomerRequestsHistory";
 import { DeveloperProductsDashboard } from "@/components/developer/DeveloperProductsDashboard";
+import { ResellerWholesaleStudio } from "@/components/reseller/ResellerWholesaleStudio";
+import { FraudAlertCenter } from "@/components/security/FraudAlertCenter";
 import { meQueryOptions } from "@/lib/lara-me";
 import { clearLaraSession } from "@/lib/lara-api-session";
-import { LogOut, LayoutGrid, KeyRound } from "lucide-react";
+import { LogOut, LayoutGrid, KeyRound, Store, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/_authenticated/portal/home")({
@@ -18,7 +20,7 @@ export const Route = createFileRoute("/_authenticated/portal/home")({
       { title: "Portal | Licensing Portal" },
       {
         name: "description",
-        content: "Developer Product Studio and Client License Verification.",
+        content: "Developer Studio, Reseller Wholesale Hub, Fraud Guard, and Client License Verification.",
       },
       { name: "robots", content: "noindex,nofollow" },
     ],
@@ -33,7 +35,7 @@ function PortalHome() {
   const customerEmail = me?.Email ?? "user@licensingportal.local";
   const customerName = me?.DisplayName ?? "Valued Customer";
   const [selectedSerial, setSelectedSerial] = useState("");
-  const [activeTab, setActiveTab] = useState<"developer" | "client">("developer");
+  const [activeTab, setActiveTab] = useState<"developer" | "reseller" | "security" | "client">("developer");
 
   const handleSignOut = () => {
     clearLaraSession();
@@ -56,7 +58,7 @@ function PortalHome() {
       <div className="flex items-center justify-between">
         <PageHeader
           title={`Hello, ${displayName}`}
-          description="Manage software products, configure deal tiers & machine limits, or verify license serials."
+          description="Enterprise multi-tenant licensing ecosystem: developer product studio, reseller wholesale hub, fraud guard, and client verification."
         />
         <Button
           variant="outline"
@@ -70,7 +72,7 @@ function PortalHome() {
       </div>
 
       {/* Surface Selector Navigation */}
-      <div className="flex items-center gap-2 border-b border-border/80 pb-2">
+      <div className="flex flex-wrap items-center gap-2 border-b border-border/80 pb-2">
         <Button
           variant={activeTab === "developer" ? "default" : "ghost"}
           size="sm"
@@ -78,7 +80,25 @@ function PortalHome() {
           className="gap-2 text-xs font-medium"
         >
           <LayoutGrid className="size-4" />
-          Developer Product Studio (Tier 2)
+          Developer Studio (Tier 2)
+        </Button>
+        <Button
+          variant={activeTab === "reseller" ? "default" : "ghost"}
+          size="sm"
+          onClick={() => setActiveTab("reseller")}
+          className="gap-2 text-xs font-medium"
+        >
+          <Store className="size-4" />
+          Reseller Wholesale Hub
+        </Button>
+        <Button
+          variant={activeTab === "security" ? "default" : "ghost"}
+          size="sm"
+          onClick={() => setActiveTab("security")}
+          className="gap-2 text-xs font-medium"
+        >
+          <ShieldAlert className="size-4" />
+          Fraud Guard
         </Button>
         <Button
           variant={activeTab === "client" ? "default" : "ghost"}
@@ -87,13 +107,14 @@ function PortalHome() {
           className="gap-2 text-xs font-medium"
         >
           <KeyRound className="size-4" />
-          Client License Portal (Tier 3)
+          Client Verification (Tier 3)
         </Button>
       </div>
 
-      {activeTab === "developer" ? (
-        <DeveloperProductsDashboard />
-      ) : (
+      {activeTab === "developer" && <DeveloperProductsDashboard />}
+      {activeTab === "reseller" && <ResellerWholesaleStudio />}
+      {activeTab === "security" && <FraudAlertCenter />}
+      {activeTab === "client" && (
         <div className="flex flex-col gap-6">
           <CustomerRequestForm
             customerEmail={customerEmail}
