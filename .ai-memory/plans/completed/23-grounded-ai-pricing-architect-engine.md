@@ -63,37 +63,37 @@ flowchart TD
 ## 3. Step-by-Step Implementation Breakdown
 
 ### Phase 1: Database & Model Schema Extension
-- [ ] Add `features` TEXT (JSON-encoded) column to `ProductDeals` table in `backend/database/lara_root.sqlite`.
-- [ ] Update `ProductDeal.php` model with `'features' => 'array'` in `$casts` and fillable array.
-- [ ] Update `ProductService.php` to accept and serialize `features` when creating products or adding deals.
+- [x] Add `features` TEXT (JSON-encoded) column to `ProductDeals` table in `backend/database/lara_root.sqlite`.
+- [x] Update `ProductDeal.php` model with `'features' => 'array'` in `$casts` and fillable array.
+- [x] Update `ProductService.php` to accept and serialize `features` when creating products or adding deals.
 
 ### Phase 2: Grounded AI Architecture Engine (Backend)
-- [ ] Save the verified Gemini API key into `backend/.env` as `GEMINI_API_KEY`.
-- [ ] Implement `backend/app/Services/AiArchitectService.php`:
+- [x] Save the verified Gemini API key into `backend/.env` as `GEMINI_API_KEY`.
+- [x] Implement `backend/app/Services/AiArchitectService.php`:
   - Grounding prompt containing the 3-actor model, VPN decoy rules, and category intelligence.
   - Strict JSON schema for guaranteed database compatibility.
   - Resilient call to `gemini-3-flash-preview` with timeout and fallback handling.
-- [ ] Implement `backend/app/Http/Controllers/Developer/AiArchitectController.php`:
+- [x] Implement `backend/app/Http/Controllers/Developer/AiArchitectController.php`:
   - `POST /api/v1/developer/ai/design-pricing`: Takes product metadata + user prompt, returns pricing advice and structured deals.
   - `POST /api/v1/developer/products/{slug}/apply-ai-deals`: Atomically wipes draft/seeded deals and saves the AI-generated deal matrix to the product.
-- [ ] Register routes in `backend/routes/api.php`.
+- [x] Register routes in `backend/routes/api.php`.
 
 ### Phase 3: Interactive Developer Portal UI (Frontend)
-- [ ] Add an **"AI Pricing Architect"** chat drawer / dialog in `src/components/developer/DeveloperProductsDashboard.tsx`.
-- [ ] Provide interactive prompt starters (e.g. *"Design high-converting SaaS tiers for this product"*).
-- [ ] Render the AI's explanation and a preview of the proposed deal cards.
-- [ ] Add an **"Apply Deals to Product"** button that saves the deals directly to the backend without manual typing.
-- [ ] Update the manual **"Add Deal"** modal to include a multi-line **"Feature Perks (one per line)"** textarea for developers who prefer manual input.
+- [x] Add an **"AI Pricing Architect"** chat drawer / dialog in `src/components/developer/DeveloperProductsDashboard.tsx`.
+- [x] Provide interactive prompt starters (e.g. *"Design high-converting SaaS tiers for this product"*).
+- [x] Render the AI's explanation and a preview of the proposed deal cards.
+- [x] Add an **"Apply Deals to Product"** button that saves the deals directly to the backend without manual typing.
+- [x] Update the manual **"Add Deal"** modal to include a multi-line **"Feature Perks (one per line)"** textarea for developers who prefer manual input.
 
 ### Phase 4: Dynamic Headless Storefront Sync
-- [ ] Update `testing-sandbox/developer-storefront-sandbox/app_developer_storefront.py`:
+- [x] Update `testing-sandbox/developer-storefront-sandbox/app_developer_storefront.py`:
   - Modify the card rendering template: if `deal.features` exists and has items, render `deal.features.map(...)`.
   - Graceful fallback: if `deal.features` is empty, display the standard seats and domains licensing specs.
-- [ ] Ensure anti-caching headers remain active so storefront updates instantly upon deal sync.
+- [x] Ensure anti-caching headers remain active so storefront updates instantly upon deal sync.
 
 ### Phase 5: End-to-End Empirical Verification
-- [ ] Open Developer Studio and test the AI Architect on `leadhunter` (ChromeExtension).
-- [ ] Confirm Gemini generates custom extension perks (e.g. *1,000 Leads/mo, CSV Export, Chrome Profile*).
-- [ ] Click **"Apply Deals"** and confirm database persistence in `lara_root.sqlite`.
-- [ ] Open `http://localhost:5050/?slug=leadhunter` and verify the storefront renders the custom extension perks with the decoy ribbon!
-- [ ] Re-sync `lara-sandbox-desktop-client` on the storefront to guarantee desktop products remain unaffected and fully functional.
+- [x] Open Developer Studio and test the AI Architect on `leadhunter` (ChromeExtension).
+- [x] Confirm Gemini generates custom extension perks (e.g. *1,000 Leads/mo, CSV Export, Chrome Profile*).
+- [x] Click **"Apply Deals"** and confirm database persistence in `lara_root.sqlite`.
+- [x] Open `http://localhost:5050/?slug=leadhunter` and verify the storefront renders the custom extension perks with the decoy ribbon!
+- [x] Re-sync `lara-sandbox-desktop-client` on the storefront to guarantee desktop products remain unaffected and fully functional.
