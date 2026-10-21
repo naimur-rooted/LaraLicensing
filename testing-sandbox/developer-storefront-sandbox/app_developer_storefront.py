@@ -13,6 +13,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
     <title>Developer Storefront Sandbox (Method 1 Live Sync)</title>
     <style>
         :root {
@@ -176,7 +179,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             const fakeTxId = 'ch_stripe_' + Math.random().toString(36).substring(2, 12);
 
             status.innerHTML = '<span style="color:#f59e0b;">Dispatching payment webhook...</span>';
-            consoleOut.textContent = "Dispatched Webhook Payload:\n" + JSON.stringify({
+            consoleOut.textContent = `Dispatched Webhook Payload:\n` + JSON.stringify({
                 transactionId: fakeTxId,
                 customerEmail: randomEmail,
                 dealCode: dealCode,
@@ -197,10 +200,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
                 const data = await res.json();
                 status.innerHTML = '<span style="color:#10b981;">✔ Serial Minted Successfully</span>';
-                consoleOut.textContent = "LaraLicensing Webhook Response (Instant Serial Minted):\n\n" +
+                consoleOut.textContent = `LaraLicensing Webhook Response (Instant Serial Minted):\n\n` +
                     JSON.stringify(data, null, 2) +
-                    "\n\n👉 COPY THIS SERIAL KEY TO TEST IN APP B (End-User Simulator):\n" +
-                    "Serial Key: " + (data.Data?.SerialValue || "N/A");
+                    `\n\n👉 COPY THIS SERIAL KEY TO TEST IN APP B (End-User Simulator):\n` +
+                    `Serial Key: ` + (data.Data?.SerialValue || "N/A");
             } catch (err) {
                 status.innerHTML = '<span style="color:#ef4444;">✖ Webhook Failed</span>';
                 consoleOut.textContent = "Error: " + err.message;
@@ -219,13 +222,20 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 """
 
 class SandboxHandler(http.server.SimpleHTTPRequestHandler):
+    def end_headers(self):
+        self.send_header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+        self.send_header("Pragma", "no-cache")
+        self.send_header("Expires", "0")
+        super().end_headers()
+
     def do_GET(self):
-        if self.path == "/" or self.path == "/index.html":
+        clean_path = self.path.split("?")[0]
+        if clean_path in ("/", "/index.html"):
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.end_headers()
             self.wfile.write(HTML_TEMPLATE.encode("utf-8"))
-        elif self.path.startswith("/api/proxy-deals"):
+        elif clean_path.startswith("/api/proxy-deals"):
             # Proxy request to backend
             slug = self.path.split("slug=")[-1].strip() if "slug=" in self.path else DEFAULT_PRODUCT_SLUG
             url = f"{LARALICENSING_API}/api/v1/products/{slug}/deals"
@@ -252,7 +262,8 @@ class SandboxHandler(http.server.SimpleHTTPRequestHandler):
             self.end_headers()
 
     def do_POST(self):
-        if self.path == "/api/proxy-webhook":
+        clean_path = self.path.split("?")[0]
+        if clean_path == "/api/proxy-webhook":
             content_len = int(self.headers.get("Content-Length", 0))
             body = self.rfile.read(content_len).decode("utf-8")
             payload = json.loads(body)
