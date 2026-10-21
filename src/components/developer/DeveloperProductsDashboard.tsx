@@ -56,46 +56,7 @@ export interface DeveloperProductItem {
   deals: ProductDealItem[];
 }
 
-const INITIAL_PRODUCTS: DeveloperProductItem[] = [
-  {
-    ProductId: 1,
-    productSlug: "elementor-assistant",
-    productName: "Elementor Assistant Pro",
-    category: "WordPressPlugin",
-    description: "Autonomous styling and widget generation engine for Elementor.",
-    ed25519PublicKey: "MCowBQYDK2VwAyEA9gM2jFq1n3i6jGk8n0y4q7w9e2r5t8y1u4i7o0p3a6s=",
-    checkIntervalDays: 7,
-    deals: [
-      {
-        dealName: "Single Site Monthly",
-        dealCode: "ELM_1M_SINGLE",
-        billingInterval: "monthly",
-        priceCents: 999,
-        allowedMachineSeats: 1,
-        allowedDomains: 1,
-        isDecoyTarget: false,
-      },
-      {
-        dealName: "3 Sites Annual",
-        dealCode: "ELM_1Y_THREE",
-        billingInterval: "yearly",
-        priceCents: 4999,
-        allowedMachineSeats: 3,
-        allowedDomains: 3,
-        isDecoyTarget: false,
-      },
-      {
-        dealName: "Unlimited Agency (2 Years + 3 Mo)",
-        dealCode: "ELM_2Y_UNLIMITED",
-        billingInterval: "biennial",
-        priceCents: 8900,
-        allowedMachineSeats: 10,
-        allowedDomains: 10,
-        isDecoyTarget: true,
-      },
-    ],
-  },
-];
+const INITIAL_PRODUCTS: DeveloperProductItem[] = [];
 
 export function DeveloperProductsDashboard() {
   const [products, setProducts] = useState<DeveloperProductItem[]>(INITIAL_PRODUCTS);
@@ -103,8 +64,8 @@ export function DeveloperProductsDashboard() {
   const [isBlueprintOpen, setIsBlueprintOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  // Platform Subscription State
-  const [currentTier, setCurrentTier] = useState("Pro");
+  // Platform Subscription State (Default to Free / Unsubscribed)
+  const [currentTier, setCurrentTier] = useState("Free Starter");
   const [isPlatformModalOpen, setIsPlatformModalOpen] = useState(false);
 
   // New Product Modal State
@@ -179,6 +140,10 @@ ${dealsList}
     setDealCode("");
   };
 
+  const isFreePlan = currentTier.includes("Free") || currentTier.includes("Starter");
+  const maxProducts = isFreePlan ? 1 : currentTier.includes("Essential") ? 3 : currentTier.includes("Pro") ? 15 : 999;
+  const maxRequests = isFreePlan ? 100 : currentTier.includes("Essential") ? 200 : currentTier.includes("Pro") ? 1000 : 10000;
+
   return (
     <div className="flex flex-col gap-6" data-component="developer-dashboard">
       {/* Top Banner: Metered Capability Quota */}
@@ -190,21 +155,28 @@ ${dealsList}
           <div>
             <div className="flex items-center gap-2">
               <h3 className="font-semibold text-foreground">Developer License Studio</h3>
-              <Badge variant="outline" className="text-xs font-medium text-emerald-500 border-emerald-500/30">
-                {currentTier} Tier Active
+              <Badge
+                variant="outline"
+                className={`text-xs font-medium ${
+                  isFreePlan
+                    ? "text-amber-500 border-amber-500/30 bg-amber-500/10"
+                    : "text-emerald-500 border-emerald-500/30 bg-emerald-500/10"
+                }`}
+              >
+                {currentTier}
               </Badge>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setIsPlatformModalOpen(true)}
-                className="h-6 px-2 text-xs text-primary hover:text-primary/80 gap-1"
+                className="h-6 px-2 text-xs text-primary hover:text-primary/80 gap-1 font-semibold"
               >
-                <span>Upgrade / Change Plan</span>
+                <span>{isFreePlan ? "Choose a Plan" : "Upgrade / Change Plan"}</span>
                 <ArrowUpRight className="size-3" />
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              Capacity: {products.length} / 15 Products • Daily Requests: 142 / 1,000 used today
+              Capacity: {products.length} / {maxProducts >= 999 ? "Unlimited" : maxProducts} Products • Daily Requests: 0 / {maxRequests.toLocaleString()} used today
             </p>
           </div>
         </div>
@@ -214,93 +186,124 @@ ${dealsList}
         </Button>
       </div>
 
-      {/* Product Cards Grid */}
-      <div className="grid gap-6 md:grid-cols-2">
-        {products.map((p) => (
-          <Card key={p.productSlug} className="relative flex flex-col justify-between overflow-hidden border-border/80 shadow-sm">
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex items-center gap-2.5">
-                  <div className="flex size-9 items-center justify-center rounded-md bg-muted text-foreground">
-                    <Box className="size-5" />
+      {/* Product Cards Grid or Empty State */}
+      {products.length === 0 ? (
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/80 bg-card/40 p-12 text-center">
+          <div className="flex size-14 items-center justify-center rounded-full bg-primary/10 text-primary mb-4">
+            <Box className="size-7" />
+          </div>
+          <h3 className="text-base font-semibold text-foreground">No Software Products Registered Yet</h3>
+          <p className="mt-1.5 max-w-md text-xs text-muted-foreground leading-relaxed">
+            You are currently on the <strong>Free Starter Trial</strong>. You have not bought a LaraLicensing platform subscription or registered any software products yet.
+          </p>
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsPlatformModalOpen(true)}
+              className="text-xs gap-1.5 font-medium"
+            >
+              <Sparkles className="size-3.5 text-amber-500" />
+              Browse LaraLicensing Platform Packages
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => setIsNewProductOpen(true)}
+              className="text-xs gap-1.5 bg-primary hover:bg-primary/90 font-medium"
+            >
+              <Plus className="size-3.5" />
+              Register Your First Product
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="grid gap-6 md:grid-cols-2">
+          {products.map((p) => (
+            <Card key={p.productSlug} className="relative flex flex-col justify-between overflow-hidden border-border/80 shadow-sm">
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex size-9 items-center justify-center rounded-md bg-muted text-foreground">
+                      <Box className="size-5" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base font-semibold">{p.productName}</CardTitle>
+                      <CardDescription className="text-xs font-mono">{p.productSlug}</CardDescription>
+                    </div>
                   </div>
-                  <div>
-                    <CardTitle className="text-base font-semibold">{p.productName}</CardTitle>
-                    <CardDescription className="text-xs font-mono">{p.productSlug}</CardDescription>
-                  </div>
+                  <Badge variant="secondary" className="text-[11px] font-medium">
+                    {p.category}
+                  </Badge>
                 </div>
-                <Badge variant="secondary" className="text-[11px] font-medium">
-                  {p.category}
-                </Badge>
-              </div>
-              {p.description && (
-                <p className="mt-2 text-xs text-muted-foreground line-clamp-2">{p.description}</p>
-              )}
-            </CardHeader>
+                {p.description && (
+                  <p className="mt-2 text-xs text-muted-foreground line-clamp-2">{p.description}</p>
+                )}
+              </CardHeader>
 
-            <CardContent className="flex flex-col gap-3 pb-3">
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span className="flex items-center gap-1 font-medium text-foreground">
-                  <Layers className="size-3.5 text-primary" />
-                  Pricing Deals ({p.deals.length})
-                </span>
-                <span className="text-[11px]">Re-verify: every {p.checkIntervalDays} days</span>
-              </div>
+              <CardContent className="flex flex-col gap-3 pb-3">
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1 font-medium text-foreground">
+                    <Layers className="size-3.5 text-primary" />
+                    Pricing Deals ({p.deals.length})
+                  </span>
+                  <span className="text-[11px]">Re-verify: every {p.checkIntervalDays} days</span>
+                </div>
 
-              <div className="space-y-1.5 rounded-lg border bg-muted/30 p-2.5 text-xs">
-                {p.deals.map((deal) => (
-                  <div
-                    key={deal.dealCode}
-                    className="flex items-center justify-between rounded p-1 hover:bg-background/80 transition-colors"
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-medium text-foreground">{deal.dealName}</span>
-                      {deal.isDecoyTarget && (
-                        <Badge variant="default" className="h-4 px-1 text-[9px] bg-emerald-600 font-semibold">
-                          DECOY TARGET
-                        </Badge>
-                      )}
+                <div className="space-y-1.5 rounded-lg border bg-muted/30 p-2.5 text-xs">
+                  {p.deals.map((deal) => (
+                    <div
+                      key={deal.dealCode}
+                      className="flex items-center justify-between rounded p-1 hover:bg-background/80 transition-colors"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-medium text-foreground">{deal.dealName}</span>
+                        {deal.isDecoyTarget && (
+                          <Badge variant="default" className="h-4 px-1 text-[9px] bg-emerald-600 font-semibold">
+                            DECOY TARGET
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="text-right font-mono text-[11px] text-muted-foreground">
+                        <span className="font-semibold text-foreground">${(deal.priceCents / 100).toFixed(2)}</span>
+                        <span> / {deal.billingInterval}</span>
+                        <span className="ml-1 text-[10px] text-muted-foreground/80">({deal.allowedMachineSeats} seats)</span>
+                      </div>
                     </div>
-                    <div className="text-right font-mono text-[11px] text-muted-foreground">
-                      <span className="font-semibold text-foreground">${(deal.priceCents / 100).toFixed(2)}</span>
-                      <span> / {deal.billingInterval}</span>
-                      <span className="ml-1 text-[10px] text-muted-foreground/80">({deal.allowedMachineSeats} seats)</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
+                  ))}
+                </div>
+              </CardContent>
 
-            <CardFooter className="flex items-center justify-between border-t bg-muted/20 pt-3">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setTargetProduct(p);
-                  setIsAddDealOpen(true);
-                }}
-                className="h-8 gap-1 text-xs"
-              >
-                <Plus className="size-3" />
-                Add Deal
-              </Button>
+              <CardFooter className="flex items-center justify-between border-t bg-muted/20 pt-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setTargetProduct(p);
+                    setIsAddDealOpen(true);
+                  }}
+                  className="h-8 gap-1 text-xs"
+                >
+                  <Plus className="size-3" />
+                  Add Deal
+                </Button>
 
-              <Button
-                variant="default"
-                size="sm"
-                onClick={() => {
-                  setSelectedProduct(p);
-                  setIsBlueprintOpen(true);
-                }}
-                className="h-8 gap-1.5 text-xs bg-primary hover:bg-primary/90"
-              >
-                <Bot className="size-3.5" />
-                Export AI Blueprint
-              </Button>
-            </CardFooter>
-          </Card>
-        ))}
-      </div>
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedProduct(p);
+                    setIsBlueprintOpen(true);
+                  }}
+                  className="h-8 gap-1.5 text-xs bg-primary hover:bg-primary/90"
+                >
+                  <Bot className="size-3.5" />
+                  Export AI Blueprint
+                </Button>
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
+      )}
 
       {/* Export AI Blueprint Dialog */}
       <Dialog open={isBlueprintOpen} onOpenChange={setIsBlueprintOpen}>
