@@ -1,23 +1,26 @@
 import { createFileRoute } from "@tanstack/react-router";
-
-import { CtaFooter } from "@/components/landing/CtaFooter";
-import { FeatureGrid } from "@/components/landing/FeatureGrid";
-import { HeroSection } from "@/components/landing/HeroSection";
+import { LicenseSpringHeader } from "@/components/landing/LicenseSpringHeader";
+import { LicenseSpringHero } from "@/components/landing/LicenseSpringHero";
+import { InteractiveCodeShowcase } from "@/components/landing/InteractiveCodeShowcase";
+import { LiveDashboardShowcase } from "@/components/landing/LiveDashboardShowcase";
+import { LicensingModelsGrid } from "@/components/landing/LicensingModelsGrid";
+import { CompetitiveAdvantageSection } from "@/components/landing/CompetitiveAdvantageSection";
+import { LicenseSpringFooter } from "@/components/landing/LicenseSpringFooter";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Licensing Portal, license issuance and verification API" },
+      { title: "LaraLicensing • Modern Multi-Tenant Software Licensing Engine" },
       {
         name: "description",
         content:
-          "Licensing Portal issues, binds, and verifies software licenses for resellers, app builders, and end users with split-DB tenancy and signed self-update.",
+          "Developer-first software licensing engine: node-locking, machine seat quotas, offline Ed25519 signatures, split-DB tenancy, and AI blueprint synthesis.",
       },
-      { property: "og:title", content: "Licensing Portal" },
+      { property: "og:title", content: "LaraLicensing Software Licensing" },
       {
         property: "og:description",
         content:
-          "License issuance and verification API for resellers, app builders, and end users.",
+          "Modern software licensing, node-locking, and offline verification engine for desktop, Chrome extensions, WordPress, and SaaS.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -28,21 +31,29 @@ export const Route = createFileRoute("/")({
 
 function Index() {
   return (
-    <main className="min-h-screen bg-background text-foreground">
-      <HeroSection />
-      <FeatureGrid />
-      <CtaFooter />
-      <footer className="border-t border-border/60 bg-surface">
-        <div
-          className="mx-auto flex max-w-6xl flex-col gap-2 py-10 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between"
-          style={{ paddingInline: "clamp(1.5rem, 4vw, 3rem)" }}
-        >
-          <span style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}>
-            Licensing Portal
-          </span>
-          <span>Split-DB license issuance and verification API.</span>
-        </div>
-      </footer>
-    </main>
+    <div className="min-h-screen bg-background text-foreground flex flex-col">
+      {/* LicenseSpring-Style Navigation Header & Mega Menu */}
+      <LicenseSpringHeader />
+
+      <main className="flex-1">
+        {/* Hero Section with Ambient Pastel Glow & Language Matrix */}
+        <LicenseSpringHero />
+
+        {/* Market-Ready in 3 Lines of Code (Interactive Tabs) */}
+        <InteractiveCodeShowcase />
+
+        {/* Live Overview Dashboard Showcase */}
+        <LiveDashboardShowcase />
+
+        {/* 6 Core Licensing Models Grid */}
+        <LicensingModelsGrid />
+
+        {/* Competitive Advantage Comparison Table */}
+        <CompetitiveAdvantageSection />
+      </main>
+
+      {/* LicenseSpring-Style Footer */}
+      <LicenseSpringFooter />
+    </div>
   );
 }
