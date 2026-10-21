@@ -15,11 +15,12 @@ class AiArchitectService
 {
     private string $apiKey;
     private const CANDIDATE_MODELS = [
+        'gemini-3.5-flash-lite',
+        'gemini-3.1-flash-lite',
+        'gemini-3.6-flash',
+        'gemini-flash-lite-latest',
         'gemini-3-flash-preview',
         'gemini-3.5-flash',
-        'gemini-3.1-flash-lite',
-        'gemini-2.5-flash-lite',
-        'gemini-flash-latest',
     ];
     private const BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
 
@@ -62,6 +63,89 @@ class AiArchitectService
                 }
             }
 
+            $lastError = 'Model ' . $model . ' failed (' . $response->status() . '): ' . $response->body();
+        }
+
+        throw new RuntimeException($lastError);
+    }
+
+    /** Generate framework-tailored client integration code and AI prompt via Gemini. */
+    public function generateClientBlueprintCode(Product $product, string $targetFramework, string $customNotes = ''): array
+    {
+        if (empty($this->apiKey)) {
+            throw new RuntimeException('GEMINI_API_KEY is not configured in backend/.env');
+        }
+
+        $verifyUrl = url("/api/v1/products/{$product->productSlug}/verify");
+        $dealsList = $product->deals ? $product->deals->map(fn($d) => "- {$d->dealName} ({$d->dealCode}): seats={$d->allowedMachineSeats}, features=" . json_encode($d->features ?? []))->implode("\n") : 'None';
+
+        $prompt = <<<PROMPT
+You are the Principal Lead Licensing & Cryptographic Systems Engineer for LaraLicensing.
+Generate a complete, production-ready client integration blueprint for a developer integrating this product.
+
+PRODUCT DETAILS:
+- Name: {$product->productName}
+- Slug: {$product->productSlug}
+- Category: {$product->category}
+- Description: {$product->description}
+- Verification Endpoint: {$verifyUrl}
+- Public Key (Ed25519): {$product->ed25519PublicKey}
+- Cadence Check Interval: Every {$product->checkIntervalDays} days
+- Configured Deals & Features:
+{$dealsList}
+
+TARGET FRAMEWORK / LANGUAGE: {$targetFramework}
+ADDITIONAL DEVELOPER NOTES: {$customNotes}
+
+ARCHITECTURAL MANDATES:
+1. Generate real, runnable client code (not pseudocode).
+2. Hardware/Environment Fingerprinting:
+   - For Desktop (Python/C#/Electron): hash machine GUID or MAC.
+   - For Chrome Extension: generate or retrieve a persistent client UUID stored in chrome.storage.local.
+   - For WordPress: hash site home_url() and server hostname.
+3. Offline Caching & Ed25519 Verification:
+   - Store offline JWT token locally.
+   - On startup, check if offline token exists and is valid. If network is offline, allow access if token is within {$product->checkIntervalDays} days.
+4. Feature Gating:
+   - Provide a clean helper method e.g. `hasFeature(featureName)` or `canAccess(module)`.
+
+OUTPUT SCHEMA (JSON ONLY):
+{
+  "framework": "{$targetFramework}",
+  "fileName": "filename with extension (e.g. licensing.py or license-verifier.js)",
+  "dependencies": "required install command or none",
+  "instructions": "1-3 step quick start setup instructions",
+  "codeSnippet": "The complete, fully commented, production-ready code with no placeholders",
+  "agentPrompt": "The tailored prompt to copy into Cursor, Windsurf, Claude, or ChatGPT to implement it automatically into their existing project"
+}
+PROMPT;
+
+        $payload = [
+            'contents' => [
+                ['parts' => [['text' => $prompt]]],
+            ],
+            'generationConfig' => [
+                'responseMimeType' => 'application/json',
+            ],
+        ];
+
+        $lastError = 'Unknown error';
+        foreach (self::CANDIDATE_MODELS as $model) {
+            $url = self::BASE_URL . '/' . $model . ':generateContent?key=' . $this->apiKey;
+            $response = Http::withHeaders(['Content-Type' => 'application/json'])
+                ->timeout(30)
+                ->post($url, $payload);
+
+            if ($response->successful()) {
+                $data = $response->json();
+                $text = $data['candidates'][0]['content']['parts'][0]['text'] ?? '{}';
+                $decoded = json_decode($text, true);
+                if (is_array($decoded) && (!empty($decoded['codeSnippet']) || !empty($decoded['agentPrompt']))) {
+                    return $decoded;
+                }
+            }
+
+            \Illuminate\Support\Facades\Log::warning("Blueprint model {$model} failed: " . $response->status() . " - " . substr($response->body(), 0, 300));
             $lastError = 'Model ' . $model . ' failed (' . $response->status() . '): ' . $response->body();
         }
 

@@ -30,6 +30,10 @@ import {
   ShieldCheck,
   Activity,
   ArrowUpRight,
+  Loader2,
+  Code2,
+  Terminal,
+  FileCode,
 } from "lucide-react";
 import { CreateProductDialog } from "./CreateProductDialog";
 import { PlatformSubscriptionModal } from "./PlatformSubscriptionModal";
@@ -66,6 +70,43 @@ export function DeveloperProductsDashboard() {
   const [selectedProduct, setSelectedProduct] = useState<DeveloperProductItem | null>(null);
   const [isBlueprintOpen, setIsBlueprintOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // AI Blueprint Code Generation State
+  const [blueprintFramework, setBlueprintFramework] = useState("chrome-extension");
+  const [blueprintNotes, setBlueprintNotes] = useState("");
+  const [isGeneratingBlueprintCode, setIsGeneratingBlueprintCode] = useState(false);
+  const [generatedBlueprint, setGeneratedBlueprint] = useState<{
+    framework: string;
+    fileName: string;
+    dependencies: string;
+    instructions: string;
+    codeSnippet: string;
+    agentPrompt: string;
+  } | null>(null);
+  const [blueprintTab, setBlueprintTab] = useState<"code" | "prompt">("code");
+
+  const handleGenerateBlueprintCode = async (product: DeveloperProductItem, framework: string) => {
+    setIsGeneratingBlueprintCode(true);
+    try {
+      const res = await fetch(`http://127.0.0.1:8000/api/v1/developer/products/${product.productSlug}/blueprint-code`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          framework,
+          notes: blueprintNotes,
+        }),
+      });
+      const data = await res.json();
+      if (data.IsSuccess && data.Data) {
+        setGeneratedBlueprint(data.Data);
+        setBlueprintTab("code");
+      }
+    } catch {
+      // Local fallback
+    } finally {
+      setIsGeneratingBlueprintCode(false);
+    }
+  };
 
   // Platform Subscription State (Default to Free / Unsubscribed)
   const [currentTier, setCurrentTier] = useState("Free Starter");
@@ -345,6 +386,14 @@ ${dealsList}
                   size="sm"
                   onClick={() => {
                     setSelectedProduct(p);
+                    const defaultFw =
+                      p.category === "ChromeExtension"
+                        ? "chrome-extension"
+                        : p.category === "WordPressPlugin"
+                        ? "wordpress-plugin"
+                        : "python-desktop";
+                    setBlueprintFramework(defaultFw);
+                    setGeneratedBlueprint(null);
                     setIsBlueprintOpen(true);
                   }}
                   className="h-8 gap-1.5 text-xs bg-primary hover:bg-primary/90"
@@ -358,42 +407,176 @@ ${dealsList}
         </div>
       )}
 
-      {/* Export AI Blueprint Dialog */}
+      {/* Export AI Blueprint & Source Generator Dialog */}
       <Dialog open={isBlueprintOpen} onOpenChange={setIsBlueprintOpen}>
-        <DialogContent className="max-w-xl">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className="flex items-center gap-2 text-lg">
               <Bot className="size-5 text-primary" />
-              AI Integration Prompt
+              AI Integration Blueprint & Drop-in Source Generator
             </DialogTitle>
             <DialogDescription>
-              Copy this ready-made blueprint and paste it directly into Cursor, Claude, ChatGPT, or Gemini to auto-integrate client license verification into your software.
+              Synthesize production-ready client verification code and tailored AI agent prompts (Cursor, Claude, Copilot) grounded in your product's Ed25519 keys, cadence intervals, and feature gates.
             </DialogDescription>
           </DialogHeader>
 
           {selectedProduct && (
-            <div className="relative rounded-lg border bg-zinc-950 p-4 font-mono text-xs text-zinc-100 dark:bg-zinc-900">
-              <pre className="whitespace-pre-wrap leading-relaxed max-h-[320px] overflow-y-auto">
-                {generateBlueprintText(selectedProduct)}
-              </pre>
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={() => handleCopyPrompt(generateBlueprintText(selectedProduct))}
-                className="absolute top-3 right-3 gap-1.5 text-xs shadow-md"
-              >
-                {copied ? <Check className="size-3.5 text-emerald-500" /> : <Copy className="size-3.5" />}
-                {copied ? "Copied Prompt!" : "Copy Prompt"}
-              </Button>
+            <div className="space-y-4 py-1">
+              {/* Framework Selector & Gemini Generator Bar */}
+              <div className="rounded-lg border bg-muted/20 p-3.5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-semibold text-foreground">Select Target Language / Framework</Label>
+                  <span className="text-[10px] text-muted-foreground font-mono">
+                    Product: {selectedProduct.productSlug} ({selectedProduct.category})
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5">
+                  {[
+                    { id: "chrome-extension", label: "🧩 Chrome (JS)" },
+                    { id: "python-desktop", label: "🐍 Python Desktop" },
+                    { id: "wordpress-plugin", label: "🔌 WordPress (PHP)" },
+                    { id: "csharp-dotnet", label: "⚡ C# .NET" },
+                    { id: "universal-agent", label: "🤖 Universal AI" },
+                  ].map((fw) => (
+                    <button
+                      key={fw.id}
+                      type="button"
+                      onClick={() => setBlueprintFramework(fw.id)}
+                      className={`px-2.5 py-1.5 rounded-md text-xs font-medium border text-center transition-all ${
+                        blueprintFramework === fw.id
+                          ? "border-primary bg-primary text-primary-foreground shadow-xs font-semibold"
+                          : "border-border/60 bg-background/50 hover:bg-background text-muted-foreground"
+                      }`}
+                    >
+                      {fw.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex items-center gap-2 pt-1">
+                  <Input
+                    placeholder="Optional notes: e.g. 'Use electron-store', 'Integrate with PyQt6', 'Strict offline mode'"
+                    value={blueprintNotes}
+                    onChange={(e) => setBlueprintNotes(e.target.value)}
+                    className="h-8 text-xs bg-background flex-1"
+                  />
+                  <Button
+                    size="sm"
+                    disabled={isGeneratingBlueprintCode}
+                    onClick={() => handleGenerateBlueprintCode(selectedProduct, blueprintFramework)}
+                    className="h-8 text-xs gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90 shrink-0"
+                  >
+                    {isGeneratingBlueprintCode ? (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    ) : (
+                      <Sparkles className="size-3.5 text-amber-400" />
+                    )}
+                    {isGeneratingBlueprintCode ? "Synthesizing with Gemini..." : "Synthesize Code with Gemini"}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Generated Result or Default Blueprint Specification */}
+              {generatedBlueprint ? (
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-foreground flex items-center gap-1">
+                        <FileCode className="size-3.5 text-primary" />
+                        File: <code className="text-primary font-mono">{generatedBlueprint.fileName}</code>
+                      </span>
+                      {generatedBlueprint.dependencies && generatedBlueprint.dependencies !== "none" && (
+                        <span className="text-[11px] font-mono bg-zinc-800 text-amber-300 px-2 py-0.5 rounded border border-zinc-700">
+                          {generatedBlueprint.dependencies}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-1 border rounded-md p-0.5 bg-muted/30">
+                      <button
+                        type="button"
+                        onClick={() => setBlueprintTab("code")}
+                        className={`px-2 py-0.5 rounded text-xs font-medium transition-all ${
+                          blueprintTab === "code" ? "bg-background text-foreground shadow-xs" : "text-muted-foreground"
+                        }`}
+                      >
+                        Drop-in Code
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setBlueprintTab("prompt")}
+                        className={`px-2 py-0.5 rounded text-xs font-medium transition-all ${
+                          blueprintTab === "prompt" ? "bg-background text-foreground shadow-xs" : "text-muted-foreground"
+                        }`}
+                      >
+                        Agent Prompt (Cursor/Claude)
+                      </button>
+                    </div>
+                  </div>
+
+                  {generatedBlueprint.instructions && (
+                    <p className="text-[11px] text-muted-foreground px-1 italic">
+                      💡 {generatedBlueprint.instructions}
+                    </p>
+                  )}
+
+                  <div className="relative rounded-lg border bg-zinc-950 p-4 font-mono text-xs text-zinc-100 dark:bg-zinc-900 shadow-inner">
+                    <pre className="whitespace-pre-wrap leading-relaxed max-h-[360px] overflow-y-auto">
+                      {blueprintTab === "code" ? generatedBlueprint.codeSnippet : generatedBlueprint.agentPrompt}
+                    </pre>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() =>
+                        handleCopyPrompt(
+                          blueprintTab === "code"
+                            ? generatedBlueprint.codeSnippet
+                            : generatedBlueprint.agentPrompt
+                        )
+                      }
+                      className="absolute top-3 right-3 gap-1.5 text-xs shadow-md bg-zinc-800 hover:bg-zinc-700 text-zinc-100"
+                    >
+                      {copied ? <Check className="size-3.5 text-emerald-400" /> : <Copy className="size-3.5" />}
+                      {copied ? "Copied!" : blueprintTab === "code" ? "Copy Source Code" : "Copy Agent Prompt"}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between px-1">
+                    <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+                      <Terminal className="size-3.5" /> Base Protocol Specification
+                    </span>
+                    <span className="text-[11px] text-amber-500 font-medium">
+                      👆 Click "Synthesize Code with Gemini" above for ready-to-paste {blueprintFramework} code
+                    </span>
+                  </div>
+                  <div className="relative rounded-lg border bg-zinc-950 p-4 font-mono text-xs text-zinc-100 dark:bg-zinc-900">
+                    <pre className="whitespace-pre-wrap leading-relaxed max-h-[280px] overflow-y-auto">
+                      {generateBlueprintText(selectedProduct)}
+                    </pre>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => handleCopyPrompt(generateBlueprintText(selectedProduct))}
+                      className="absolute top-3 right-3 gap-1.5 text-xs shadow-md bg-zinc-800 hover:bg-zinc-700 text-zinc-100"
+                    >
+                      {copied ? <Check className="size-3.5 text-emerald-400" /> : <Copy className="size-3.5" />}
+                      {copied ? "Copied Protocol!" : "Copy Protocol"}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
-          <DialogFooter className="sm:justify-between">
+          <DialogFooter className="sm:justify-between pt-2">
             <span className="text-[11px] text-muted-foreground flex items-center gap-1">
-              <ShieldCheck className="size-3.5 text-emerald-500" /> Zero cardholder data processed
+              <ShieldCheck className="size-3.5 text-emerald-500" /> Ed25519 Cryptographic Signatures • Zero Cardholder Data
             </span>
             <Button variant="outline" size="sm" onClick={() => setIsBlueprintOpen(false)}>
-              Done
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>

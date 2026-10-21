@@ -78,4 +78,23 @@ class AiArchitectController extends Controller
             'Data' => $refreshed,
         ]);
     }
+
+    /** Generate framework-tailored client integration code via Gemini. */
+    public function generateBlueprintCode(string $slug, Request $request): JsonResponse
+    {
+        $product = $this->productService->getProductBySlug($slug);
+        if (!$product) {
+            return response()->json(['IsSuccess' => false, 'ErrorCode' => 'ProductNotFound', 'Message' => 'Product not found.'], 404);
+        }
+
+        $framework = trim((string) $request->input('framework', 'universal-agent'));
+        $notes = trim((string) $request->input('notes', ''));
+
+        try {
+            $blueprint = $this->aiArchitectService->generateClientBlueprintCode($product, $framework, $notes);
+            return response()->json(['IsSuccess' => true, 'Data' => $blueprint]);
+        } catch (Throwable $e) {
+            return response()->json(['IsSuccess' => false, 'ErrorCode' => 'BlueprintGenerationFailed', 'Message' => $e->getMessage()], 500);
+        }
+    }
 }

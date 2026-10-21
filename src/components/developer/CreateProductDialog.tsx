@@ -20,6 +20,10 @@ export function CreateProductDialog({ isOpen, onOpenChange, onProductCreated }: 
   const [description, setDescription] = useState("");
   const [checkIntervalDays, setCheckIntervalDays] = useState("7");
   const [isAiGenerating, setIsAiGenerating] = useState(false);
+  const [isAiPanelOpen, setIsAiPanelOpen] = useState(false);
+  const [aiStrategy, setAiStrategy] = useState<"decoy-matrix" | "appsumo-ltd" | "b2b-agency" | "low-barrier">("decoy-matrix");
+  const [aiKillerFeatures, setAiKillerFeatures] = useState("");
+  const [aiTargetPrice, setAiTargetPrice] = useState("");
 
   // Default 3 VPN-Style Decoy Deals matching meeting discussion
   const [deals, setDeals] = useState<ProductDealItem[]>([
@@ -58,11 +62,23 @@ export function CreateProductDialog({ isOpen, onOpenChange, onProductCreated }: 
     },
   ]);
 
-  const handleAiAutoFill = async () => {
+  const handleAiAutoFill = async (useCustomContext = false) => {
     setIsAiGenerating(true);
     try {
       const name = productName.trim() || "My Software";
       const cleanSlug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+      
+      let promptText = `Generate high-converting pricing deals with realistic feature perks specifically for a ${category} named ${name}.`;
+      if (useCustomContext) {
+        const strategyNames = {
+          "decoy-matrix": "Three-Tier Decoy Matrix (NordVPN style: Monthly Anchor, Annual Pro, 2-Year Best Value Target)",
+          "appsumo-ltd": "AppSumo-Style Lifetime Deals (Single Code LTD, Double Code, Unlimited Agency Code)",
+          "b2b-agency": "High-Ticket B2B SaaS (Starter, Professional Team, Unlimited Agency)",
+          "low-barrier": "Low-Barrier Impulse Utility ($9 - $29 impulse buy with high volume)",
+        };
+        promptText = `Strategy Model: ${strategyNames[aiStrategy]}. Killer Features & Value Proposition: ${aiKillerFeatures || 'Standard category capabilities'}. Target Price Range: ${aiTargetPrice || 'Market competitive'}. Output packages with software-specific feature perks that directly deliver on this value proposition.`;
+      }
+
       const res = await fetch("http://127.0.0.1:8000/api/v1/developer/ai/design-pricing", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -71,7 +87,7 @@ export function CreateProductDialog({ isOpen, onOpenChange, onProductCreated }: 
           productName: name,
           category: category === "CustomOther" ? (customCategory.trim() || "CustomSoftware") : category,
           description: description,
-          userPrompt: `Generate high-converting 3-tier decoy pricing deals with realistic feature perks specifically for a ${category} named ${name}.`,
+          userPrompt: promptText,
         }),
       });
 
@@ -82,6 +98,7 @@ export function CreateProductDialog({ isOpen, onOpenChange, onProductCreated }: 
           featuresText: Array.isArray(d.features) ? d.features.join("\n") : (d.features || ""),
         }));
         setDeals(enriched);
+        setIsAiPanelOpen(false);
       }
     } catch (e) {
       if (category === "ChromeExtension") {
@@ -279,17 +296,110 @@ export function CreateProductDialog({ isOpen, onOpenChange, onProductCreated }: 
                   variant="outline"
                   size="sm"
                   disabled={isAiGenerating}
-                  onClick={handleAiAutoFill}
-                  className="h-7 text-xs gap-1 border-primary/40 text-primary hover:bg-primary/10"
+                  onClick={() => setIsAiPanelOpen(!isAiPanelOpen)}
+                  className={`h-7 text-xs gap-1 transition-colors ${
+                    isAiPanelOpen 
+                      ? "bg-primary text-primary-foreground border-primary" 
+                      : "border-primary/40 text-primary hover:bg-primary/10"
+                  }`}
                 >
                   {isAiGenerating ? <Loader2 className="size-3 animate-spin" /> : <Sparkles className="size-3 text-amber-500" />}
-                  {isAiGenerating ? "Architecting..." : "Auto-Fill with AI"}
+                  {isAiGenerating ? "Architecting..." : isAiPanelOpen ? "Close AI Studio" : "✨ Auto-Fill with AI"}
                 </Button>
                 <Button type="button" variant="outline" size="sm" onClick={handleAddDealRow} className="h-7 text-xs gap-1">
                   <Plus className="size-3" /> Add Deal
                 </Button>
               </div>
             </div>
+
+            {/* Expandable Grounded AI Pricing Strategy Studio */}
+            {isAiPanelOpen && (
+              <div className="rounded-lg border-2 border-primary/30 bg-primary/5 p-3.5 space-y-3 transition-all animate-in fade-in-50">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-primary flex items-center gap-1.5">
+                    <Bot className="size-4" /> AI Monetization & Pricing Architect
+                  </span>
+                  <Badge variant="secondary" className="text-[10px] bg-primary/10 text-primary border-primary/20">
+                    Gemini Intelligence
+                  </Badge>
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-[11px] font-medium text-foreground">Select Monetization Strategy</Label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                    {[
+                      { id: "decoy-matrix", label: "🛡️ 2-Yr Decoy", desc: "NordVPN style" },
+                      { id: "appsumo-ltd", label: "⚡ AppSumo LTD", desc: "Lifetime codes" },
+                      { id: "b2b-agency", label: "💼 B2B Agency", desc: "Team growth" },
+                      { id: "low-barrier", label: "🚀 Low Impulse", desc: "$9 - $29 volume" },
+                    ].map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => setAiStrategy(s.id as any)}
+                        className={`p-1.5 rounded-md text-left border transition-all ${
+                          aiStrategy === s.id
+                            ? "border-primary bg-primary/15 text-primary font-semibold shadow-xs"
+                            : "border-border/60 bg-background/50 hover:bg-background text-muted-foreground"
+                        }`}
+                      >
+                        <div className="text-[11px]">{s.label}</div>
+                        <div className="text-[9px] opacity-70">{s.desc}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <div className="sm:col-span-2 space-y-1">
+                    <Label className="text-[11px] font-medium text-foreground">
+                      Killer Features & Value Proposition (What did you build?)
+                    </Label>
+                    <Input
+                      placeholder={
+                        category === "ChromeExtension"
+                          ? "e.g. 10k LinkedIn scrapes, CRM auto-sync, proxy rotation"
+                          : category === "WordPressPlugin"
+                          ? "e.g. WooCommerce checkout booster, cart recovery, priority updates"
+                          : "e.g. 4K GPU video upscaling, offline mode, multi-track audio"
+                      }
+                      value={aiKillerFeatures}
+                      onChange={(e) => setAiKillerFeatures(e.target.value)}
+                      className="h-8 text-xs bg-background"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[11px] font-medium text-foreground">Target Price Range</Label>
+                    <Input
+                      placeholder="e.g. $29 - $89"
+                      value={aiTargetPrice}
+                      onChange={(e) => setAiTargetPrice(e.target.value)}
+                      className="h-8 text-xs bg-background"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-1 border-t border-primary/20">
+                  <button
+                    type="button"
+                    onClick={() => handleAiAutoFill(false)}
+                    className="text-[11px] text-muted-foreground hover:text-foreground underline"
+                  >
+                    Or quick 1-click auto-fill without prompts
+                  </button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={isAiGenerating}
+                    onClick={() => handleAiAutoFill(true)}
+                    className="h-7 text-xs gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90"
+                  >
+                    {isAiGenerating ? <Loader2 className="size-3 animate-spin" /> : <Sparkles className="size-3" />}
+                    {isAiGenerating ? "Architecting Deals..." : "Generate Custom Deals"}
+                  </Button>
+                </div>
+              </div>
+            )}
 
             <div className="space-y-2.5">
               {deals.map((deal, index) => (
