@@ -32,6 +32,7 @@ export function CreateProductDialog({ isOpen, onOpenChange, onProductCreated }: 
       allowedDomains: 1,
       isDecoyTarget: false,
       features: ["Standard software access", "Automatic updates", "Standard email support"],
+      featuresText: "Standard software access\nAutomatic updates\nStandard email support",
     },
     {
       dealName: "Annual Pro (3 Sites)",
@@ -42,6 +43,7 @@ export function CreateProductDialog({ isOpen, onOpenChange, onProductCreated }: 
       allowedDomains: 3,
       isDecoyTarget: false,
       features: ["3 User activations", "Priority updates & patches", "Direct support channel"],
+      featuresText: "3 User activations\nPriority updates & patches\nDirect support channel",
     },
     {
       dealName: "Unlimited Agency (2 Years + 3 Mo. Free)",
@@ -52,6 +54,7 @@ export function CreateProductDialog({ isOpen, onOpenChange, onProductCreated }: 
       allowedDomains: 10,
       isDecoyTarget: true,
       features: ["10 User activations", "All premium add-on modules", "27 months total access (+3 mo free)", "VIP Priority 24/7 support"],
+      featuresText: "10 User activations\nAll premium add-on modules\n27 months total access (+3 mo free)\nVIP Priority 24/7 support",
     },
   ]);
 
@@ -74,14 +77,18 @@ export function CreateProductDialog({ isOpen, onOpenChange, onProductCreated }: 
 
       const data = await res.json();
       if (data.IsSuccess && data.Data && Array.isArray(data.Data.deals) && data.Data.deals.length > 0) {
-        setDeals(data.Data.deals);
+        const enriched = data.Data.deals.map((d: ProductDealItem) => ({
+          ...d,
+          featuresText: Array.isArray(d.features) ? d.features.join("\n") : (d.features || ""),
+        }));
+        setDeals(enriched);
       }
     } catch (e) {
       if (category === "ChromeExtension") {
         setDeals([
-          { dealName: "Monthly Starter", dealCode: "MONTHLY_1P", billingInterval: "monthly", priceCents: 999, allowedMachineSeats: 1, allowedDomains: 1, isDecoyTarget: false, features: ["500 Verified Leads/month", "Basic CSV Export", "1 Chrome Profile License"] },
-          { dealName: "Annual Pro", dealCode: "ANNUAL_3P", billingInterval: "yearly", priceCents: 4900, allowedMachineSeats: 3, allowedDomains: 1, isDecoyTarget: false, features: ["2,500 Verified Leads/month", "Direct CRM & HubSpot Sync", "3 Chrome Profiles License"] },
-          { dealName: "Unlimited Agency (2 Years + 3 Mo. Free)", dealCode: "BIENNIAL_DECOY", billingInterval: "biennial", priceCents: 6900, allowedMachineSeats: 10, allowedDomains: 5, isDecoyTarget: true, features: ["10,000 Verified Leads/month", "Unlimited Chrome Profiles", "Advanced CRM Automation", "3 Months Free Bonus"] },
+          { dealName: "Monthly Starter", dealCode: "MONTHLY_1P", billingInterval: "monthly", priceCents: 999, allowedMachineSeats: 1, allowedDomains: 1, isDecoyTarget: false, features: ["500 Verified Leads/month", "Basic CSV Export", "1 Chrome Profile License"], featuresText: "500 Verified Leads/month\nBasic CSV Export\n1 Chrome Profile License" },
+          { dealName: "Annual Pro", dealCode: "ANNUAL_3P", billingInterval: "yearly", priceCents: 4900, allowedMachineSeats: 3, allowedDomains: 1, isDecoyTarget: false, features: ["2,500 Verified Leads/month", "Direct CRM & HubSpot Sync", "3 Chrome Profiles License"], featuresText: "2,500 Verified Leads/month\nDirect CRM & HubSpot Sync\n3 Chrome Profiles License" },
+          { dealName: "Unlimited Agency (2 Years + 3 Mo. Free)", dealCode: "BIENNIAL_DECOY", billingInterval: "biennial", priceCents: 6900, allowedMachineSeats: 10, allowedDomains: 5, isDecoyTarget: true, features: ["10,000 Verified Leads/month", "Unlimited Chrome Profiles", "Advanced CRM Automation", "3 Months Free Bonus"], featuresText: "10,000 Verified Leads/month\nUnlimited Chrome Profiles\nAdvanced CRM Automation\n3 Months Free Bonus" },
         ]);
       }
     } finally {
@@ -106,6 +113,8 @@ export function CreateProductDialog({ isOpen, onOpenChange, onProductCreated }: 
         allowedMachineSeats: 5,
         allowedDomains: 5,
         isDecoyTarget: false,
+        features: ["Lifetime license access", "All core features", "Community support"],
+        featuresText: "Lifetime license access\nAll core features\nCommunity support",
       },
     ]);
   };
@@ -123,6 +132,22 @@ export function CreateProductDialog({ isOpen, onOpenChange, onProductCreated }: 
         ? customCategory.trim() || "CustomSoftware"
         : category;
 
+    const processedDeals = deals.map((d) => {
+      const feats = d.featuresText !== undefined
+        ? d.featuresText.split("\n").map((f) => f.trim()).filter(Boolean)
+        : (d.features || []);
+      return {
+        dealName: d.dealName,
+        dealCode: d.dealCode,
+        billingInterval: d.billingInterval,
+        priceCents: d.priceCents,
+        allowedMachineSeats: d.allowedMachineSeats,
+        allowedDomains: d.allowedDomains,
+        isDecoyTarget: d.isDecoyTarget,
+        features: feats,
+      };
+    });
+
     const newProduct: DeveloperProductItem = {
       ProductId: Date.now(),
       productSlug: cleanSlug,
@@ -131,7 +156,7 @@ export function CreateProductDialog({ isOpen, onOpenChange, onProductCreated }: 
       description: description.trim() || undefined,
       checkIntervalDays: parseInt(checkIntervalDays, 10) || 7,
       ed25519PublicKey: "MCowBQYDK2VwAyEA" + Math.random().toString(36).substring(2, 15) + "=",
-      deals,
+      deals: processedDeals,
     };
 
     // Provision real SQLite shard and deals on the backend
@@ -145,15 +170,7 @@ export function CreateProductDialog({ isOpen, onOpenChange, onProductCreated }: 
           category: finalCategory,
           description: description.trim() || undefined,
           checkIntervalDays: parseInt(checkIntervalDays, 10) || 7,
-          deals: deals.map((d) => ({
-            dealName: d.dealName,
-            dealCode: d.dealCode,
-            billingInterval: d.billingInterval,
-            priceCents: d.priceCents,
-            allowedMachineSeats: d.allowedMachineSeats,
-            allowedDomains: d.allowedDomains,
-            isDecoyTarget: d.isDecoyTarget,
-          })),
+          deals: processedDeals,
         }),
       });
     } catch {
@@ -370,7 +387,7 @@ export function CreateProductDialog({ isOpen, onOpenChange, onProductCreated }: 
                       <span className="text-[9px] text-muted-foreground">Displayed with checkmarks on customer storefront</span>
                     </div>
                     <textarea
-                      rows={2}
+                      rows={3}
                       placeholder={
                         category === "ChromeExtension"
                           ? "500 Verified Leads / month\nExport to CSV & HubSpot\n1 Chrome Profile License"
@@ -378,15 +395,24 @@ export function CreateProductDialog({ isOpen, onOpenChange, onProductCreated }: 
                           ? "1 Domain License\nWooCommerce Addon\n1 Year Priority Updates"
                           : "4K Export Resolution\nOffline Verification\nPriority Support"
                       }
-                      value={(deal.features || []).join("\n")}
-                      onChange={(e) =>
-                        handleDealChange(
-                          index,
-                          "features",
-                          e.target.value.split("\n").map((f) => f.trim()).filter(Boolean)
-                        )
-                      }
-                      className="w-full rounded-md border border-input bg-background p-2 text-xs font-mono"
+                      value={deal.featuresText !== undefined ? deal.featuresText : (deal.features || []).join("\n")}
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        const updated = [...deals];
+                        updated[index] = {
+                          ...updated[index],
+                          featuresText: raw,
+                          features: raw.split("\n").map((f) => f.trim()).filter(Boolean),
+                        };
+                        setDeals(updated);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          // Prevent parent dialog / form handlers from intercepting Enter
+                          e.stopPropagation();
+                        }
+                      }}
+                      className="w-full rounded-md border border-input bg-background p-2.5 text-xs font-mono min-h-[64px] resize-y leading-relaxed"
                     />
                   </div>
                 </div>

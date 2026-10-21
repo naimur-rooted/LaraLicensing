@@ -45,6 +45,7 @@ export interface ProductDealItem {
   allowedDomains: number;
   isDecoyTarget: boolean;
   features?: string[];
+  featuresText?: string;
 }
 
 export interface DeveloperProductItem {
