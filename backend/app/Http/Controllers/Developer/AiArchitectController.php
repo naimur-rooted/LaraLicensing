@@ -30,7 +30,17 @@ class AiArchitectController extends Controller
 
         $product = $this->productService->getProductBySlug($slug);
         if (!$product) {
-            return response()->json(['IsSuccess' => false, 'ErrorCode' => 'ProductNotFound', 'Message' => 'Product not found.'], 404);
+            $name = trim((string) $request->input('productName', ''));
+            if (!empty($name)) {
+                $product = new \App\Models\Product([
+                    'productName' => $name,
+                    'productSlug' => $slug ?: \Illuminate\Support\Str::slug($name),
+                    'category' => (string) $request->input('category', 'DesktopApp'),
+                    'description' => (string) $request->input('description', ''),
+                ]);
+            } else {
+                return response()->json(['IsSuccess' => false, 'ErrorCode' => 'ProductNotFound', 'Message' => 'Product not found.'], 404);
+            }
         }
 
         try {

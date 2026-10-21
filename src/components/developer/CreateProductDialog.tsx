@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, Box, Sparkles, CheckCircle2 } from "lucide-react";
+import { Plus, Trash2, Box, Sparkles, CheckCircle2, Loader2, Bot } from "lucide-react";
 import type { DeveloperProductItem, ProductDealItem } from "./DeveloperProductsDashboard";
 
 interface CreateProductDialogProps {
@@ -19,6 +19,7 @@ export function CreateProductDialog({ isOpen, onOpenChange, onProductCreated }: 
   const [customCategory, setCustomCategory] = useState("");
   const [description, setDescription] = useState("");
   const [checkIntervalDays, setCheckIntervalDays] = useState("7");
+  const [isAiGenerating, setIsAiGenerating] = useState(false);
 
   // Default 3 VPN-Style Decoy Deals matching meeting discussion
   const [deals, setDeals] = useState<ProductDealItem[]>([
@@ -30,6 +31,7 @@ export function CreateProductDialog({ isOpen, onOpenChange, onProductCreated }: 
       allowedMachineSeats: 1,
       allowedDomains: 1,
       isDecoyTarget: false,
+      features: ["Standard software access", "Automatic updates", "Standard email support"],
     },
     {
       dealName: "Annual Pro (3 Sites)",
@@ -39,6 +41,7 @@ export function CreateProductDialog({ isOpen, onOpenChange, onProductCreated }: 
       allowedMachineSeats: 3,
       allowedDomains: 3,
       isDecoyTarget: false,
+      features: ["3 User activations", "Priority updates & patches", "Direct support channel"],
     },
     {
       dealName: "Unlimited Agency (2 Years + 3 Mo. Free)",
@@ -48,8 +51,43 @@ export function CreateProductDialog({ isOpen, onOpenChange, onProductCreated }: 
       allowedMachineSeats: 10,
       allowedDomains: 10,
       isDecoyTarget: true,
+      features: ["10 User activations", "All premium add-on modules", "27 months total access (+3 mo free)", "VIP Priority 24/7 support"],
     },
   ]);
+
+  const handleAiAutoFill = async () => {
+    setIsAiGenerating(true);
+    try {
+      const name = productName.trim() || "My Software";
+      const cleanSlug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+      const res = await fetch("http://127.0.0.1:8000/api/v1/developer/ai/design-pricing", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productSlug: cleanSlug || "draft-product",
+          productName: name,
+          category: category === "CustomOther" ? (customCategory.trim() || "CustomSoftware") : category,
+          description: description,
+          userPrompt: `Generate high-converting 3-tier decoy pricing deals with realistic feature perks specifically for a ${category} named ${name}.`,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.IsSuccess && data.Data && Array.isArray(data.Data.deals) && data.Data.deals.length > 0) {
+        setDeals(data.Data.deals);
+      }
+    } catch (e) {
+      if (category === "ChromeExtension") {
+        setDeals([
+          { dealName: "Monthly Starter", dealCode: "MONTHLY_1P", billingInterval: "monthly", priceCents: 999, allowedMachineSeats: 1, allowedDomains: 1, isDecoyTarget: false, features: ["500 Verified Leads/month", "Basic CSV Export", "1 Chrome Profile License"] },
+          { dealName: "Annual Pro", dealCode: "ANNUAL_3P", billingInterval: "yearly", priceCents: 4900, allowedMachineSeats: 3, allowedDomains: 1, isDecoyTarget: false, features: ["2,500 Verified Leads/month", "Direct CRM & HubSpot Sync", "3 Chrome Profiles License"] },
+          { dealName: "Unlimited Agency (2 Years + 3 Mo. Free)", dealCode: "BIENNIAL_DECOY", billingInterval: "biennial", priceCents: 6900, allowedMachineSeats: 10, allowedDomains: 5, isDecoyTarget: true, features: ["10,000 Verified Leads/month", "Unlimited Chrome Profiles", "Advanced CRM Automation", "3 Months Free Bonus"] },
+        ]);
+      }
+    } finally {
+      setIsAiGenerating(false);
+    }
+  };
 
   const handleDealChange = (index: number, field: keyof ProductDealItem, value: any) => {
     const updated = [...deals];
@@ -218,9 +256,22 @@ export function CreateProductDialog({ isOpen, onOpenChange, onProductCreated }: 
                   Configure the pricing packages your software users will buy (VPN-style Decoy Matrix).
                 </p>
               </div>
-              <Button type="button" variant="outline" size="sm" onClick={handleAddDealRow} className="h-7 text-xs gap-1">
-                <Plus className="size-3" /> Add Deal
-              </Button>
+              <div className="flex items-center gap-1.5">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={isAiGenerating}
+                  onClick={handleAiAutoFill}
+                  className="h-7 text-xs gap-1 border-primary/40 text-primary hover:bg-primary/10"
+                >
+                  {isAiGenerating ? <Loader2 className="size-3 animate-spin" /> : <Sparkles className="size-3 text-amber-500" />}
+                  {isAiGenerating ? "Architecting..." : "Auto-Fill with AI"}
+                </Button>
+                <Button type="button" variant="outline" size="sm" onClick={handleAddDealRow} className="h-7 text-xs gap-1">
+                  <Plus className="size-3" /> Add Deal
+                </Button>
+              </div>
             </div>
 
             <div className="space-y-2.5">
@@ -283,7 +334,9 @@ export function CreateProductDialog({ isOpen, onOpenChange, onProductCreated }: 
                       />
                     </div>
                     <div>
-                      <Label className="text-[10px] text-muted-foreground">Machine Seats</Label>
+                      <Label className="text-[10px] text-muted-foreground">
+                        {category === "ChromeExtension" ? "Chrome Profiles" : category === "WordPressPlugin" ? "Domain Sites" : "Machine Seats"}
+                      </Label>
                       <Input
                         type="number"
                         value={deal.allowedMachineSeats}
@@ -306,6 +359,35 @@ export function CreateProductDialog({ isOpen, onOpenChange, onProductCreated }: 
                     <label htmlFor={`decoy-${index}`} className="text-[11px] text-muted-foreground cursor-pointer">
                       Highlight as Decoy Target (Recommended Deal with highest discount)
                     </label>
+                  </div>
+
+                  {/* Custom Feature Perks (One per line) */}
+                  <div className="space-y-1 pt-1.5 border-t border-border/40 mt-1.5">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-[10px] font-semibold text-foreground">
+                        Included Features & Capabilities (one per line)
+                      </Label>
+                      <span className="text-[9px] text-muted-foreground">Displayed with checkmarks on customer storefront</span>
+                    </div>
+                    <textarea
+                      rows={2}
+                      placeholder={
+                        category === "ChromeExtension"
+                          ? "500 Verified Leads / month\nExport to CSV & HubSpot\n1 Chrome Profile License"
+                          : category === "WordPressPlugin"
+                          ? "1 Domain License\nWooCommerce Addon\n1 Year Priority Updates"
+                          : "4K Export Resolution\nOffline Verification\nPriority Support"
+                      }
+                      value={(deal.features || []).join("\n")}
+                      onChange={(e) =>
+                        handleDealChange(
+                          index,
+                          "features",
+                          e.target.value.split("\n").map((f) => f.trim()).filter(Boolean)
+                        )
+                      }
+                      className="w-full rounded-md border border-input bg-background p-2 text-xs font-mono"
+                    />
                   </div>
                 </div>
               ))}
