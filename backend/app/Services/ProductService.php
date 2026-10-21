@@ -95,6 +95,45 @@ class ProductService
         ]);
     }
 
+    /** Update an existing deal for a product. */
+    public function updateDeal(Product $product, int $dealId, array $attributes): ?ProductDeal
+    {
+        $deal = ProductDeal::where('productId', $product->ProductId)
+            ->where('ProductDealId', $dealId)
+            ->first();
+
+        if (!$deal) {
+            return null;
+        }
+
+        $features = $attributes['features'] ?? $deal->features;
+        if (is_string($features)) {
+            $features = array_values(array_filter(array_map('trim', explode("\n", $features))));
+        }
+
+        $deal->update([
+            'dealName' => (string) ($attributes['dealName'] ?? $deal->dealName),
+            'dealCode' => isset($attributes['dealCode']) ? strtoupper(trim((string) $attributes['dealCode'])) : $deal->dealCode,
+            'billingInterval' => (string) ($attributes['billingInterval'] ?? $deal->billingInterval),
+            'priceCents' => isset($attributes['priceCents']) ? (int) $attributes['priceCents'] : $deal->priceCents,
+            'allowedMachineSeats' => isset($attributes['allowedMachineSeats']) ? (int) $attributes['allowedMachineSeats'] : $deal->allowedMachineSeats,
+            'allowedDomains' => isset($attributes['allowedDomains']) ? (int) $attributes['allowedDomains'] : $deal->allowedDomains,
+            'isDecoyTarget' => isset($attributes['isDecoyTarget']) ? (bool) $attributes['isDecoyTarget'] : $deal->isDecoyTarget,
+            'features' => is_array($features) ? $features : [],
+            'isActive' => isset($attributes['isActive']) ? (bool) $attributes['isActive'] : $deal->isActive,
+        ]);
+
+        return $deal;
+    }
+
+    /** Delete a deal for a product. */
+    public function deleteDeal(Product $product, int $dealId): bool
+    {
+        return (bool) ProductDeal::where('productId', $product->ProductId)
+            ->where('ProductDealId', $dealId)
+            ->delete();
+    }
+
     /** Generate AI-Ready Markdown Integration Blueprint. */
     public function generateAiBlueprint(Product $product): string
     {

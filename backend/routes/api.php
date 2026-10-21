@@ -606,6 +606,8 @@ Route::prefix('v1/developer')->group(function (): void {
     Route::post('/products', [\App\Http\Controllers\Developer\ProductController::class, 'store'])->name('api.developer.products.store');
     Route::get('/products/{slug}', [\App\Http\Controllers\Developer\ProductController::class, 'show'])->name('api.developer.products.show');
     Route::post('/products/{slug}/deals', [\App\Http\Controllers\Developer\ProductController::class, 'addDeal'])->name('api.developer.products.deals.store');
+    Route::put('/products/{slug}/deals/{dealId}', [\App\Http\Controllers\Developer\ProductController::class, 'updateDeal'])->name('api.developer.products.deals.update');
+    Route::delete('/products/{slug}/deals/{dealId}', [\App\Http\Controllers\Developer\ProductController::class, 'deleteDeal'])->name('api.developer.products.deals.destroy');
     Route::get('/products/{slug}/blueprint', [\App\Http\Controllers\Developer\ProductController::class, 'aiBlueprint'])->name('api.developer.products.blueprint');
     Route::post('/ai/design-pricing', [\App\Http\Controllers\Developer\AiArchitectController::class, 'designPricing'])->name('api.developer.ai.design_pricing');
     Route::post('/products/{slug}/apply-ai-deals', [\App\Http\Controllers\Developer\AiArchitectController::class, 'applyAiDeals'])->name('api.developer.products.apply_ai_deals');

@@ -53,6 +53,29 @@ class ProductController extends Controller
         return response()->json(['IsSuccess' => true, 'Data' => $deal], 201);
     }
 
+    public function updateDeal(string $slug, int $dealId, Request $request): JsonResponse
+    {
+        $product = $this->productService->getProductBySlug($slug);
+        if (!$product) {
+            return response()->json(['IsSuccess' => false, 'ErrorCode' => 'ProductNotFound'], 404);
+        }
+        $deal = $this->productService->updateDeal($product, $dealId, $request->all());
+        if (!$deal) {
+            return response()->json(['IsSuccess' => false, 'ErrorCode' => 'DealNotFound', 'Message' => 'Deal not found.'], 404);
+        }
+        return response()->json(['IsSuccess' => true, 'Data' => $deal]);
+    }
+
+    public function deleteDeal(string $slug, int $dealId): JsonResponse
+    {
+        $product = $this->productService->getProductBySlug($slug);
+        if (!$product) {
+            return response()->json(['IsSuccess' => false, 'ErrorCode' => 'ProductNotFound'], 404);
+        }
+        $deleted = $this->productService->deleteDeal($product, $dealId);
+        return response()->json(['IsSuccess' => $deleted]);
+    }
+
     public function aiBlueprint(string $slug): JsonResponse
     {
         $product = $this->productService->getProductBySlug($slug);

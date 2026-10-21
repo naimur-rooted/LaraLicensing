@@ -34,6 +34,8 @@ import {
   Code2,
   Terminal,
   FileCode,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { CreateProductDialog } from "./CreateProductDialog";
 import { PlatformSubscriptionModal } from "./PlatformSubscriptionModal";
@@ -140,6 +142,103 @@ export function DeveloperProductsDashboard() {
   const [dealSeats, setDealSeats] = useState("5");
   const [dealFeatures, setDealFeatures] = useState("");
   const [isDecoy, setIsDecoy] = useState(true);
+
+  // Edit Deal Modal State
+  const [isEditDealOpen, setIsEditDealOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<DeveloperProductItem | null>(null);
+  const [editingDealId, setEditingDealId] = useState<number | null>(null);
+  const [editDealName, setEditDealName] = useState("");
+  const [editDealCode, setEditDealCode] = useState("");
+  const [editDealInterval, setEditDealInterval] = useState("monthly");
+  const [editDealPrice, setEditDealPrice] = useState("29");
+  const [editDealSeats, setEditDealSeats] = useState("1");
+  const [editDealFeatures, setEditDealFeatures] = useState("");
+  const [editIsDecoy, setEditIsDecoy] = useState(false);
+  const [isSavingDeal, setIsSavingDeal] = useState(false);
+
+  const handleOpenEditDeal = (product: DeveloperProductItem, deal: ProductDealItem) => {
+    setEditingProduct(product);
+    setEditingDealId(deal.ProductDealId || null);
+    setEditDealName(deal.dealName);
+    setEditDealCode(deal.dealCode);
+    setEditDealInterval(deal.billingInterval);
+    setEditDealPrice((deal.priceCents / 100).toFixed(2));
+    setEditDealSeats(deal.allowedMachineSeats.toString());
+    setEditDealFeatures((deal.features || []).join("\n"));
+    setEditIsDecoy(deal.isDecoyTarget);
+    setIsEditDealOpen(true);
+  };
+
+  const handleSaveEditDeal = async () => {
+    if (!editingProduct || !editingDealId) return;
+    setIsSavingDeal(true);
+    const parsedFeatures = editDealFeatures
+      ? editDealFeatures.split("\n").map((f) => f.trim()).filter(Boolean)
+      : [];
+
+    try {
+      const res = await fetch(
+        `http://127.0.0.1:8000/api/v1/developer/products/${editingProduct.productSlug}/deals/${editingDealId}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            dealName: editDealName,
+            dealCode: editDealCode,
+            billingInterval: editDealInterval,
+            priceCents: Math.round(parseFloat(editDealPrice || "0") * 100),
+            allowedMachineSeats: parseInt(editDealSeats, 10) || 1,
+            isDecoyTarget: editIsDecoy,
+            features: parsedFeatures,
+          }),
+        }
+      );
+
+      const data = await res.json();
+      if (data.IsSuccess) {
+        setProducts((prev) =>
+          prev.map((p) => {
+            if (p.productSlug !== editingProduct.productSlug) return p;
+            return {
+              ...p,
+              deals: p.deals.map((d) => (d.ProductDealId === editingDealId ? data.Data : d)),
+            };
+          })
+        );
+        setIsEditDealOpen(false);
+      }
+    } catch {
+      // Local fallback
+    } finally {
+      setIsSavingDeal(false);
+    }
+  };
+
+  const handleDeleteDeal = async (product: DeveloperProductItem, deal: ProductDealItem) => {
+    if (!deal.ProductDealId) return;
+    if (!window.confirm(`Are you sure you want to delete the deal "${deal.dealName}"?`)) return;
+
+    try {
+      const res = await fetch(
+        `http://127.0.0.1:8000/api/v1/developer/products/${product.productSlug}/deals/${deal.ProductDealId}`,
+        {
+          method: "DELETE",
+        }
+      );
+      const data = await res.json();
+      if (data.IsSuccess) {
+        setProducts((prev) =>
+          prev.map((p) => {
+            if (p.productSlug !== product.productSlug) return p;
+            return {
+              ...p,
+              deals: p.deals.filter((d) => d.ProductDealId !== deal.ProductDealId),
+            };
+          })
+        );
+      }
+    } catch {}
+  };
 
   const handleCopyPrompt = (prompt: string) => {
     navigator.clipboard.writeText(prompt);
@@ -328,7 +427,7 @@ ${dealsList}
                   {p.deals.map((deal) => (
                     <div
                       key={deal.dealCode}
-                      className="flex items-center justify-between rounded p-1 hover:bg-background/80 transition-colors"
+                      className="group flex items-center justify-between rounded p-1.5 hover:bg-background/80 transition-colors"
                     >
                       <div className="flex items-center gap-1.5">
                         <span className="font-medium text-foreground">{deal.dealName}</span>
@@ -338,14 +437,34 @@ ${dealsList}
                           </Badge>
                         )}
                       </div>
-                      <div className="text-right font-mono text-[11px] text-muted-foreground">
-                        <span className="font-semibold text-foreground">${(deal.priceCents / 100).toFixed(2)}</span>
-                        <span> / {deal.billingInterval}</span>
-                        {deal.features && deal.features.length > 0 ? (
-                          <span className="ml-1 text-[10px] text-emerald-400 font-medium">({deal.features.length} perks)</span>
-                        ) : (
-                          <span className="ml-1 text-[10px] text-muted-foreground/80">({deal.allowedMachineSeats} seats)</span>
-                        )}
+                      <div className="flex items-center gap-2">
+                        <div className="text-right font-mono text-[11px] text-muted-foreground">
+                          <span className="font-semibold text-foreground">${(deal.priceCents / 100).toFixed(2)}</span>
+                          <span> / {deal.billingInterval}</span>
+                          {deal.features && deal.features.length > 0 ? (
+                            <span className="ml-1 text-[10px] text-emerald-400 font-medium">({deal.features.length} perks)</span>
+                          ) : (
+                            <span className="ml-1 text-[10px] text-muted-foreground/80">({deal.allowedMachineSeats} seats)</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-0.5 opacity-60 group-hover:opacity-100 transition-opacity">
+                          <button
+                            type="button"
+                            title="Edit Deal Price & Features"
+                            onClick={() => handleOpenEditDeal(p, deal)}
+                            className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            <Pencil className="size-3" />
+                          </button>
+                          <button
+                            type="button"
+                            title="Delete Deal"
+                            onClick={() => handleDeleteDeal(p, deal)}
+                            className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-destructive transition-colors"
+                          >
+                            <Trash2 className="size-3" />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -689,6 +808,111 @@ ${dealsList}
               Cancel
             </Button>
             <Button onClick={handleAddDealSubmit}>Save Deal</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Deal Modal */}
+      <Dialog open={isEditDealOpen} onOpenChange={setIsEditDealOpen}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Pricing Deal: {editingProduct?.productName}</DialogTitle>
+            <DialogDescription>
+              Update price, billing interval, and software capability perks. Changes sync live to the REST API.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-3 py-2 text-sm">
+            <div className="grid gap-1.5">
+              <Label>Deal Name</Label>
+              <Input
+                value={editDealName}
+                onChange={(e) => setEditDealName(e.target.value)}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-1.5">
+                <Label>Billing Interval</Label>
+                <select
+                  value={editDealInterval}
+                  onChange={(e) => setEditDealInterval(e.target.value)}
+                  className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="daily">Daily Pass (24h)</option>
+                  <option value="weekly">Weekly Pass (7 Days)</option>
+                  <option value="monthly">Monthly</option>
+                  <option value="quarterly">Quarterly (3 Months)</option>
+                  <option value="yearly">Yearly</option>
+                  <option value="biennial">2-Years (Decoy)</option>
+                  <option value="lifetime">Lifetime Deal</option>
+                </select>
+              </div>
+              <div className="grid gap-1.5">
+                <Label>Price (USD)</Label>
+                <Input
+                  type="number"
+                  value={editDealPrice}
+                  onChange={(e) => setEditDealPrice(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-1.5">
+                <Label>
+                  {editingProduct?.category === "ChromeExtension"
+                    ? "Chrome Profiles"
+                    : editingProduct?.category === "WordPressPlugin"
+                    ? "Domain Sites"
+                    : "Machine Seats"}
+                </Label>
+                <Input
+                  type="number"
+                  value={editDealSeats}
+                  onChange={(e) => setEditDealSeats(e.target.value)}
+                />
+              </div>
+              <div className="flex items-center gap-2 pt-6">
+                <input
+                  type="checkbox"
+                  id="editDecoyCheck"
+                  checked={editIsDecoy}
+                  onChange={(e) => setEditIsDecoy(e.target.checked)}
+                  className="size-4 rounded border-input"
+                />
+                <Label htmlFor="editDecoyCheck" className="text-xs cursor-pointer font-semibold text-emerald-600">
+                  Decoy Target (Best Value)
+                </Label>
+              </div>
+            </div>
+
+            {/* Custom Features & Capabilities */}
+            <div className="grid gap-1.5">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-semibold">
+                  Included Features & Capabilities (one per line)
+                </Label>
+                <span className="text-[10px] text-muted-foreground">Bullets with checkmarks</span>
+              </div>
+              <textarea
+                rows={4}
+                value={editDealFeatures}
+                onChange={(e) => setEditDealFeatures(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.stopPropagation();
+                  }
+                }}
+                className="w-full rounded-md border border-input bg-background p-2.5 text-xs font-mono min-h-[90px] resize-y leading-relaxed"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setIsEditDealOpen(false)}>
+              Cancel
+            </Button>
+            <Button size="sm" disabled={isSavingDeal} onClick={handleSaveEditDeal}>
+              {isSavingDeal ? <Loader2 className="size-3.5 animate-spin mr-1" /> : null}
+              Save Changes
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
