@@ -602,6 +602,8 @@ Route::post('/Serials/OfflineToken', function (\Illuminate\Http\Request $request
 // Public Deals API for Method 1 Headless Synchronization
 Route::get('/v1/products/{slug}/deals', [\App\Http\Controllers\Developer\ProductController::class, 'publicDeals'])->name('api.products.deals.public');
 Route::prefix('v1/developer')->group(function (): void {
+    Route::get('/overview', [\App\Http\Controllers\Developer\DeveloperOverviewController::class, 'overview'])->name('api.developer.overview');
+    Route::post('/ai/chat', [\App\Http\Controllers\Developer\DeveloperOverviewController::class, 'chat'])->name('api.developer.ai.chat');
     Route::get('/products', [\App\Http\Controllers\Developer\ProductController::class, 'index'])->name('api.developer.products.index');
     Route::post('/products', [\App\Http\Controllers\Developer\ProductController::class, 'store'])->name('api.developer.products.store');
     Route::get('/products/{slug}', [\App\Http\Controllers\Developer\ProductController::class, 'show'])->name('api.developer.products.show');
