@@ -14,5 +14,6 @@
 | 20-seeder-e2e-fixtures | Seeder E2E Fixtures & Matrix (v3.3) | completed | 2026-08-06 | `completed/20-seeder-e2e-fixtures-v3.3.md` |
 | 21-backend-parity-phase-c | Backend Parity Phase C - Auth & Synthetic Sessions | completed | 2026-08-06 | `completed/21-backend-parity-phase-c.md` |
 | 22-refactoring-and-logging-wrapper | Refactoring and Logging Wrapper | pending | 2026-08-10 | `pending/22-refactoring-and-logging-wrapper.md` |
+| 23-grounded-ai-pricing-architect-engine | Grounded AI Pricing Architect & Dynamic Deal Perks | pending | 2026-10-21 | `pending/23-grounded-ai-pricing-architect-engine.md` |
 
 Completed plans live under `./completed/`.
