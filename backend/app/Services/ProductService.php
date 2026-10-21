@@ -51,7 +51,14 @@ class ProductService
             'isActive' => true,
         ]);
         $this->provisionProductShard($slug);
-        return $product;
+
+        if (!empty($attributes['deals']) && is_array($attributes['deals'])) {
+            foreach ($attributes['deals'] as $deal) {
+                $this->createDeal($product, (array) $deal);
+            }
+        }
+
+        return $product->load('deals');
     }
 
     /** Provision an isolated SQLite shard for the product. */

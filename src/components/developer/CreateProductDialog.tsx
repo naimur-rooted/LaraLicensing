@@ -77,9 +77,9 @@ export function CreateProductDialog({ isOpen, onOpenChange, onProductCreated }: 
     setDeals(deals.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!productName.trim()) return;
-    const slug = productName.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    const cleanSlug = productName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
     const finalCategory =
       category === "CustomOther"
         ? customCategory.trim() || "CustomSoftware"
@@ -87,7 +87,7 @@ export function CreateProductDialog({ isOpen, onOpenChange, onProductCreated }: 
 
     const newProduct: DeveloperProductItem = {
       ProductId: Date.now(),
-      productSlug: slug,
+      productSlug: cleanSlug,
       productName: productName.trim(),
       category: finalCategory,
       description: description.trim() || undefined,
@@ -95,6 +95,32 @@ export function CreateProductDialog({ isOpen, onOpenChange, onProductCreated }: 
       ed25519PublicKey: "MCowBQYDK2VwAyEA" + Math.random().toString(36).substring(2, 15) + "=",
       deals,
     };
+
+    // Provision real SQLite shard and deals on the backend
+    try {
+      await fetch("http://127.0.0.1:8000/api/v1/developer/products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productSlug: cleanSlug,
+          productName: productName.trim(),
+          category: finalCategory,
+          description: description.trim() || undefined,
+          checkIntervalDays: parseInt(checkIntervalDays, 10) || 7,
+          deals: deals.map((d) => ({
+            dealName: d.dealName,
+            dealCode: d.dealCode,
+            billingInterval: d.billingInterval,
+            priceCents: d.priceCents,
+            allowedMachineSeats: d.allowedMachineSeats,
+            allowedDomains: d.allowedDomains,
+            isDecoyTarget: d.isDecoyTarget,
+          })),
+        }),
+      });
+    } catch {
+      // Local fallback
+    }
 
     onProductCreated(newProduct);
     onOpenChange(false);

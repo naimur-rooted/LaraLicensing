@@ -68,6 +68,17 @@ export function DeveloperProductsDashboard() {
   const [currentTier, setCurrentTier] = useState("Free Starter");
   const [isPlatformModalOpen, setIsPlatformModalOpen] = useState(false);
 
+  React.useEffect(() => {
+    fetch("http://127.0.0.1:8000/api/v1/developer/products")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.IsSuccess && Array.isArray(data.Data) && data.Data.length > 0) {
+          setProducts(data.Data);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   // New Product Modal State
   const [isNewProductOpen, setIsNewProductOpen] = useState(false);
 

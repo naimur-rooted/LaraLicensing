@@ -95,26 +95,45 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     </div>
 
     <script>
+        function setSlug(s) {
+            document.getElementById('productSlugInput').value = s;
+            fetchPricing();
+        }
+
         async function fetchPricing() {
             const slug = document.getElementById('productSlugInput').value.trim();
             const grid = document.getElementById('pricingGrid');
             const status = document.getElementById('syncStatus');
+            if (!slug) {
+                status.innerHTML = '<span style="color:#ef4444;">Please enter a product slug.</span>';
+                return;
+            }
             status.innerHTML = "Fetching from /api/v1/products/" + slug + "/deals...";
+            grid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); padding: 40px;">Querying LaraLicensing for ' + slug + '...</div>';
 
             try {
                 const res = await fetch('/api/proxy-deals?slug=' + encodeURIComponent(slug));
-                const data = await res.json();
+                let data;
+                try {
+                    data = await res.json();
+                } catch (e) {
+                    data = { IsSuccess: false, Message: "Server returned non-JSON response" };
+                }
 
-                if (!data.IsSuccess || !data.Data) {
-                    grid.innerHTML = '<div style="grid-column:1/-1; color:#ef4444; text-align:center;">Failed to load deals for slug: ' + slug + '</div>';
-                    status.innerHTML = "Error: " + (data.Message || "Not found");
+                if (!res.ok || !data.IsSuccess || !data.Data) {
+                    grid.innerHTML = '<div style="grid-column:1/-1; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:10px; padding:24px; color:#fca5a5; text-align:center;">' +
+                        '<div style="font-size:16px; font-weight:700; margin-bottom:6px;">⚠️ Product Not Found: ' + slug + '</div>' +
+                        '<p style="font-size:13px; color:#9ca3af; max-width:550px; margin:0 auto 12px;">The product slug you typed does not exist in LaraLicensing yet. Check that you typed the full slug without typos, or try the seeded product below:</p>' +
+                        '<button type="button" style="background:#0284c7; color:#fff; padding:6px 14px; font-size:12px; border-radius:6px; cursor:pointer;" onclick="setSlug(\\'elementor-assistant\\')">Load Demo: elementor-assistant</button>' +
+                        '</div>';
+                    status.innerHTML = '<span style="color:#ef4444;">✖ Product ' + slug + ' not found</span>';
                     return;
                 }
 
                 status.innerHTML = '<span style="color:#10b981;">● Synced live with Shard: product_' + slug + '.sqlite</span>';
                 const deals = data.Data.deals || [];
                 if (deals.length === 0) {
-                    grid.innerHTML = '<div style="grid-column:1/-1; text-align:center;">No active deals found for this product.</div>';
+                    grid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:30px; color:#9ca3af;">No active pricing deals configured for this product.</div>';
                     return;
                 }
 
@@ -204,15 +223,21 @@ class SandboxHandler(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(HTML_TEMPLATE.encode("utf-8"))
         elif self.path.startswith("/api/proxy-deals"):
             # Proxy request to backend
-            slug = self.path.split("slug=")[-1] if "slug=" in self.path else DEFAULT_PRODUCT_SLUG
+            slug = self.path.split("slug=")[-1].strip() if "slug=" in self.path else DEFAULT_PRODUCT_SLUG
             url = f"{LARALICENSING_API}/api/v1/products/{slug}/deals"
             try:
-                with urllib.request.urlopen(url, timeout=3) as resp:
+                with urllib.request.urlopen(url, timeout=5) as resp:
                     data = resp.read()
                     self.send_response(resp.status)
                     self.send_header("Content-Type", "application/json")
                     self.end_headers()
                     self.wfile.write(data)
+            except urllib.error.HTTPError as he:
+                err_data = he.read()
+                self.send_response(he.code)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(err_data if err_data else json.dumps({"IsSuccess": False, "Message": f"HTTP Error {he.code}"}).encode())
             except Exception as e:
                 self.send_response(500)
                 self.send_header("Content-Type", "application/json")
@@ -236,25 +261,34 @@ class SandboxHandler(http.server.SimpleHTTPRequestHandler):
                     data=json.dumps(payload).encode("utf-8"),
                     headers={"Content-Type": "application/json"}
                 )
-                with urllib.request.urlopen(req, timeout=3) as resp:
+                with urllib.request.urlopen(req, timeout=5) as resp:
                     data = resp.read()
                     self.send_response(resp.status)
                     self.send_header("Content-Type", "application/json")
                     self.end_headers()
                     self.wfile.write(data)
+            except urllib.error.HTTPError as he:
+                err_data = he.read()
+                self.send_response(he.code)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(err_data if err_data else json.dumps({"IsSuccess": False, "Message": f"HTTP Error {he.code}"}).encode())
             except Exception as e:
                 self.send_response(500)
                 self.send_header("Content-Type", "application/json")
                 self.end_headers()
                 self.wfile.write(json.dumps({"IsSuccess": False, "Message": str(e)}).encode())
 
+class ThreadingHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
+    daemon_threads = True
+
 def run_server():
-    with socketserver.TCPServer(("", PORT), SandboxHandler) as httpd:
-        print(f"==================================================================")
-        print(f"  APP A: DEVELOPER STOREFRONT SANDBOX (Method 1 Live Sync)")
-        print(f"  Running at: http://localhost:{PORT}")
-        print(f"==================================================================")
-        httpd.serve_forever()
+    server = ThreadingHTTPServer(("", PORT), SandboxHandler)
+    print(f"==================================================================")
+    print(f"  APP A: DEVELOPER STOREFRONT SANDBOX (Method 1 Live Sync)")
+    print(f"  Running at: http://localhost:{PORT}")
+    print(f"==================================================================")
+    server.serve_forever()
 
 if __name__ == "__main__":
     run_server()
