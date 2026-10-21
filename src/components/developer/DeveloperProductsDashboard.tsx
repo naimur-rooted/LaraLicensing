@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import { CreateProductDialog } from "./CreateProductDialog";
 import { PlatformSubscriptionModal } from "./PlatformSubscriptionModal";
+import { AiPricingArchitectDialog } from "./AiPricingArchitectDialog";
 
 export interface ProductDealItem {
   ProductDealId?: number;
@@ -43,6 +44,7 @@ export interface ProductDealItem {
   allowedMachineSeats: number;
   allowedDomains: number;
   isDecoyTarget: boolean;
+  features?: string[];
 }
 
 export interface DeveloperProductItem {
@@ -82,6 +84,10 @@ export function DeveloperProductsDashboard() {
   // New Product Modal State
   const [isNewProductOpen, setIsNewProductOpen] = useState(false);
 
+  // AI Pricing Architect State
+  const [isAiArchitectOpen, setIsAiArchitectOpen] = useState(false);
+  const [aiArchitectProduct, setAiArchitectProduct] = useState<DeveloperProductItem | null>(null);
+
   // Add Deal Modal State
   const [isAddDealOpen, setIsAddDealOpen] = useState(false);
   const [targetProduct, setTargetProduct] = useState<DeveloperProductItem | null>(null);
@@ -90,6 +96,7 @@ export function DeveloperProductsDashboard() {
   const [dealInterval, setDealInterval] = useState("biennial");
   const [dealPrice, setDealPrice] = useState("69");
   const [dealSeats, setDealSeats] = useState("5");
+  const [dealFeatures, setDealFeatures] = useState("");
   const [isDecoy, setIsDecoy] = useState(true);
 
   const handleCopyPrompt = (prompt: string) => {
@@ -128,8 +135,12 @@ ${dealsList}
     setProducts((prev) => [...prev, newProduct]);
   };
 
-  const handleAddDealSubmit = () => {
+  const handleAddDealSubmit = async () => {
     if (!targetProduct || !dealName.trim()) return;
+    const parsedFeatures = dealFeatures
+      ? dealFeatures.split("\n").map((f) => f.trim()).filter(Boolean)
+      : [];
+
     const newDeal: ProductDealItem = {
       dealName,
       dealCode: dealCode.toUpperCase().trim() || `DEAL_${Date.now()}`,
@@ -138,7 +149,17 @@ ${dealsList}
       allowedMachineSeats: parseInt(dealSeats, 10) || 1,
       allowedDomains: 1,
       isDecoyTarget: isDecoy,
+      features: parsedFeatures,
     };
+
+    try {
+      await fetch(`http://127.0.0.1:8000/api/v1/developer/products/${targetProduct.productSlug}/deals`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newDeal),
+      });
+    } catch {}
+
     const updated = products.map((p) => {
       if (p.productSlug === targetProduct.productSlug) {
         return { ...p, deals: [...p.deals, newDeal] };
@@ -149,6 +170,7 @@ ${dealsList}
     setIsAddDealOpen(false);
     setDealName("");
     setDealCode("");
+    setDealFeatures("");
   };
 
   const isFreePlan = currentTier.includes("Free") || currentTier.includes("Starter");
@@ -277,7 +299,11 @@ ${dealsList}
                       <div className="text-right font-mono text-[11px] text-muted-foreground">
                         <span className="font-semibold text-foreground">${(deal.priceCents / 100).toFixed(2)}</span>
                         <span> / {deal.billingInterval}</span>
-                        <span className="ml-1 text-[10px] text-muted-foreground/80">({deal.allowedMachineSeats} seats)</span>
+                        {deal.features && deal.features.length > 0 ? (
+                          <span className="ml-1 text-[10px] text-emerald-400 font-medium">({deal.features.length} perks)</span>
+                        ) : (
+                          <span className="ml-1 text-[10px] text-muted-foreground/80">({deal.allowedMachineSeats} seats)</span>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -285,18 +311,33 @@ ${dealsList}
               </CardContent>
 
               <CardFooter className="flex items-center justify-between border-t bg-muted/20 pt-3">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setTargetProduct(p);
-                    setIsAddDealOpen(true);
-                  }}
-                  className="h-8 gap-1 text-xs"
-                >
-                  <Plus className="size-3" />
-                  Add Deal
-                </Button>
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setTargetProduct(p);
+                      setIsAddDealOpen(true);
+                    }}
+                    className="h-8 gap-1 text-xs"
+                  >
+                    <Plus className="size-3" />
+                    Add Deal
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setAiArchitectProduct(p);
+                      setIsAiArchitectOpen(true);
+                    }}
+                    className="h-8 gap-1.5 text-xs border-primary/40 text-primary hover:bg-primary/10"
+                  >
+                    <Sparkles className="size-3 text-amber-500" />
+                    AI Architect
+                  </Button>
+                </div>
 
                 <Button
                   variant="default"
@@ -439,6 +480,16 @@ ${dealsList}
                 </Label>
               </div>
             </div>
+            <div className="grid gap-1.5">
+              <Label>Feature Perks (one bullet per line)</Label>
+              <textarea
+                rows={3}
+                placeholder={"e.g.\n1,000 Verified Leads / month\nExport to CSV & HubSpot\n1 Chrome Profile License"}
+                value={dealFeatures}
+                onChange={(e) => setDealFeatures(e.target.value)}
+                className="rounded-md border border-input bg-background px-3 py-2 text-xs font-mono"
+              />
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAddDealOpen(false)}>
@@ -448,6 +499,18 @@ ${dealsList}
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Grounded AI Pricing Architect Dialog */}
+      <AiPricingArchitectDialog
+        isOpen={isAiArchitectOpen}
+        onOpenChange={setIsAiArchitectOpen}
+        product={aiArchitectProduct}
+        onDealsApplied={(updated) => {
+          setProducts((prev) =>
+            prev.map((p) => (p.productSlug === updated.productSlug ? updated : p))
+          );
+        }}
+      />
     </div>
   );
 }

@@ -102,7 +102,7 @@ Route::middleware(['auth:sanctum', 'session.active', 'require.role:Admin|SuperAd
         Route::get('/Licenses/{LicenseKey}/Ledger', [LicenseController::class, 'ledger'])
             ->where('LicenseKey', '[A-Z0-9-]{4,80}')->name('licenses.ledger');
 
-        // Plan 06 step 39 (admin bindings). Spec 30 §"Admin operations".
+        // Plan 06 step 39 (admin bindings). Spec 30 Â§"Admin operations".
         // Shard bound via ?ResellerSlug=..., same pattern as other Admin routes.
         Route::get('/Licenses/{LicenseKey}/Bindings', [AdminBindingController::class, 'index'])
             ->where('LicenseKey', '[A-Z0-9-]{4,80}')->name('licenses.bindings.index');
@@ -132,7 +132,7 @@ Route::middleware(['auth:sanctum', 'session.active', 'require.role:Admin|SuperAd
         Route::post('/Impersonation/End', [UserController::class, 'endImpersonation'])
             ->name('impersonation.end');
         // Plan 06 step 43 (forceEnd). Admin-only termination of any active
-        // impersonation session by SessionId (spec 47 §2 AdminForced).
+        // impersonation session by SessionId (spec 47 Â§2 AdminForced).
         Route::post('/Impersonation/{SessionId}/ForceEnd', [UserController::class, 'forceEndImpersonation'])
             ->where('SessionId', '[0-9a-fA-F-]{36}')
             ->name('impersonation.force_end');
@@ -142,7 +142,7 @@ Route::middleware(['auth:sanctum', 'session.active', 'require.role:Admin|SuperAd
         // Shard is selected explicitly via ?ResellerSlug=... on each call.
         Route::get('/QuotaRequests', [AdminQuotaRequestController::class, 'index'])
             ->name('quota_requests.index');
-        // Cross-tenant fanout inbox (spec 42 v1.1.0 §"Admin inbox").
+        // Cross-tenant fanout inbox (spec 42 v1.1.0 Â§"Admin inbox").
         Route::get('/QuotaRequests/All', [AdminQuotaRequestController::class, 'indexAll'])
             ->name('quota_requests.index_all');
         Route::post('/QuotaRequests/{RequestId}/Approve', [AdminQuotaRequestController::class, 'approve'])
@@ -238,7 +238,7 @@ Route::middleware(['auth:sanctum', 'session.active', 'require.role:Reseller', \A
             ->where('LicenseKey', '[A-Z0-9-]{4,80}')->name('licenses.ledger');
 
         // Plan 06 step 36. Reseller-scoped quota-request workflow (shard-bound).
-        // Approve/Deny live on the Admin surface per spec 42 §Endpoints.
+        // Approve/Deny live on the Admin surface per spec 42 Â§Endpoints.
         Route::get('/QuotaRequests', [ResellerQuotaRequestController::class, 'index'])
             ->name('quota_requests.index');
         Route::post('/QuotaRequests', [ResellerQuotaRequestController::class, 'store'])
@@ -284,7 +284,7 @@ Route::middleware(['require.signature'])
         // Plan 06 step 39c. Third and final verify handshake endpoint.
         // Consumes the VerifyKey inside a shard transaction, runs the
         // environment gate INSIDE the same transaction per spec 03
-        // §Transaction boundary, resolves the Features map via
+        // Â§Transaction boundary, resolves the Features map via
         // FeatureService (LicenseFeatures > TierFeatures precedence),
         // and returns {IsAuthorized, LicenseId, EnvironmentId,
         // LicenseTierId, Features, AuthorizedAt, ExpiresAt}. Machine /
@@ -565,15 +565,15 @@ Route::put('/App/UpdateAssetReceiver/{UploadToken}', \App\Http\Controllers\App\U
     ->name('app.update_asset_receiver');
 
 // Plan 06 step 45 (v0.238.0). Self-update byte-serving endpoint per
-// spec 17 v1.3.0 §"HEAD /App/UpdateAsset/{Version}/{Platform}" and
-// §"GET". Anonymous on Stable channel (v1.0). Only finalised and
+// spec 17 v1.3.0 Â§"HEAD /App/UpdateAsset/{Version}/{Platform}" and
+// Â§"GET". Anonymous on Stable channel (v1.0). Only finalised and
 // non-yanked rows visible; missing rows return UpdateAssetNotFound.
 Route::match(['GET', 'HEAD'], '/App/UpdateAsset/{Version}/{Platform}', \App\Http\Controllers\App\UpdateAssetController::class)
     ->where(['Version' => '[0-9]+\.[0-9]+\.[0-9]+([-+][0-9A-Za-z.\-]+)?', 'Platform' => '[A-Za-z0-9]+'])
     ->name('app.update_asset');
 
 // Plan 06 step 46 (v0.239.0). Ed25519 detached-signature endpoint per
-// spec 17 v1.3.0 §"Signature verification" + §"Response 200" SignatureUrl.
+// spec 17 v1.3.0 Â§"Signature verification" + Â§"Response 200" SignatureUrl.
 // Anonymous on Stable channel (v1.0). Only finalised, non-yanked rows
 // with a persisted signature blob are visible; otherwise 404
 // UpdateSignatureUnavailable.
@@ -607,6 +607,8 @@ Route::prefix('v1/developer')->group(function (): void {
     Route::get('/products/{slug}', [\App\Http\Controllers\Developer\ProductController::class, 'show'])->name('api.developer.products.show');
     Route::post('/products/{slug}/deals', [\App\Http\Controllers\Developer\ProductController::class, 'addDeal'])->name('api.developer.products.deals.store');
     Route::get('/products/{slug}/blueprint', [\App\Http\Controllers\Developer\ProductController::class, 'aiBlueprint'])->name('api.developer.products.blueprint');
+    Route::post('/ai/design-pricing', [\App\Http\Controllers\Developer\AiArchitectController::class, 'designPricing'])->name('api.developer.ai.design_pricing');
+    Route::post('/products/{slug}/apply-ai-deals', [\App\Http\Controllers\Developer\AiArchitectController::class, 'applyAiDeals'])->name('api.developer.products.apply_ai_deals');
 });
 
 // Decoupled Payment Gateway Webhook Callback (Zero card data stored)

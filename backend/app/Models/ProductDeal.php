@@ -25,6 +25,7 @@ class ProductDeal extends Model
         'allowedMachineSeats',
         'allowedDomains',
         'isDecoyTarget',
+        'features',
         'isActive',
     ];
 
@@ -33,6 +34,7 @@ class ProductDeal extends Model
         'allowedMachineSeats' => 'integer',
         'allowedDomains' => 'integer',
         'isDecoyTarget' => 'boolean',
+        'features' => 'array',
         'isActive' => 'boolean',
     ];
 

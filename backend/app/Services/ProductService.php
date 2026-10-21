@@ -76,6 +76,11 @@ class ProductService
     /** Create a deal/pricing package for a product. */
     public function createDeal(Product $product, array $attributes): ProductDeal
     {
+        $features = $attributes['features'] ?? [];
+        if (is_string($features)) {
+            $features = array_values(array_filter(array_map('trim', explode("\n", $features))));
+        }
+
         return ProductDeal::create([
             'productId' => $product->ProductId,
             'dealName' => (string) $attributes['dealName'],
@@ -85,6 +90,7 @@ class ProductService
             'allowedMachineSeats' => (int) ($attributes['allowedMachineSeats'] ?? 1),
             'allowedDomains' => (int) ($attributes['allowedDomains'] ?? 1),
             'isDecoyTarget' => (bool) ($attributes['isDecoyTarget'] ?? false),
+            'features' => is_array($features) ? $features : [],
             'isActive' => true,
         ]);
     }

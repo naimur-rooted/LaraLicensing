@@ -143,6 +143,14 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 grid.innerHTML = deals.map(d => {
                     const priceFormatted = (d.priceCents / 100).toFixed(2);
                     const isDecoy = d.isDecoyTarget;
+                    const featuresHtml = (d.features && Array.isArray(d.features) && d.features.length > 0)
+                        ? d.features.map(f => `<li><strong>${f}</strong></li>`).join('')
+                        : `
+                            <li>Hardware Seats: <strong>${d.allowedMachineSeats} Allowed Machine(s)</strong></li>
+                            <li>Allowed Domains: <strong>${d.allowedDomains} Domain(s)</strong></li>
+                            <li>Cadence Check: <strong>Every ${data.Data.checkIntervalDays || 7} Days</strong></li>
+                            <li>Offline Verification: <strong>Signed Ed25519 JWT</strong></li>
+                        `;
                     return `
                         <div class="pricing-card ${isDecoy ? 'decoy-target' : ''}">
                             ${isDecoy ? '<div class="decoy-ribbon">⭐ BEST VALUE (DECOY TARGET)</div>' : ''}
@@ -154,10 +162,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                                     <span class="interval">/ ${d.billingInterval}</span>
                                 </div>
                                 <ul class="features-list">
-                                    <li>Hardware Seats: <strong>${d.allowedMachineSeats} Allowed Machine(s)</strong></li>
-                                    <li>Allowed Domains: <strong>${d.allowedDomains} Domain(s)</strong></li>
-                                    <li>Cadence Check: <strong>Every ${data.Data.checkIntervalDays || 7} Days</strong></li>
-                                    <li>Offline Verification: <strong>Signed Ed25519 JWT</strong></li>
+                                    ${featuresHtml}
                                 </ul>
                             </div>
                             <button class="btn-buy ${isDecoy ? 'btn-primary' : 'btn-outline'}" onclick="simulatePurchase('${slug}', '${d.dealCode}')">
