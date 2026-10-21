@@ -599,6 +599,8 @@ Route::post('/Serials/OfflineToken', function (\Illuminate\Http\Request $request
 })->name('api.serials.offline_token');
 
 // Developer Portal Product Management & AI Integration Endpoints
+// Public Deals API for Method 1 Headless Synchronization
+Route::get('/v1/products/{slug}/deals', [\App\Http\Controllers\Developer\ProductController::class, 'publicDeals'])->name('api.products.deals.public');
 Route::prefix('v1/developer')->group(function (): void {
     Route::get('/products', [\App\Http\Controllers\Developer\ProductController::class, 'index'])->name('api.developer.products.index');
     Route::post('/products', [\App\Http\Controllers\Developer\ProductController::class, 'store'])->name('api.developer.products.store');

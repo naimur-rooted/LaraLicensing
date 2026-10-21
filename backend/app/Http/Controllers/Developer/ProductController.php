@@ -10,7 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 /**
- * Controller handling Developer Portal Product actions and AI Blueprints.
+ * Controller handling Developer Portal Product actions, Deals sync, and AI Blueprints.
  */
 class ProductController extends Controller
 {
@@ -85,6 +85,25 @@ class ProductController extends Controller
                 'ProductSlug' => $product->productSlug,
                 'DealCode' => $dealCode ?: 'DEFAULT',
                 'IssuedAt' => now()->toISOString(),
+            ],
+        ]);
+    }
+
+    public function publicDeals(string $slug): JsonResponse
+    {
+        $product = $this->productService->getProductBySlug($slug);
+        if (!$product) {
+            return response()->json(['IsSuccess' => false, 'ErrorCode' => 'ProductNotFound', 'Message' => 'Product not found.'], 404);
+        }
+        return response()->json([
+            'IsSuccess' => true,
+            'Data' => [
+                'productSlug' => $product->productSlug,
+                'productName' => $product->productName,
+                'category' => $product->category,
+                'description' => $product->description,
+                'checkIntervalDays' => $product->checkIntervalDays,
+                'deals' => $product->deals->where('isActive', true)->values(),
             ],
         ]);
     }
