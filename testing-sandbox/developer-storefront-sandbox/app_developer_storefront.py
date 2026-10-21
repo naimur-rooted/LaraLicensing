@@ -121,12 +121,12 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 }
 
                 if (!res.ok || !data.IsSuccess || !data.Data) {
+                    const msg = (data && data.Message) ? data.Message : "Product not found";
                     grid.innerHTML = '<div style="grid-column:1/-1; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:10px; padding:24px; color:#fca5a5; text-align:center;">' +
-                        '<div style="font-size:16px; font-weight:700; margin-bottom:6px;">⚠️ Product Not Found: ' + slug + '</div>' +
-                        '<p style="font-size:13px; color:#9ca3af; max-width:550px; margin:0 auto 12px;">The product slug you typed does not exist in LaraLicensing yet. Check that you typed the full slug without typos, or try the seeded product below:</p>' +
-                        '<button type="button" style="background:#0284c7; color:#fff; padding:6px 14px; font-size:12px; border-radius:6px; cursor:pointer;" onclick="setSlug(\\'elementor-assistant\\')">Load Demo: elementor-assistant</button>' +
+                        '<div style="font-size:16px; font-weight:700; margin-bottom:6px;">Product Not Found: ' + slug + '</div>' +
+                        '<p style="font-size:13px; color:#9ca3af; max-width:550px; margin:0 auto 12px;">' + msg + '. Verify your product is registered in the Developer Portal.</p>' +
                         '</div>';
-                    status.innerHTML = '<span style="color:#ef4444;">✖ Product ' + slug + ' not found</span>';
+                    status.innerHTML = '<span style="color:#ef4444;">Error: ' + msg + '</span>';
                     return;
                 }
 
