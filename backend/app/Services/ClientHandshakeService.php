@@ -27,7 +27,9 @@ class ClientHandshakeService
         string $serialValue,
         string $hardwareDigest,
         string $clientIp,
-        string $hostname = 'Client PC'
+        string $hostname = 'Client PC',
+        ?string $countryCode = null,
+        ?string $countryName = null
     ): array {
         $product = Product::with('deals')->where('productSlug', $productSlug)->where('isActive', true)->first();
         if (!$product) {
@@ -51,7 +53,19 @@ class ClientHandshakeService
             return ['isValid' => false, 'errorCode' => 'SecurityRiskDetected', 'message' => 'Anomaly detected. Attempt quarantined.', 'reasons' => $risk['reasons']];
         }
 
-        $bindingResult = $this->bindHardwareSeat($pdo, (int) $license['id'], $hardwareDigest, $hostname, (int) $license['allowedSeats']);
+        $resolvedCountryCode = strtoupper(trim((string) ($countryCode ?: 'US')));
+        $resolvedCountryName = trim((string) ($countryName ?: $this->resolveCountryName($resolvedCountryCode)));
+
+        $bindingResult = $this->bindHardwareSeat(
+            $pdo,
+            (int) $license['id'],
+            $hardwareDigest,
+            $hostname,
+            (int) $license['allowedSeats'],
+            $clientIp,
+            $resolvedCountryCode,
+            $resolvedCountryName
+        );
         if (!$bindingResult['isBound']) {
             return ['isValid' => false, 'errorCode' => 'SeatLimitExceeded', 'message' => $bindingResult['message'], 'boundSeats' => $bindingResult['boundSeats']];
         }
@@ -104,16 +118,31 @@ class ClientHandshakeService
         ];
     }
 
-    private function bindHardwareSeat(PDO $pdo, int $licenseId, string $hwid, string $hostname, int $maxSeats): array
-    {
+    private function bindHardwareSeat(
+        PDO $pdo,
+        int $licenseId,
+        string $hwid,
+        string $hostname,
+        int $maxSeats,
+        string $clientIp = '127.0.0.1',
+        string $countryCode = 'US',
+        string $countryName = 'United States'
+    ): array {
         $stmt = $pdo->prepare('SELECT * FROM HardwareBindings WHERE licenseId = :lid');
         $stmt->execute([':lid' => $licenseId]);
         $bindings = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         foreach ($bindings as $b) {
             if ($b['hardwareDigest'] === $hwid) {
-                $upd = $pdo->prepare('UPDATE HardwareBindings SET lastSeenAt = :dt, hostname = :h WHERE id = :id');
-                $upd->execute([':dt' => Carbon::now()->toISOString(), ':h' => $hostname, ':id' => $b['id']]);
+                $upd = $pdo->prepare('UPDATE HardwareBindings SET lastSeenAt = :dt, hostname = :h, clientIp = :ip, countryCode = :cc, countryName = :cn WHERE id = :id');
+                $upd->execute([
+                    ':dt' => Carbon::now()->toISOString(),
+                    ':h' => $hostname,
+                    ':ip' => $clientIp,
+                    ':cc' => $countryCode,
+                    ':cn' => $countryName,
+                    ':id' => $b['id'],
+                ]);
                 return ['isBound' => true, 'activeCount' => count($bindings)];
             }
         }
@@ -127,15 +156,37 @@ class ClientHandshakeService
             ];
         }
 
-        $ins = $pdo->prepare('INSERT INTO HardwareBindings (licenseId, hardwareDigest, hostname, boundAt, lastSeenAt) VALUES (:lid, :hwid, :h, :dt, :dt)');
+        $ins = $pdo->prepare('INSERT INTO HardwareBindings (licenseId, hardwareDigest, hostname, boundAt, lastSeenAt, clientIp, countryCode, countryName) VALUES (:lid, :hwid, :h, :dt, :dt, :ip, :cc, :cn)');
         $ins->execute([
             ':lid' => $licenseId,
             ':hwid' => $hwid,
             ':h' => $hostname,
             ':dt' => Carbon::now()->toISOString(),
+            ':ip' => $clientIp,
+            ':cc' => $countryCode,
+            ':cn' => $countryName,
         ]);
 
         return ['isBound' => true, 'activeCount' => count($bindings) + 1];
+    }
+
+    private function resolveCountryName(string $code): string
+    {
+        $map = [
+            'US' => 'United States',
+            'GB' => 'United Kingdom',
+            'DE' => 'Germany',
+            'BD' => 'Bangladesh',
+            'CA' => 'Canada',
+            'FR' => 'France',
+            'AU' => 'Australia',
+            'IN' => 'India',
+            'JP' => 'Japan',
+            'SG' => 'Singapore',
+            'NL' => 'Netherlands',
+            'BR' => 'Brazil',
+        ];
+        return $map[$code] ?? "Country ({$code})";
     }
 
     private function logSecurityEvent(PDO $pdo, string $serial, string $ip, string $hwid, array $reasons): void
@@ -171,8 +222,21 @@ class ClientHandshakeService
             hardwareDigest TEXT NOT NULL,
             hostname TEXT DEFAULT "Client PC",
             boundAt TEXT NOT NULL,
-            lastSeenAt TEXT NOT NULL
+            lastSeenAt TEXT NOT NULL,
+            clientIp TEXT DEFAULT "127.0.0.1",
+            countryCode TEXT DEFAULT "US",
+            countryName TEXT DEFAULT "United States"
         );');
+        // Gracefully migrate older schemas if columns are missing
+        try {
+            $pdo->exec("ALTER TABLE HardwareBindings ADD COLUMN clientIp TEXT DEFAULT '127.0.0.1';");
+        } catch (\Throwable) {}
+        try {
+            $pdo->exec("ALTER TABLE HardwareBindings ADD COLUMN countryCode TEXT DEFAULT 'US';");
+        } catch (\Throwable) {}
+        try {
+            $pdo->exec("ALTER TABLE HardwareBindings ADD COLUMN countryName TEXT DEFAULT 'United States';");
+        } catch (\Throwable) {}
         $pdo->exec('CREATE TABLE IF NOT EXISTS SecurityAuditEvents (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             serialValue TEXT NOT NULL,

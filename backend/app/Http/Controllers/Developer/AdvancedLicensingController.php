@@ -34,7 +34,18 @@ class AdvancedLicensingController extends Controller
             return response()->json(['IsSuccess' => false, 'ErrorCode' => 'InvalidInput', 'Message' => 'serialValue and hardwareDigest are required.'], 422);
         }
 
-        $result = $this->handshakeService->verifyClient($productSlug, $serial, $hwid, (string) $request->ip(), $hostname);
+        $countryCode = strtoupper(trim((string) ($request->header('CF-IPCountry') ?: $request->input('countryCode') ?: '')));
+        $countryName = trim((string) ($request->input('countryName') ?: ''));
+
+        $result = $this->handshakeService->verifyClient(
+            $productSlug,
+            $serial,
+            $hwid,
+            (string) $request->ip(),
+            $hostname,
+            $countryCode ?: null,
+            $countryName ?: null
+        );
         $status = $result['isValid'] ? 200 : 403;
         return response()->json(['IsSuccess' => $result['isValid'], 'Data' => $result], $status);
     }
