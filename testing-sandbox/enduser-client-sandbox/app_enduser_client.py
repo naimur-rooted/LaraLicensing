@@ -35,7 +35,7 @@ class EndUserClientApp:
         self.root.configure(bg="#0b0f19")
         self.hw = get_machine_fingerprint()
 
-        self.product_slug = tk.StringVar(value="elementor-assistant")
+        self.product_slug = tk.StringVar(value="lara-sandbox-desktop-client")
         self.serial_var = tk.StringVar(value="")
         self.simulated_hwid = tk.StringVar(value=self.hw["HardwareDigest"])
 

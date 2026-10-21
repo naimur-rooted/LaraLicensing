@@ -6,7 +6,7 @@ import urllib.error
 
 PORT = 5050
 LARALICENSING_API = "http://127.0.0.1:8000"
-DEFAULT_PRODUCT_SLUG = "elementor-assistant"
+DEFAULT_PRODUCT_SLUG = "lara-sandbox-desktop-client"
 
 HTML_TEMPLATE = """<!DOCTYPE html>
 <html lang="en">
@@ -70,7 +70,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         <div class="control-panel">
             <div class="input-group">
                 <span>Product Slug:</span>
-                <input type="text" id="productSlugInput" value="elementor-assistant">
+                <input type="text" id="productSlugInput" value="lara-sandbox-desktop-client">
                 <button onclick="fetchPricing()">Re-Sync Deals</button>
             </div>
             <div class="input-group">
