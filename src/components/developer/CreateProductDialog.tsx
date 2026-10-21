@@ -16,6 +16,7 @@ interface CreateProductDialogProps {
 export function CreateProductDialog({ isOpen, onOpenChange, onProductCreated }: CreateProductDialogProps) {
   const [productName, setProductName] = useState("");
   const [category, setCategory] = useState("ChromeExtension");
+  const [customCategory, setCustomCategory] = useState("");
   const [description, setDescription] = useState("");
   const [checkIntervalDays, setCheckIntervalDays] = useState("7");
 
@@ -79,12 +80,16 @@ export function CreateProductDialog({ isOpen, onOpenChange, onProductCreated }: 
   const handleSubmit = () => {
     if (!productName.trim()) return;
     const slug = productName.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    const finalCategory =
+      category === "CustomOther"
+        ? customCategory.trim() || "CustomSoftware"
+        : category;
 
     const newProduct: DeveloperProductItem = {
       ProductId: Date.now(),
       productSlug: slug,
       productName: productName.trim(),
-      category,
+      category: finalCategory,
       description: description.trim() || undefined,
       checkIntervalDays: parseInt(checkIntervalDays, 10) || 7,
       ed25519PublicKey: "MCowBQYDK2VwAyEA" + Math.random().toString(36).substring(2, 15) + "=",
@@ -94,6 +99,7 @@ export function CreateProductDialog({ isOpen, onOpenChange, onProductCreated }: 
     onProductCreated(newProduct);
     onOpenChange(false);
     setProductName("");
+    setCustomCategory("");
     setDescription("");
   };
 
@@ -134,13 +140,35 @@ export function CreateProductDialog({ isOpen, onOpenChange, onProductCreated }: 
                   onChange={(e) => setCategory(e.target.value)}
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 >
-                  <option value="ChromeExtension">Chrome Extension</option>
-                  <option value="WordPressPlugin">WordPress Plugin</option>
-                  <option value="DesktopApp">Desktop Software (Windows/macOS)</option>
-                  <option value="WebService">Web API / Microservice</option>
+                  <option value="ChromeExtension">Chrome / Browser Extension</option>
+                  <option value="WordPressPlugin">WordPress / WooCommerce Plugin</option>
+                  <option value="DesktopApp">Desktop Software (Windows / macOS / Linux)</option>
+                  <option value="CliScript">CLI Tool / Python Script / Automation Bot</option>
+                  <option value="ElectronTauri">Electron / Tauri App</option>
+                  <option value="IdeExtension">VS Code / JetBrains / IDE Extension</option>
+                  <option value="DesignToolPlugin">Figma Plugin / Blender Addon</option>
+                  <option value="MobileApp">Mobile App (iOS / Android / Flutter)</option>
+                  <option value="ShopifyApp">Shopify / E-Commerce App</option>
+                  <option value="WebService">Web API / SaaS Microservice</option>
+                  <option value="CustomOther">Custom / Other Platform...</option>
                 </select>
               </div>
             </div>
+
+            {category === "CustomOther" && (
+              <div className="space-y-1.5 rounded-md border border-primary/20 bg-primary/5 p-3">
+                <Label htmlFor="customCategory" className="text-xs font-semibold text-primary">
+                  Specify Your Custom Platform / Runtime
+                </Label>
+                <Input
+                  id="customCategory"
+                  placeholder="e.g. AutoCAD Plugin, Unity Asset, Trading Bot, Discord Bot"
+                  value={customCategory}
+                  onChange={(e) => setCustomCategory(e.target.value)}
+                  className="bg-background"
+                />
+              </div>
+            )}
 
             <div className="space-y-1.5">
               <Label htmlFor="description">Short Description (Optional)</Label>
