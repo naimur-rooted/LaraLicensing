@@ -626,7 +626,10 @@ ${dealsList}
                   onChange={(e) => setDealInterval(e.target.value)}
                   className="rounded-md border border-input bg-background px-3 py-2 text-sm"
                 >
+                  <option value="daily">Daily Pass (24h)</option>
+                  <option value="weekly">Weekly Pass (7 Days)</option>
                   <option value="monthly">Monthly</option>
+                  <option value="quarterly">Quarterly (3 Months)</option>
                   <option value="yearly">Yearly</option>
                   <option value="biennial">2-Years (Decoy)</option>
                   <option value="lifetime">Lifetime Deal</option>
@@ -644,7 +647,13 @@ ${dealsList}
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="grid gap-1.5">
-                <Label>Machine Seats</Label>
+                <Label>
+                  {targetProduct?.category === "ChromeExtension"
+                    ? "Chrome Profiles"
+                    : targetProduct?.category === "WordPressPlugin"
+                    ? "Domain Sites"
+                    : "Machine Seats"}
+                </Label>
                 <Input
                   type="number"
                   value={dealSeats}

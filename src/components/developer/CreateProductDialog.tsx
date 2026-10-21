@@ -17,13 +17,23 @@ export function CreateProductDialog({ isOpen, onOpenChange, onProductCreated }: 
   const [productName, setProductName] = useState("");
   const [category, setCategory] = useState("ChromeExtension");
   const [customCategory, setCustomCategory] = useState("");
+  const [seatUnitName, setSeatUnitName] = useState("Chrome Profiles");
   const [description, setDescription] = useState("");
   const [checkIntervalDays, setCheckIntervalDays] = useState("7");
   const [isAiGenerating, setIsAiGenerating] = useState(false);
   const [isAiPanelOpen, setIsAiPanelOpen] = useState(false);
-  const [aiStrategy, setAiStrategy] = useState<"decoy-matrix" | "appsumo-ltd" | "b2b-agency" | "low-barrier">("decoy-matrix");
+  const [aiStrategy, setAiStrategy] = useState<"decoy-matrix" | "daily-pass" | "appsumo-ltd" | "b2b-agency" | "low-barrier">("decoy-matrix");
   const [aiKillerFeatures, setAiKillerFeatures] = useState("");
   const [aiTargetPrice, setAiTargetPrice] = useState("");
+
+  const handleCategoryChange = (val: string) => {
+    setCategory(val);
+    if (val === "ChromeExtension") setSeatUnitName("Chrome Profiles");
+    else if (val === "WordPressPlugin") setSeatUnitName("Domain Sites");
+    else if (val === "DesktopApp") setSeatUnitName("Machine Seats");
+    else if (val === "CliScript") setSeatUnitName("Runner / Worker Nodes");
+    else setSeatUnitName("Allowed Units");
+  };
 
   // Default 3 VPN-Style Decoy Deals matching meeting discussion
   const [deals, setDeals] = useState<ProductDealItem[]>([
@@ -72,11 +82,12 @@ export function CreateProductDialog({ isOpen, onOpenChange, onProductCreated }: 
       if (useCustomContext) {
         const strategyNames = {
           "decoy-matrix": "Three-Tier Decoy Matrix (NordVPN style: Monthly Anchor, Annual Pro, 2-Year Best Value Target)",
+          "daily-pass": "Daily & Micro Passes (24-Hour Day Pass, 7-Day Weekly Pass, Monthly Access)",
           "appsumo-ltd": "AppSumo-Style Lifetime Deals (Single Code LTD, Double Code, Unlimited Agency Code)",
           "b2b-agency": "High-Ticket B2B SaaS (Starter, Professional Team, Unlimited Agency)",
           "low-barrier": "Low-Barrier Impulse Utility ($9 - $29 impulse buy with high volume)",
         };
-        promptText = `Strategy Model: ${strategyNames[aiStrategy]}. Killer Features & Value Proposition: ${aiKillerFeatures || 'Standard category capabilities'}. Target Price Range: ${aiTargetPrice || 'Market competitive'}. Output packages with software-specific feature perks that directly deliver on this value proposition.`;
+        promptText = `Strategy Model: ${strategyNames[aiStrategy]}. Killer Features & Value Proposition: ${aiKillerFeatures || 'Standard category capabilities'}. Target Price Range: ${aiTargetPrice || 'Market competitive'}. Output packages with software-specific feature perks that directly deliver on this value proposition and output the detected seatUnitName (e.g. Discord Servers, Profiles, Stores, Nodes).`;
       }
 
       const res = await fetch("http://127.0.0.1:8000/api/v1/developer/ai/design-pricing", {
@@ -93,6 +104,9 @@ export function CreateProductDialog({ isOpen, onOpenChange, onProductCreated }: 
 
       const data = await res.json();
       if (data.IsSuccess && data.Data && Array.isArray(data.Data.deals) && data.Data.deals.length > 0) {
+        if (data.Data.seatUnitName) {
+          setSeatUnitName(data.Data.seatUnitName);
+        }
         const enriched = data.Data.deals.map((d: ProductDealItem) => ({
           ...d,
           featuresText: Array.isArray(d.features) ? d.features.join("\n") : (d.features || ""),
@@ -235,7 +249,7 @@ export function CreateProductDialog({ isOpen, onOpenChange, onProductCreated }: 
                 <select
                   id="category"
                   value={category}
-                  onChange={(e) => setCategory(e.target.value)}
+                  onChange={(e) => handleCategoryChange(e.target.value)}
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 >
                   <option value="ChromeExtension">Chrome / Browser Extension</option>
@@ -268,14 +282,30 @@ export function CreateProductDialog({ isOpen, onOpenChange, onProductCreated }: 
               </div>
             )}
 
-            <div className="space-y-1.5">
-              <Label htmlFor="description">Short Description (Optional)</Label>
-              <Input
-                id="description"
-                placeholder="Brief summary of your software features"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="description">Short Description (Optional)</Label>
+                <Input
+                  id="description"
+                  placeholder="Brief summary of your software features"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="seatUnitName">License Quota Unit / Metric</Label>
+                  <span className="text-[10px] text-muted-foreground font-medium">What is 1 activation?</span>
+                </div>
+                <Input
+                  id="seatUnitName"
+                  placeholder="e.g. Chrome Profiles, Domain Sites, Discord Servers, Stores"
+                  value={seatUnitName}
+                  onChange={(e) => setSeatUnitName(e.target.value)}
+                  className="bg-background"
+                />
+              </div>
             </div>
           </div>
 
@@ -326,9 +356,10 @@ export function CreateProductDialog({ isOpen, onOpenChange, onProductCreated }: 
 
                 <div className="space-y-1">
                   <Label className="text-[11px] font-medium text-foreground">Select Monetization Strategy</Label>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5">
                     {[
                       { id: "decoy-matrix", label: "🛡️ 2-Yr Decoy", desc: "NordVPN style" },
+                      { id: "daily-pass", label: "⚡ Daily Pass", desc: "24h / Weekly passes" },
                       { id: "appsumo-ltd", label: "⚡ AppSumo LTD", desc: "Lifetime codes" },
                       { id: "b2b-agency", label: "💼 B2B Agency", desc: "Team growth" },
                       { id: "low-barrier", label: "🚀 Low Impulse", desc: "$9 - $29 volume" },
@@ -443,8 +474,11 @@ export function CreateProductDialog({ isOpen, onOpenChange, onProductCreated }: 
                         onChange={(e) => handleDealChange(index, "billingInterval", e.target.value)}
                         className="w-full h-7 rounded-md border border-input bg-background px-2 text-xs"
                       >
+                        <option value="daily">Daily Pass (24h)</option>
+                        <option value="weekly">Weekly (7 Days)</option>
                         <option value="monthly">Monthly</option>
-                        <option value="yearly">Yearly</option>
+                        <option value="quarterly">Quarterly (3 Mo.)</option>
+                        <option value="yearly">Yearly / Annual</option>
                         <option value="biennial">2-Year (Decoy)</option>
                         <option value="lifetime">Lifetime Deal</option>
                       </select>
@@ -461,8 +495,8 @@ export function CreateProductDialog({ isOpen, onOpenChange, onProductCreated }: 
                       />
                     </div>
                     <div>
-                      <Label className="text-[10px] text-muted-foreground">
-                        {category === "ChromeExtension" ? "Chrome Profiles" : category === "WordPressPlugin" ? "Domain Sites" : "Machine Seats"}
+                      <Label className="text-[10px] text-muted-foreground truncate block" title={seatUnitName || "Machine Seats"}>
+                        {seatUnitName || "Machine Seats"}
                       </Label>
                       <Input
                         type="number"
