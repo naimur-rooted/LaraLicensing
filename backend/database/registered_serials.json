@@ -164,5 +164,23 @@
         "MaxActivations": 5,
         "IsRevoked": false,
         "RegisteredAt": "2026-10-19T07:43:55.732143Z"
+    },
+    "LARA-U4E8-0001": {
+        "SerialId": 51944196,
+        "SerialValue": "LARA-U4E8-0001",
+        "Category": "Yearly",
+        "TierName": "Scale",
+        "CustomerName": "Jane Doe",
+        "CustomerEmail": "approve-test@domain.com",
+        "Status": "active",
+        "ExpiresAt": "2027-10-21T09:37:15.191Z",
+        "Features": [
+            "core.reports",
+            "core.dashboards",
+            "addon.exports"
+        ],
+        "MaxActivations": 5,
+        "IsRevoked": false,
+        "RegisteredAt": "2026-10-21T09:37:15.967000Z"
     }
 }

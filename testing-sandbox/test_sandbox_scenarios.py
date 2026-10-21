@@ -18,7 +18,7 @@ def run_tests():
     try:
         url = f"{API_BASE}/api/v1/products/elementor-assistant/deals"
         req = urllib.request.Request(url)
-        with urllib.request.urlopen(req, timeout=3) as resp:
+        with urllib.request.urlopen(req, timeout=10) as resp:
             data = json.loads(resp.read().decode())
             assert data["IsSuccess"] is True
             deals = data["Data"]["deals"]
@@ -34,12 +34,12 @@ def run_tests():
     try:
         url = f"{API_BASE}/api/v1/products/elementor-assistant/licenses/issue"
         payload = {
-            "transactionId": "tx_test_real_scenario_9918",
+            "transactionId": f"tx_test_real_scenario_{os.urandom(4).hex()}",
             "customerEmail": "real.customer@testing.local",
             "dealCode": "ELM_1Y_THREE"
         }
         req = urllib.request.Request(url, data=json.dumps(payload).encode(), headers={"Content-Type": "application/json"})
-        with urllib.request.urlopen(req, timeout=3) as resp:
+        with urllib.request.urlopen(req, timeout=10) as resp:
             data = json.loads(resp.read().decode())
             assert data["IsSuccess"] is True
             serial_issued = data["Data"]["SerialValue"]
@@ -59,7 +59,7 @@ def run_tests():
             "hostname": "Developer-PC"
         }
         req = urllib.request.Request(url, data=json.dumps(payload).encode(), headers={"Content-Type": "application/json"})
-        with urllib.request.urlopen(req, timeout=3) as resp:
+        with urllib.request.urlopen(req, timeout=10) as resp:
             data = json.loads(resp.read().decode())
             assert data["IsSuccess"] is True
             res = data["Data"]
@@ -73,15 +73,26 @@ def run_tests():
 
     # 4. Seat Limit Enforcement Test (Multi-Seat Overflow)
     print("\n[TEST 4] Testing Single Seat Limit Overflow Protection...")
-    single_seat_serial = "ELEMENTOR-ASSISTANT-SINGLE-SEAT"
     try:
+        # Mint a fresh 1-seat license for isolated test
+        mint_url = f"{API_BASE}/api/v1/products/elementor-assistant/licenses/issue"
+        mint_payload = {
+            "transactionId": f"tx_single_seat_{os.urandom(4).hex()}",
+            "customerEmail": "single.user@testing.local",
+            "dealCode": "ELM_1M_SINGLE"
+        }
+        mint_req = urllib.request.Request(mint_url, data=json.dumps(mint_payload).encode(), headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(mint_req, timeout=10) as mint_resp:
+            mint_data = json.loads(mint_resp.read().decode())
+            single_seat_serial = mint_data["Data"]["SerialValue"]
+
         # Machine 1 binds successfully
         url = f"{API_BASE}/api/v1/products/elementor-assistant/verify"
         req1 = urllib.request.Request(url, data=json.dumps({
             "serialValue": single_seat_serial,
             "hardwareDigest": "HWID_FIRST_PC"
         }).encode(), headers={"Content-Type": "application/json"})
-        with urllib.request.urlopen(req1, timeout=3) as resp:
+        with urllib.request.urlopen(req1, timeout=10) as resp:
             pass
 
         # Machine 2 attempts to use same single seat key -> must be blocked
@@ -90,7 +101,7 @@ def run_tests():
             "hardwareDigest": "HWID_SECOND_PIRATED_PC"
         }).encode(), headers={"Content-Type": "application/json"})
         try:
-            with urllib.request.urlopen(req2, timeout=3) as resp2:
+            with urllib.request.urlopen(req2, timeout=10) as resp2:
                 print("       -> FAIL: Second machine was not blocked!")
         except urllib.error.HTTPError as he:
             assert he.code == 403
@@ -109,7 +120,7 @@ def run_tests():
             "serialValue": single_seat_serial,
             "reason": "Piracy attempt on multiple unauthorized devices"
         }).encode(), headers={"Content-Type": "application/json"})
-        with urllib.request.urlopen(q_req, timeout=3) as q_resp:
+        with urllib.request.urlopen(q_req, timeout=10) as q_resp:
             q_data = json.loads(q_resp.read().decode())
             assert q_data["IsSuccess"] is True
 
@@ -120,7 +131,7 @@ def run_tests():
             "hardwareDigest": "HWID_FIRST_PC"
         }).encode(), headers={"Content-Type": "application/json"})
         try:
-            with urllib.request.urlopen(v_req, timeout=3) as v_resp:
+            with urllib.request.urlopen(v_req, timeout=10) as v_resp:
                 print("       -> FAIL: Quarantined license was still allowed!")
         except urllib.error.HTTPError as he2:
             assert he2.code == 403

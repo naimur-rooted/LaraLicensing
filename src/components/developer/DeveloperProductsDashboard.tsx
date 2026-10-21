@@ -29,7 +29,10 @@ import {
   Sparkles,
   ShieldCheck,
   Activity,
+  ArrowUpRight,
 } from "lucide-react";
+import { CreateProductDialog } from "./CreateProductDialog";
+import { PlatformSubscriptionModal } from "./PlatformSubscriptionModal";
 
 export interface ProductDealItem {
   ProductDealId?: number;
@@ -100,10 +103,12 @@ export function DeveloperProductsDashboard() {
   const [isBlueprintOpen, setIsBlueprintOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  // Platform Subscription State
+  const [currentTier, setCurrentTier] = useState("Pro");
+  const [isPlatformModalOpen, setIsPlatformModalOpen] = useState(false);
+
   // New Product Modal State
   const [isNewProductOpen, setIsNewProductOpen] = useState(false);
-  const [newProductName, setNewProductName] = useState("");
-  const [newProductCategory, setNewProductCategory] = useState("ChromeExtension");
 
   // Add Deal Modal State
   const [isAddDealOpen, setIsAddDealOpen] = useState(false);
@@ -125,7 +130,7 @@ export function DeveloperProductsDashboard() {
     const dealsList = p.deals
       .map(
         (d) =>
-          `- ${d.dealName} (${d.dealCode}): \$${(d.priceCents / 100).toFixed(2)} / ${d.billingInterval}, ${d.allowedMachineSeats} seat(s)`
+          `- ${d.dealName} (${d.dealCode}): $${(d.priceCents / 100).toFixed(2)} / ${d.billingInterval}, ${d.allowedMachineSeats} seat(s)`
       )
       .join("\n");
 
@@ -147,31 +152,8 @@ ${dealsList}
 4. Schedule background re-verification every ${p.checkIntervalDays} days.`;
   };
 
-  const handleCreateProduct = () => {
-    if (!newProductName.trim()) return;
-    const slug = newProductName.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-    const item: DeveloperProductItem = {
-      ProductId: Date.now(),
-      productSlug: slug,
-      productName: newProductName,
-      category: newProductCategory,
-      checkIntervalDays: 7,
-      ed25519PublicKey: "MCowBQYDK2VwAyEA" + Math.random().toString(36).substring(2, 15),
-      deals: [
-        {
-          dealName: "Standard 1-Year",
-          dealCode: `${slug.toUpperCase().slice(0, 4)}_1Y`,
-          billingInterval: "yearly",
-          priceCents: 4900,
-          allowedMachineSeats: 1,
-          allowedDomains: 1,
-          isDecoyTarget: false,
-        },
-      ],
-    };
-    setProducts([...products, item]);
-    setNewProductName("");
-    setIsNewProductOpen(false);
+  const handleProductCreated = (newProduct: DeveloperProductItem) => {
+    setProducts((prev) => [...prev, newProduct]);
   };
 
   const handleAddDealSubmit = () => {
@@ -209,11 +191,20 @@ ${dealsList}
             <div className="flex items-center gap-2">
               <h3 className="font-semibold text-foreground">Developer License Studio</h3>
               <Badge variant="outline" className="text-xs font-medium text-emerald-500 border-emerald-500/30">
-                Pro Tier Active
+                {currentTier} Tier Active
               </Badge>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsPlatformModalOpen(true)}
+                className="h-6 px-2 text-xs text-primary hover:text-primary/80 gap-1"
+              >
+                <span>Upgrade / Change Plan</span>
+                <ArrowUpRight className="size-3" />
+              </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              Capacity: 1 / 15 Products • Daily Requests: 142 / 1,000 used today
+              Capacity: {products.length} / 15 Products • Daily Requests: 142 / 1,000 used today
             </p>
           </div>
         </div>
@@ -271,7 +262,7 @@ ${dealsList}
                       )}
                     </div>
                     <div className="text-right font-mono text-[11px] text-muted-foreground">
-                      <span className="font-semibold text-foreground">\${(deal.priceCents / 100).toFixed(2)}</span>
+                      <span className="font-semibold text-foreground">${(deal.priceCents / 100).toFixed(2)}</span>
                       <span> / {deal.billingInterval}</span>
                       <span className="ml-1 text-[10px] text-muted-foreground/80">({deal.allowedMachineSeats} seats)</span>
                     </div>
@@ -352,48 +343,23 @@ ${dealsList}
         </DialogContent>
       </Dialog>
 
-      {/* Create Product Modal */}
-      <Dialog open={isNewProductOpen} onOpenChange={setIsNewProductOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Add New Software Product</DialogTitle>
-            <DialogDescription>
-              Provision a new product with an isolated SQLite shard database.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-2 text-sm">
-            <div className="grid gap-1.5">
-              <Label htmlFor="prodName">Product Name</Label>
-              <Input
-                id="prodName"
-                placeholder="e.g. LeadScraper Chrome Extension"
-                value={newProductName}
-                onChange={(e) => setNewProductName(e.target.value)}
-              />
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="category">Category</Label>
-              <select
-                id="category"
-                value={newProductCategory}
-                onChange={(e) => setNewProductCategory(e.target.value)}
-                className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-              >
-                <option value="ChromeExtension">Chrome Extension</option>
-                <option value="WordPressPlugin">WordPress Plugin</option>
-                <option value="DesktopApp">Desktop Software</option>
-                <option value="WebService">Web Service / API</option>
-              </select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsNewProductOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleCreateProduct}>Create & Provision Shard</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Create Product Modal with Downstream Pricing Matrix */}
+      <CreateProductDialog
+        isOpen={isNewProductOpen}
+        onOpenChange={setIsNewProductOpen}
+        onProductCreated={handleProductCreated}
+      />
+
+      {/* Developer Platform Tier Subscription Modal */}
+      <PlatformSubscriptionModal
+        isOpen={isPlatformModalOpen}
+        onOpenChange={setIsPlatformModalOpen}
+        currentTier={currentTier}
+        onTierSelect={(tierCode) => {
+          const formatted = tierCode.charAt(0).toUpperCase() + tierCode.slice(1).toLowerCase();
+          setCurrentTier(formatted);
+        }}
+      />
 
       {/* Add Deal Modal */}
       <Dialog open={isAddDealOpen} onOpenChange={setIsAddDealOpen}>

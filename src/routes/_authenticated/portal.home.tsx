@@ -3,7 +3,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { PageHeader } from "@/components/shell/PageHeader";
 import { SerialLookupPanel } from "@/components/portal/serial-lookup-panel";
-import { CustomerRequestForm } from "@/components/portal/CustomerRequestForm";
 import { CustomerRequestsHistory } from "@/components/portal/CustomerRequestsHistory";
 import { DeveloperProductsDashboard } from "@/components/developer/DeveloperProductsDashboard";
 import { ResellerWholesaleStudio } from "@/components/reseller/ResellerWholesaleStudio";
@@ -33,21 +32,12 @@ function PortalHome() {
   const me = meQuery.data?.[0];
   const displayName = me?.DisplayName ?? me?.Email ?? "there";
   const customerEmail = me?.Email ?? "user@licensingportal.local";
-  const customerName = me?.DisplayName ?? "Valued Customer";
   const [selectedSerial, setSelectedSerial] = useState("");
   const [activeTab, setActiveTab] = useState<"developer" | "reseller" | "security" | "client">("developer");
 
   const handleSignOut = () => {
     clearLaraSession();
     window.location.href = "/admin/login";
-  };
-
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [formNotes, setFormNotes] = useState("");
-
-  const handleRenew = (request: { IssuedLicenseKey?: string | null; ResellerName: string }) => {
-    setFormNotes(`Renewal for ${request.IssuedLicenseKey ?? "existing license"}`);
-    setIsFormOpen(true);
   };
 
   return (
@@ -107,7 +97,7 @@ function PortalHome() {
           className="gap-2 text-xs font-medium"
         >
           <KeyRound className="size-4" />
-          Client Verification (Tier 3)
+          Issued Licenses & Serial Lookup
         </Button>
       </div>
 
@@ -116,28 +106,15 @@ function PortalHome() {
       {activeTab === "security" && <FraudAlertCenter />}
       {activeTab === "client" && (
         <div className="flex flex-col gap-6">
-          <CustomerRequestForm
-            customerEmail={customerEmail}
-            customerName={customerName}
-            isOpen={isFormOpen}
-            onOpenChange={setIsFormOpen}
-            initialNotes={formNotes}
-          />
-
           <CustomerRequestsHistory
             customerEmail={customerEmail}
             onApplySerial={(serial) => setSelectedSerial(serial)}
-            onRenew={handleRenew}
           />
 
           <SerialLookupPanel
             key={selectedSerial}
             initialSerial={selectedSerial}
             testIdPrefix="portal-home-serial"
-            onRequestRenewal={(serial) => {
-              setFormNotes(`Renewal for ${serial}`);
-              setIsFormOpen(true);
-            }}
           />
         </div>
       )}
