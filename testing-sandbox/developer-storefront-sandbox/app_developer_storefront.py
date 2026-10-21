@@ -34,7 +34,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .badge-live { background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); }
         .control-panel { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; margin-bottom: 30px; display: flex; align-items: center; justify-content: space-between; gap: 15px; flex-wrap: wrap; }
         .input-group { display: flex; align-items: center; gap: 10px; font-size: 13px; }
-        input[type="text"] { background: #030712; border: 1px solid var(--border); color: #fff; padding: 8px 12px; border-radius: 6px; font-size: 13px; outline: none; }
+        input[type="text"] { background: #030712; border: 1px solid var(--border); color: #fff; padding: 8px 12px; border-radius: 6px; font-size: 13px; outline: none; min-width: 280px; font-family: monospace; }
         button { background: var(--primary); color: #000; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 13px; transition: opacity 0.2s; }
         button:hover { opacity: 0.9; }
         .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 35px; }
@@ -208,7 +208,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         }
 
         // Initial fetch
-        fetchPricing();
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", fetchPricing);
+        } else {
+            fetchPricing();
+        }
     </script>
 </body>
 </html>
