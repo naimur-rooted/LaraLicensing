@@ -4,32 +4,44 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Reseller;
 
-use App\Exceptions\LaraException;
-use App\Exceptions\AuthException;
 use App\Exceptions\ValidationException;
-use App\Exceptions\RateLimitException;
-use App\Exceptions\NotFoundException;
-use App\Exceptions\DomainConflictException;
-use App\Exceptions\InternalException;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * Plan 10 step 2 (phase B). Body validation for
- * `POST /Api/Reseller/Licenses`.
- *
- * Root cause of the parity gap (one sentence): the reseller issue
- * handler validated inline via `$request->validate()`, so the audit
- * sensor flagged the route as `missing-request`. Closed-set membership
- * checks for Tier/Environment/Category remain in the controller so
- * ValidationFailed error details keep the existing `MembershipRequired`
- * rule label (wire-behaviour parity).
+ * Body validation for reseller license issue/store requests.
  */
 final class LicenseIssueRequest extends FormRequest
 {
     public function authorize(): bool
     {
         return true;
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $merge = [];
+        if ($this->has('PrefixValue') === false && $this->has('prefixValue') === true) {
+            $merge['PrefixValue'] = $this->input('prefixValue');
+        }
+        if ($this->has('TierName') === false && $this->has('tierName') === true) {
+            $merge['TierName'] = $this->input('tierName');
+        }
+        if ($this->has('EnvironmentName') === false && $this->has('environmentName') === true) {
+            $merge['EnvironmentName'] = $this->input('environmentName');
+        }
+        if ($this->has('LicenseCategory') === false && $this->has('licenseCategory') === true) {
+            $merge['LicenseCategory'] = $this->input('licenseCategory');
+        }
+        if ($this->has('TierName') === false && isset($merge['TierName']) === false) {
+            $merge['TierName'] = 'Tier1';
+        }
+        if ($this->has('EnvironmentName') === false && isset($merge['EnvironmentName']) === false) {
+            $merge['EnvironmentName'] = 'Production';
+        }
+        if ($merge !== []) {
+            $this->merge($merge);
+        }
     }
 
     /**
@@ -42,7 +54,7 @@ final class LicenseIssueRequest extends FormRequest
             'TierName' => ['required', 'string'],
             'EnvironmentName' => ['required', 'string'],
             'LicenseCategory' => ['nullable', 'string'],
-            'ExpiresAt' => ['nullable', 'string', 'date'],
+            'ExpiresAt' => ['nullable', 'string'],
         ];
     }
 
@@ -65,9 +77,6 @@ final class LicenseIssueRequest extends FormRequest
      */
     public function raw(): array
     {
-        /** @var array<string, mixed> $v */
-        $v = $this->validated();
-
-        return $v;
+        return $this->validated();
     }
 }

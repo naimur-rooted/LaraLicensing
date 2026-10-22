@@ -49,6 +49,12 @@ export function AuthCard(props: AuthCardProps) {
         />
         <section className="flex flex-col items-center py-10 overflow-y-auto min-h-0">
           <div className="w-full max-w-md my-auto">
+            <div className="mb-4 flex items-center justify-between">
+              <Link to="/" className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline transition-colors">
+                ← Back to Landing Page
+              </Link>
+              <span className="text-xs text-muted-foreground">Admin Console</span>
+            </div>
             <AuthMobileBrand />
             <div className="surface-elevated rounded-2xl p-8 fade-in">
               <div className="mb-6 flex items-start gap-3">

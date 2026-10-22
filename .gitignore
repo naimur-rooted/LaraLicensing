@@ -123,3 +123,10 @@ scripts/.demo_license_cache.json
 
 
 backend/database/product_*.sqlite
+backend/database/lara_shard_*.sqlite
+
+# Raw prompt extracts
+.ai-memory/all_prompts_single_box.md
+.ai-memory/complete_session_report.md
+.ai-memory/today_prompts.json
+.ai-memory/append_report.py

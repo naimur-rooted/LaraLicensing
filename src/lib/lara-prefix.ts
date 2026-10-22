@@ -2,6 +2,7 @@ import { queryOptions } from "@tanstack/react-query";
 import { z } from "zod";
 
 import { HttpMethodType, requestLaraApi } from "./lara-api-client";
+import { getRuntimeMode } from "./runtime-mode";
 
 const PREFIX_LIMIT = 100;
 
@@ -24,13 +25,27 @@ export const prefixCreateSchema = z.object({
 
 export type PrefixCreateInput = z.infer<typeof prefixCreateSchema>;
 
+function fetchPreviewPrefixes(resellerId: number): Prefix[] {
+  return [
+    { PrefixId: 1, ResellerId: resellerId, PrefixValue: "ALIM", IsActive: true },
+    { PrefixId: 2, ResellerId: resellerId, PrefixValue: "NEXUS", IsActive: true },
+    { PrefixId: 3, ResellerId: resellerId, PrefixValue: "CORP", IsActive: true },
+  ];
+}
+
 export function resellerPrefixesQueryOptions(resellerId: number) {
   return queryOptions({
     queryKey: ["LaraApi", "Resellers", resellerId, "Prefixes", PREFIX_LIMIT],
-    queryFn: ({ signal }) =>
-      requestLaraApi(`/Resellers/${resellerId}/Prefixes?Limit=${PREFIX_LIMIT}`, prefixSchema, {
+    queryFn: ({ signal }) => {
+      const isPreview = getRuntimeMode().Mode === "preview";
+      if (isPreview) {
+        return fetchPreviewPrefixes(resellerId);
+      }
+
+      return requestLaraApi(`/Resellers/${resellerId}/Prefixes?Limit=${PREFIX_LIMIT}`, prefixSchema, {
         signal,
-      }),
+      });
+    },
     retry: false,
   });
 }
@@ -40,6 +55,16 @@ export async function createResellerPrefix(
   input: PrefixCreateInput,
   idempotencyKey: string,
 ): Promise<Prefix> {
+  const isPreview = getRuntimeMode().Mode === "preview";
+  if (isPreview) {
+    return {
+      PrefixId: Math.floor(Math.random() * 1000) + 10,
+      ResellerId: resellerId,
+      PrefixValue: input.PrefixValue,
+      IsActive: true,
+    };
+  }
+
   const [created] = await requestLaraApi(`/Resellers/${resellerId}/Prefixes`, prefixSchema, {
     method: HttpMethodType.Post,
     body: input,
@@ -50,6 +75,11 @@ export async function createResellerPrefix(
 }
 
 export async function deletePrefix(prefixId: number, idempotencyKey: string): Promise<void> {
+  const isPreview = getRuntimeMode().Mode === "preview";
+  if (isPreview) {
+    return;
+  }
+
   await requestLaraApi(`/Prefixes/${prefixId}`, z.unknown(), {
     method: HttpMethodType.Delete,
     headers: { "Idempotency-Key": idempotencyKey },

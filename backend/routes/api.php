@@ -34,6 +34,8 @@ use App\Http\Controllers\Auth\MeController;
 use App\Http\Controllers\Public\HealthController;
 
 use App\Http\Controllers\Reseller\LicenseController as ResellerLicenseController;
+use App\Http\Controllers\Reseller\MachineBindingController as ResellerMachineBindingController;
+use App\Http\Controllers\Reseller\PrefixController as ResellerPrefixController;
 use App\Http\Controllers\Reseller\QuotaRequestController as ResellerQuotaRequestController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -225,6 +227,10 @@ Route::middleware(['auth:sanctum', 'session.active', 'require.role:Reseller', \A
             ]);
         })->name('ping');
 
+        // Plan 24 Group 3. Reseller Vanity Prefixes.
+        Route::get('/Prefixes', [\App\Http\Controllers\Reseller\PrefixController::class, 'index'])->name('prefixes.index');
+        Route::post('/Prefixes', [\App\Http\Controllers\Reseller\PrefixController::class, 'store'])->name('prefixes.store');
+
         // Plan 06 step 35. Reseller-scoped License surface (shard-bound).
         Route::get('/Licenses', [ResellerLicenseController::class, 'index'])->name('licenses.index');
         // Plan 06 step 35b. Reseller-scoped License minting.
@@ -236,6 +242,15 @@ Route::middleware(['auth:sanctum', 'session.active', 'require.role:Reseller', \A
         // Plan 06 step 48. LicenseLedger read (shard already bound).
         Route::get('/Licenses/{LicenseKey}/Ledger', [ResellerLicenseController::class, 'ledger'])
             ->where('LicenseKey', '[A-Z0-9-]{4,80}')->name('licenses.ledger');
+        // Plan 24 Group 4. Reseller machine binding inspection and release.
+        Route::get('/Licenses/{LicenseKey}/Bindings', [ResellerMachineBindingController::class, 'index'])
+            ->where('LicenseKey', '[A-Z0-9-]{4,80}')->name('licenses.bindings.index');
+        Route::post('/Licenses/{LicenseKey}/Bindings/{MachineBindingId}/Release', [ResellerMachineBindingController::class, 'release'])
+            ->where(['LicenseKey' => '[A-Z0-9-]{4,80}', 'MachineBindingId' => '[0-9]+'])
+            ->name('licenses.bindings.release');
+        Route::post('/Licenses/{LicenseKey}/Bindings/{MachineBindingId}/ClearCooldown', [ResellerMachineBindingController::class, 'clearCooldown'])
+            ->where(['LicenseKey' => '[A-Z0-9-]{4,80}', 'MachineBindingId' => '[0-9]+'])
+            ->name('licenses.bindings.clear_cooldown');
 
         // Plan 06 step 36. Reseller-scoped quota-request workflow (shard-bound).
         // Approve/Deny live on the Admin surface per spec 42 Â§Endpoints.
@@ -637,4 +652,32 @@ Route::prefix('v1/security/{productSlug}')->group(function (): void {
     Route::post('/quarantine', [\App\Http\Controllers\Developer\AdvancedLicensingController::class, 'quarantine'])->name('api.security.quarantine');
     Route::post('/unbind-hardware', [\App\Http\Controllers\Developer\AdvancedLicensingController::class, 'unbindHardware'])->name('api.security.unbind_hardware');
 });
+
+// Reseller Portal Domain Services & API Endpoints
+Route::middleware([\App\Http\Middleware\ResellerAuthOrPreview::class])
+    ->prefix('v1/reseller')
+    ->name('api.v1.reseller.')
+    ->group(function (): void {
+        // Reseller Vanity Prefixes
+        Route::get('/prefixes', [ResellerPrefixController::class, 'index'])->name('prefixes.index');
+        Route::post('/prefixes', [ResellerPrefixController::class, 'store'])->name('prefixes.store');
+
+        // Branded Serial Minting & Licenses
+        Route::get('/licenses', [ResellerLicenseController::class, 'index'])->name('licenses.index');
+        Route::post('/licenses', [ResellerLicenseController::class, 'store'])->name('licenses.store');
+        Route::get('/licenses/{licenseKey}', [ResellerLicenseController::class, 'show'])->name('licenses.show');
+        Route::post('/licenses/{licenseKey}/revoke', [ResellerLicenseController::class, 'revoke'])->name('licenses.revoke');
+        Route::delete('/licenses/{licenseKey}', [ResellerLicenseController::class, 'destroy'])->name('licenses.destroy');
+        Route::post('/licenses/{licenseKey}/renew', [ResellerLicenseController::class, 'renew'])->name('licenses.renew');
+        Route::patch('/licenses/{licenseKey}/renew', [ResellerLicenseController::class, 'renew'])->name('licenses.patch_renew');
+        Route::get('/licenses/{licenseKey}/ledger', [ResellerLicenseController::class, 'ledger'])->name('licenses.ledger');
+
+        // Downstream Machine Bindings & Troubleshooting
+        Route::get('/licenses/{licenseKey}/bindings', [ResellerMachineBindingController::class, 'index'])->name('licenses.bindings.index');
+        Route::post('/licenses/{licenseKey}/bindings/{bindingId}/release', [ResellerMachineBindingController::class, 'release'])->name('licenses.bindings.release');
+        Route::post('/licenses/{licenseKey}/bindings/{bindingId}/clear-cooldown', [ResellerMachineBindingController::class, 'clearCooldown'])->name('licenses.bindings.clear_cooldown');
+
+        // Quotas & Ledger Overview
+        Route::get('/quotas', [ResellerLicenseController::class, 'quotas'])->name('quotas.index');
+    });
 
