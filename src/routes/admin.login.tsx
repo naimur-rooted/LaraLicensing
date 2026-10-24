@@ -14,10 +14,8 @@ import {
 } from "lucide-react";
 
 import { AuthCard, type AuthCardTrustPoint } from "../components/auth/AuthCard";
-import { DemoLoginPanel } from "../components/auth/DemoLoginPanel";
 import { ApiErrorCodeType, LaraApiError, formatLaraApiError } from "../lib/lara-api-error";
 import { fetchLoginCaptcha, loginToLaraApi, type LaraCaptchaChallenge } from "../lib/lara-auth";
-import { getRuntimeMode } from "../lib/runtime-mode";
 import { useHydrated } from "../hooks/use-hydrated";
 
 export const Route = createFileRoute("/admin/login")({
@@ -70,7 +68,6 @@ function AdminLoginPage() {
   const [captchaAnswer, setCaptchaAnswer] = useState("");
   const [captchaLoading, setCaptchaLoading] = useState(false);
   const hydrated = useHydrated();
-  const isSeedMode = hydrated && getRuntimeMode().Mode === "preview";
   const passwordRef = useRef<HTMLInputElement | null>(null);
 
   // localStorage may only be read after hydration; reading in useState
@@ -230,12 +227,6 @@ function AdminLoginPage() {
         <p id="login-help" className="text-center text-xs text-muted-foreground">
           Protected by rate-limits and HMAC-signed CAPTCHA. Sessions expire automatically.
         </p>
-        {isSeedMode && (
-          <DemoLoginPanel
-            onSuccess={() => navigate({ to: "/portal", replace: true })}
-            disabled={submitting}
-          />
-        )}
       </form>
     </AuthCard>
   );
