@@ -446,6 +446,12 @@
 }
 
 @layer base {
+  button,
+  [role="button"],
+  a,
+  a * {
+    cursor: pointer;
+  }
   * {
     border-color: var(--color-border);
   }

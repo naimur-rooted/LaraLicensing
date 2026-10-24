@@ -48,11 +48,11 @@ export function LicenseSpringHeader() {
     <header className="sticky top-0 z-50 w-full border-b border-border/60 bg-background/95 backdrop-blur-md">
       <div className="mx-auto flex h-18 w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8" ref={navRef}>
         {/* Brand Logo */}
-        <Link to="/" onClick={closeMenu} className="flex items-center gap-3 transition-opacity hover:opacity-90">
+        <Link to="/" onClick={closeMenu} className="flex items-center gap-3 transition-opacity hover:opacity-90 cursor-pointer">
           <div className="flex size-10 items-center justify-center rounded-xl bg-gradient-to-tr from-sky-500 via-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/25">
             <Shield className="size-5.5" />
           </div>
-          <span className="text-xl font-bold tracking-tight text-foreground" style={{ fontFamily: "var(--font-display)" }}>
+          <span className="text-xl font-bold tracking-tight text-foreground cursor-pointer" style={{ fontFamily: "var(--font-display)" }}>
             lara<span className="text-primary font-semibold">licensing</span>
           </span>
         </Link>
@@ -65,7 +65,7 @@ export function LicenseSpringHeader() {
               type="button"
               onClick={() => setActiveMenu(activeMenu === "platform" ? null : "platform")}
               onMouseEnter={() => setActiveMenu("platform")}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg transition-colors ${
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg transition-colors cursor-pointer ${
                 activeMenu === "platform" ? "text-foreground bg-muted/60 font-semibold" : "hover:text-foreground hover:bg-muted/40"
               }`}
             >
@@ -76,7 +76,7 @@ export function LicenseSpringHeader() {
             {activeMenu === "platform" && (
               <div
                 onMouseLeave={closeMenu}
-                className="absolute -left-20 top-full mt-2 w-[860px] rounded-3xl border border-border/80 bg-background p-6 shadow-2xl backdrop-blur-xl animate-in fade-in-50 zoom-in-95 duration-200 z-50"
+                className="absolute -left-20 top-full mt-2 w-[860px] rounded-3xl border border-border/80 bg-background p-6 shadow-2xl backdrop-blur-xl animate-in fade-in-50 zoom-in-95 duration-200 z-50 cursor-default"
               >
                 <div className="grid grid-cols-12 gap-6">
                   {/* Column 1: Core Capabilities */}
@@ -86,17 +86,17 @@ export function LicenseSpringHeader() {
                       <span>Capabilities</span>
                     </div>
                     <div className="space-y-1">
-                      <Link to="/" onClick={closeMenu} className="block p-2 rounded-xl hover:bg-muted/60">
-                        <p className="text-xs font-semibold text-foreground">Platform Overview</p>
-                        <p className="text-[11px] text-muted-foreground">Architecture tour</p>
+                      <Link to="/" onClick={closeMenu} className="block p-2 rounded-xl hover:bg-muted/60 cursor-pointer transition-colors">
+                        <p className="text-xs font-semibold text-foreground cursor-pointer">Platform Overview</p>
+                        <p className="text-[11px] text-muted-foreground cursor-pointer">Architecture tour</p>
                       </Link>
-                      <Link to="/licensing-models" onClick={closeMenu} className="block p-2 rounded-xl hover:bg-muted/60">
-                        <p className="text-xs font-semibold text-foreground">License Management</p>
-                        <p className="text-[11px] text-muted-foreground">Protect & monetize</p>
+                      <Link to="/licensing-models" onClick={closeMenu} className="block p-2 rounded-xl hover:bg-muted/60 cursor-pointer transition-colors">
+                        <p className="text-xs font-semibold text-foreground cursor-pointer">License Management</p>
+                        <p className="text-[11px] text-muted-foreground cursor-pointer">Protect & monetize</p>
                       </Link>
-                      <Link to="/security" onClick={closeMenu} className="block p-2 rounded-xl hover:bg-muted/60">
-                        <p className="text-xs font-semibold text-foreground">Security & Shards</p>
-                        <p className="text-[11px] text-muted-foreground">Split-DB isolation</p>
+                      <Link to="/security" onClick={closeMenu} className="block p-2 rounded-xl hover:bg-muted/60 cursor-pointer transition-colors">
+                        <p className="text-xs font-semibold text-foreground cursor-pointer">Security & Shards</p>
+                        <p className="text-[11px] text-muted-foreground cursor-pointer">Split-DB isolation</p>
                       </Link>
                     </div>
                   </div>
@@ -108,32 +108,32 @@ export function LicenseSpringHeader() {
                       <span>Licensing Models</span>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
-                      <Link to="/licensing-models" onClick={closeMenu} className="p-2 rounded-xl hover:bg-muted/60 flex items-center gap-2">
+                      <Link to="/licensing-models" onClick={closeMenu} className="p-2 rounded-xl hover:bg-muted/60 flex items-center gap-2 cursor-pointer transition-colors">
                         <Smartphone className="size-4 text-sky-500 shrink-0" />
                         <div>
-                          <p className="text-xs font-semibold text-foreground">Node-Locked</p>
-                          <p className="text-[10px] text-muted-foreground">Machine GUID lock</p>
+                          <p className="text-xs font-semibold text-foreground cursor-pointer">Node-Locked</p>
+                          <p className="text-[10px] text-muted-foreground cursor-pointer">Machine GUID lock</p>
                         </div>
                       </Link>
-                      <Link to="/licensing-models" onClick={closeMenu} className="p-2 rounded-xl hover:bg-muted/60 flex items-center gap-2">
+                      <Link to="/licensing-models" onClick={closeMenu} className="p-2 rounded-xl hover:bg-muted/60 flex items-center gap-2 cursor-pointer transition-colors">
                         <Network className="size-4 text-indigo-500 shrink-0" />
                         <div>
-                          <p className="text-xs font-semibold text-foreground">Floating Seats</p>
-                          <p className="text-[10px] text-muted-foreground">Concurrent pooling</p>
+                          <p className="text-xs font-semibold text-foreground cursor-pointer">Floating Seats</p>
+                          <p className="text-[10px] text-muted-foreground cursor-pointer">Concurrent pooling</p>
                         </div>
                       </Link>
-                      <Link to="/licensing-models" onClick={closeMenu} className="p-2 rounded-xl hover:bg-muted/60 flex items-center gap-2">
+                      <Link to="/licensing-models" onClick={closeMenu} className="p-2 rounded-xl hover:bg-muted/60 flex items-center gap-2 cursor-pointer transition-colors">
                         <Key className="size-4 text-amber-500 shrink-0" />
                         <div>
-                          <p className="text-xs font-semibold text-foreground">Perpetual (LTD)</p>
-                          <p className="text-[10px] text-muted-foreground">Lifetime access</p>
+                          <p className="text-xs font-semibold text-foreground cursor-pointer">Perpetual (LTD)</p>
+                          <p className="text-[10px] text-muted-foreground cursor-pointer">Lifetime access</p>
                         </div>
                       </Link>
-                      <Link to="/solutions/offline" onClick={closeMenu} className="p-2 rounded-xl hover:bg-muted/60 flex items-center gap-2">
+                      <Link to="/solutions/offline" onClick={closeMenu} className="p-2 rounded-xl hover:bg-muted/60 flex items-center gap-2 cursor-pointer transition-colors">
                         <WifiOff className="size-4 text-rose-500 shrink-0" />
                         <div>
-                          <p className="text-xs font-semibold text-foreground">Offline Tokens</p>
-                          <p className="text-[10px] text-muted-foreground">Ed25519 JWT</p>
+                          <p className="text-xs font-semibold text-foreground cursor-pointer">Offline Tokens</p>
+                          <p className="text-[10px] text-muted-foreground cursor-pointer">Ed25519 JWT</p>
                         </div>
                       </Link>
                     </div>
@@ -146,16 +146,16 @@ export function LicenseSpringHeader() {
                       <span>Portals</span>
                     </div>
                     <div className="space-y-1">
-                      <Link to="/portal/home" onClick={closeMenu} className="block p-2 rounded-xl hover:bg-muted/60">
+                      <Link to="/portal/home" onClick={closeMenu} className="block p-2 rounded-xl hover:bg-muted/60 cursor-pointer transition-colors">
                         <div className="flex items-center gap-1.5">
-                          <p className="text-xs font-semibold text-foreground">Vendor Platform</p>
+                          <p className="text-xs font-semibold text-foreground cursor-pointer">Vendor Platform</p>
                           <Lock className="size-3 text-muted-foreground" />
                         </div>
-                        <p className="text-[11px] text-muted-foreground">Manage products & keys</p>
+                        <p className="text-[11px] text-muted-foreground cursor-pointer">Manage products & keys</p>
                       </Link>
-                      <Link to="/reseller-info" onClick={closeMenu} className="block p-2 rounded-xl hover:bg-muted/60">
-                        <p className="text-xs font-semibold text-foreground">Reseller Hub</p>
-                        <p className="text-[11px] text-muted-foreground">Wholesale distribution</p>
+                      <Link to="/reseller-info" onClick={closeMenu} className="block p-2 rounded-xl hover:bg-muted/60 cursor-pointer transition-colors">
+                        <p className="text-xs font-semibold text-foreground cursor-pointer">Reseller Hub</p>
+                        <p className="text-[11px] text-muted-foreground cursor-pointer">Wholesale distribution</p>
                       </Link>
                     </div>
                   </div>
@@ -166,7 +166,7 @@ export function LicenseSpringHeader() {
                     <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
                     Split-DB Sharding • Ed25519 Tokens
                   </span>
-                  <Link to="/status" onClick={closeMenu} className="text-primary hover:underline flex items-center gap-1">
+                  <Link to="/status" onClick={closeMenu} className="text-primary hover:underline flex items-center gap-1 cursor-pointer">
                     System Telemetry <Activity className="size-3" />
                   </Link>
                 </div>
@@ -180,7 +180,7 @@ export function LicenseSpringHeader() {
               type="button"
               onClick={() => setActiveMenu(activeMenu === "solutions" ? null : "solutions")}
               onMouseEnter={() => setActiveMenu("solutions")}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg transition-colors ${
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg transition-colors cursor-pointer ${
                 activeMenu === "solutions" ? "text-foreground bg-muted/60 font-semibold" : "hover:text-foreground hover:bg-muted/40"
               }`}
             >
@@ -191,42 +191,42 @@ export function LicenseSpringHeader() {
             {activeMenu === "solutions" && (
               <div
                 onMouseLeave={closeMenu}
-                className="absolute -left-10 top-full mt-2 w-[540px] rounded-3xl border border-border/80 bg-background p-6 shadow-2xl backdrop-blur-xl animate-in fade-in-50 zoom-in-95 duration-200 z-50"
+                className="absolute -left-10 top-full mt-2 w-[540px] rounded-3xl border border-border/80 bg-background p-6 shadow-2xl backdrop-blur-xl animate-in fade-in-50 zoom-in-95 duration-200 z-50 cursor-default"
               >
                 <div className="space-y-3">
                   <div className="text-xs font-bold uppercase tracking-wider text-primary">
                     <span>By Software Architecture</span>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
-                    <Link to="/solutions/desktop" onClick={closeMenu} className="p-3 rounded-xl hover:bg-muted/60 flex items-start gap-3">
+                    <Link to="/solutions/desktop" onClick={closeMenu} className="p-3 rounded-xl hover:bg-muted/60 flex items-start gap-3 cursor-pointer transition-colors">
                       <Laptop className="size-5 text-sky-500 shrink-0 mt-0.5" />
                       <div>
-                        <p className="text-xs font-semibold text-foreground">Desktop Software</p>
-                        <p className="text-[11px] text-muted-foreground">C#, Python, Electron, Tauri</p>
+                        <p className="text-xs font-semibold text-foreground cursor-pointer">Desktop Software</p>
+                        <p className="text-[11px] text-muted-foreground cursor-pointer">C#, Python, Electron, Tauri</p>
                       </div>
                     </Link>
 
-                    <Link to="/solutions/chrome-extensions" onClick={closeMenu} className="p-3 rounded-xl hover:bg-muted/60 flex items-start gap-3">
+                    <Link to="/solutions/chrome-extensions" onClick={closeMenu} className="p-3 rounded-xl hover:bg-muted/60 flex items-start gap-3 cursor-pointer transition-colors">
                       <Chrome className="size-5 text-amber-500 shrink-0 mt-0.5" />
                       <div>
-                        <p className="text-xs font-semibold text-foreground">Chrome Extensions</p>
-                        <p className="text-[11px] text-muted-foreground">MV3 Profile UUID binding</p>
+                        <p className="text-xs font-semibold text-foreground cursor-pointer">Chrome Extensions</p>
+                        <p className="text-[11px] text-muted-foreground cursor-pointer">MV3 Profile UUID binding</p>
                       </div>
                     </Link>
 
-                    <Link to="/solutions/wordpress" onClick={closeMenu} className="p-3 rounded-xl hover:bg-muted/60 flex items-start gap-3">
+                    <Link to="/solutions/wordpress" onClick={closeMenu} className="p-3 rounded-xl hover:bg-muted/60 flex items-start gap-3 cursor-pointer transition-colors">
                       <Globe className="size-5 text-blue-500 shrink-0 mt-0.5" />
                       <div>
-                        <p className="text-xs font-semibold text-foreground">WordPress Plugins</p>
-                        <p className="text-[11px] text-muted-foreground">0% revenue cut alternative</p>
+                        <p className="text-xs font-semibold text-foreground cursor-pointer">WordPress Plugins</p>
+                        <p className="text-[11px] text-muted-foreground cursor-pointer">0% revenue cut alternative</p>
                       </div>
                     </Link>
 
-                    <Link to="/solutions/offline" onClick={closeMenu} className="p-3 rounded-xl hover:bg-muted/60 flex items-start gap-3">
+                    <Link to="/solutions/offline" onClick={closeMenu} className="p-3 rounded-xl hover:bg-muted/60 flex items-start gap-3 cursor-pointer transition-colors">
                       <WifiOff className="size-5 text-rose-500 shrink-0 mt-0.5" />
                       <div>
-                        <p className="text-xs font-semibold text-foreground">Air-Gapped & Offline</p>
-                        <p className="text-[11px] text-muted-foreground">Ed25519 token signatures</p>
+                        <p className="text-xs font-semibold text-foreground cursor-pointer">Air-Gapped & Offline</p>
+                        <p className="text-[11px] text-muted-foreground cursor-pointer">Ed25519 token signatures</p>
                       </div>
                     </Link>
                   </div>
@@ -241,7 +241,7 @@ export function LicenseSpringHeader() {
               type="button"
               onClick={() => setActiveMenu(activeMenu === "developers" ? null : "developers")}
               onMouseEnter={() => setActiveMenu("developers")}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg transition-colors ${
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg transition-colors cursor-pointer ${
                 activeMenu === "developers" ? "text-foreground bg-muted/60 font-semibold" : "hover:text-foreground hover:bg-muted/40"
               }`}
             >
@@ -252,30 +252,30 @@ export function LicenseSpringHeader() {
             {activeMenu === "developers" && (
               <div
                 onMouseLeave={closeMenu}
-                className="absolute -left-10 top-full mt-2 w-[520px] rounded-3xl border border-border/80 bg-background p-6 shadow-2xl backdrop-blur-xl animate-in fade-in-50 zoom-in-95 duration-200 z-50"
+                className="absolute -left-10 top-full mt-2 w-[520px] rounded-3xl border border-border/80 bg-background p-6 shadow-2xl backdrop-blur-xl animate-in fade-in-50 zoom-in-95 duration-200 z-50 cursor-default"
               >
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <p className="text-xs font-bold uppercase tracking-wider text-primary">Documentation</p>
-                    <Link to="/docs" onClick={closeMenu} className="block p-2 rounded-xl hover:bg-muted/60">
-                      <p className="text-xs font-semibold text-foreground">Quickstart Guide</p>
-                      <p className="text-[11px] text-muted-foreground">Get started in 3 minutes</p>
+                    <Link to="/docs" onClick={closeMenu} className="block p-2 rounded-xl hover:bg-muted/60 cursor-pointer transition-colors">
+                      <p className="text-xs font-semibold text-foreground cursor-pointer">Quickstart Guide</p>
+                      <p className="text-[11px] text-muted-foreground cursor-pointer">Get started in 3 minutes</p>
                     </Link>
-                    <Link to="/docs" onClick={closeMenu} className="block p-2 rounded-xl hover:bg-muted/60">
-                      <p className="text-xs font-semibold text-foreground">REST API Reference</p>
-                      <p className="text-[11px] text-muted-foreground">Verify & activate endpoints</p>
+                    <Link to="/docs" onClick={closeMenu} className="block p-2 rounded-xl hover:bg-muted/60 cursor-pointer transition-colors">
+                      <p className="text-xs font-semibold text-foreground cursor-pointer">REST API Reference</p>
+                      <p className="text-[11px] text-muted-foreground cursor-pointer">Verify & activate endpoints</p>
                     </Link>
                   </div>
 
                   <div className="space-y-2">
                     <p className="text-xs font-bold uppercase tracking-wider text-primary">Integrations</p>
-                    <Link to="/docs" onClick={closeMenu} className="block p-2 rounded-xl hover:bg-muted/60">
-                      <p className="text-xs font-semibold text-foreground">Webhook Ingestion</p>
-                      <p className="text-[11px] text-muted-foreground">Stripe & LemonSqueezy</p>
+                    <Link to="/docs" onClick={closeMenu} className="block p-2 rounded-xl hover:bg-muted/60 cursor-pointer transition-colors">
+                      <p className="text-xs font-semibold text-foreground cursor-pointer">Webhook Ingestion</p>
+                      <p className="text-[11px] text-muted-foreground cursor-pointer">Stripe & LemonSqueezy</p>
                     </Link>
-                    <Link to="/status" onClick={closeMenu} className="block p-2 rounded-xl hover:bg-muted/60">
-                      <p className="text-xs font-semibold text-foreground">API Status & Health</p>
-                      <p className="text-[11px] text-muted-foreground">Live latency metrics</p>
+                    <Link to="/status" onClick={closeMenu} className="block p-2 rounded-xl hover:bg-muted/60 cursor-pointer transition-colors">
+                      <p className="text-xs font-semibold text-foreground cursor-pointer">API Status & Health</p>
+                      <p className="text-[11px] text-muted-foreground cursor-pointer">Live latency metrics</p>
                     </Link>
                   </div>
                 </div>
@@ -284,10 +284,10 @@ export function LicenseSpringHeader() {
           </div>
 
           {/* 4. Top-level links */}
-          <Link to="/pricing" onClick={closeMenu} className="px-3.5 py-2 rounded-lg hover:text-foreground hover:bg-muted/40 transition-colors">
+          <Link to="/pricing" onClick={closeMenu} className="px-3.5 py-2 rounded-lg hover:text-foreground hover:bg-muted/40 transition-colors cursor-pointer">
             Pricing
           </Link>
-          <Link to="/licensing-models" onClick={closeMenu} className="px-3.5 py-2 rounded-lg hover:text-foreground hover:bg-muted/40 transition-colors">
+          <Link to="/licensing-models" onClick={closeMenu} className="px-3.5 py-2 rounded-lg hover:text-foreground hover:bg-muted/40 transition-colors cursor-pointer">
             Models
           </Link>
         </nav>
@@ -296,14 +296,14 @@ export function LicenseSpringHeader() {
         <div className="flex items-center gap-3">
           <Link
             to="/admin/login"
-            className="text-sm font-semibold text-muted-foreground hover:text-foreground px-3.5 py-2 rounded-lg transition-colors"
+            className="text-sm font-semibold text-muted-foreground hover:text-foreground px-3.5 py-2 rounded-lg transition-colors cursor-pointer"
           >
             Login
           </Link>
 
           <Link
             to="/pricing"
-            className="inline-flex h-10 items-center gap-2 rounded-full bg-zinc-950 px-5 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800 transition-colors dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-200"
+            className="inline-flex h-10 items-center gap-2 rounded-full bg-zinc-950 px-5 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800 transition-colors dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-200 cursor-pointer"
           >
             <span>Get Started</span>
             <ChevronDown className="size-3.5" />
