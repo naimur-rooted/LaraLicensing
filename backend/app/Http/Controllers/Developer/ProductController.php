@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Services\ProductService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use App\Support\AuditWriter;
 
 /**
  * Controller handling Developer Portal Product actions, Deals sync, and AI Blueprints.
@@ -40,6 +41,10 @@ class ProductController extends Controller
             return response()->json(['IsSuccess' => false, 'ErrorCode' => 'InvalidInput', 'Message' => 'productName is required.'], 422);
         }
         $product = $this->productService->createProduct(1, $request->all());
+        AuditWriter::write($request, 'ProductCreated', 'Products', (int) $product->ProductId, [
+            'ProductSlug' => (string) $product->productSlug,
+            'ProductName' => (string) $product->productName,
+        ]);
         return response()->json(['IsSuccess' => true, 'Data' => $product], 201);
     }
 

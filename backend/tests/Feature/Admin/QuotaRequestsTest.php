@@ -56,6 +56,7 @@ final class QuotaRequestsTest extends TestCase
     private const PASSWORD = 'CorrectHorse!Battery42';
     private const RESELLER_SLUG = 'acme';
     private const RESELLER_NAME = 'Acme';
+    private const IDEM_KEY = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
     private User $admin;
     private int $resellerId;
@@ -86,7 +87,7 @@ final class QuotaRequestsTest extends TestCase
 
     public function test_approve_bare_returns_401(): void
     {
-        $res = $this->postJson('/Api/Admin/QuotaRequests/1/Approve?ResellerSlug=' . self::RESELLER_SLUG, ['ApprovedDelta' => 5]);
+        $res = $this->withHeader('Idempotency-Key', self::IDEM_KEY)->postJson('/Api/Admin/QuotaRequests/1/Approve?ResellerSlug=' . self::RESELLER_SLUG, ['ApprovedDelta' => 5]);
         $this->assertLaraException($res, 'AuthUnauthorized', 401);
     }
 
@@ -94,6 +95,7 @@ final class QuotaRequestsTest extends TestCase
     {
         \Tests\Feature\FakeHasRolePolicy::$grants = [(string) $this->admin->getKey() => ['Reseller']];
         $res = $this->withHeader('Authorization', 'Bearer ' . $this->adminBearer)
+            ->withHeader('Idempotency-Key', self::IDEM_KEY)
             ->postJson('/Api/Admin/QuotaRequests/1/Approve?ResellerSlug=' . self::RESELLER_SLUG, ['ApprovedDelta' => 5]);
         $this->assertLaraException($res, 'AuthForbidden', 403);
     }
@@ -102,6 +104,7 @@ final class QuotaRequestsTest extends TestCase
     {
         \Tests\Feature\FakeHasRolePolicy::$grants = [(string) $this->admin->getKey() => ['Admin']];
         $res = $this->withHeader('Authorization', 'Bearer ' . $this->adminBearer)
+            ->withHeader('Idempotency-Key', self::IDEM_KEY)
             ->postJson('/Api/Admin/QuotaRequests/1/Approve', ['ApprovedDelta' => 5]);
         $this->assertLaraException($res, 'ValidationFailed', 400);
     }
@@ -110,6 +113,7 @@ final class QuotaRequestsTest extends TestCase
     {
         \Tests\Feature\FakeHasRolePolicy::$grants = [(string) $this->admin->getKey() => ['Admin']];
         $res = $this->withHeader('Authorization', 'Bearer ' . $this->adminBearer)
+            ->withHeader('Idempotency-Key', self::IDEM_KEY)
             ->postJson('/Api/Admin/QuotaRequests/1/Approve?ResellerSlug=nope', ['ApprovedDelta' => 5]);
         $this->assertLaraException($res, 'ResellerNotFound', 404);
     }
@@ -118,6 +122,7 @@ final class QuotaRequestsTest extends TestCase
     {
         \Tests\Feature\FakeHasRolePolicy::$grants = [(string) $this->admin->getKey() => ['Admin']];
         $res = $this->withHeader('Authorization', 'Bearer ' . $this->adminBearer)
+            ->withHeader('Idempotency-Key', self::IDEM_KEY)
             ->postJson('/Api/Admin/QuotaRequests/1/Approve?ResellerSlug=' . self::RESELLER_SLUG, ['ApprovedDelta' => 0]);
         $this->assertLaraException($res, 'ValidationFailed', 400);
     }
@@ -126,6 +131,7 @@ final class QuotaRequestsTest extends TestCase
     {
         \Tests\Feature\FakeHasRolePolicy::$grants = [(string) $this->admin->getKey() => ['Admin']];
         $res = $this->withHeader('Authorization', 'Bearer ' . $this->adminBearer)
+            ->withHeader('Idempotency-Key', self::IDEM_KEY)
             ->postJson('/Api/Admin/QuotaRequests/9999/Approve?ResellerSlug=' . self::RESELLER_SLUG, ['ApprovedDelta' => 5]);
         $this->assertLaraException($res, 'ResourceRoleNotAssigned', 404);
     }
@@ -137,6 +143,7 @@ final class QuotaRequestsTest extends TestCase
         $qrId = $this->seedPendingQuotaRequest($this->resellerId, 7, 1, 10); // Key, Tier1, delta 10
 
         $res = $this->withHeader('Authorization', 'Bearer ' . $this->adminBearer)
+            ->withHeader('Idempotency-Key', self::IDEM_KEY)
             ->postJson('/Api/Admin/QuotaRequests/' . $qrId . '/Approve?ResellerSlug=' . self::RESELLER_SLUG, [
                 'ApprovedDelta' => 10,
             ]);
@@ -182,6 +189,7 @@ final class QuotaRequestsTest extends TestCase
         DB::connection('shard')->table('QuotaRequests')->where('QuotaRequestId', $qrId)->update(['Status' => 2]);
 
         $res = $this->withHeader('Authorization', 'Bearer ' . $this->adminBearer)
+            ->withHeader('Idempotency-Key', 'cccccccccccccccccccccccccccccccc')
             ->postJson('/Api/Admin/QuotaRequests/' . $qrId . '/Approve?ResellerSlug=' . self::RESELLER_SLUG, [
                 'ApprovedDelta' => 5,
             ]);
@@ -195,6 +203,7 @@ final class QuotaRequestsTest extends TestCase
         $qrId = $this->seedPendingQuotaRequest($this->resellerId, 7, 1, 3);
 
         $res = $this->withHeader('Authorization', 'Bearer ' . $this->adminBearer)
+            ->withHeader('Idempotency-Key', 'dddddddddddddddddddddddddddddddd')
             ->postJson('/Api/Admin/QuotaRequests/' . $qrId . '/Deny?ResellerSlug=' . self::RESELLER_SLUG, [
                 'DenialReason' => 'Insufficient business justification for the requested delta.',
             ]);
@@ -374,7 +383,20 @@ final class QuotaRequestsTest extends TestCase
             "PayloadJson" TEXT NULL,
             "CreatedAt" TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         )');
-        $root->statement('CREATE TABLE IF NOT EXISTS "Resellers" (
+                $root->statement('CREATE TABLE IF NOT EXISTS "IdempotencyRecords" (
+            "IdempotencyRecordId" INTEGER PRIMARY KEY AUTOINCREMENT,
+            "Endpoint" TEXT NOT NULL,
+            "ActorId" TEXT NOT NULL,
+            "IdempotencyKey" TEXT NOT NULL,
+            "BodyHash" TEXT NOT NULL,
+            "ResponseStatus" INTEGER NOT NULL,
+            "ResponseHeadersJson" TEXT NOT NULL,
+            "ResponseBody" TEXT NOT NULL,
+            "CreatedAt" TEXT NOT NULL,
+            "ExpiresAt" TEXT NOT NULL,
+            CONSTRAINT "UX_IdempotencyRecords_Scope" UNIQUE ("Endpoint", "ActorId", "IdempotencyKey")
+        )');
+$root->statement('CREATE TABLE IF NOT EXISTS "Resellers" (
             "ResellerId" INTEGER PRIMARY KEY AUTOINCREMENT,
             "ResellerName" TEXT NOT NULL UNIQUE,
             "ResellerSlug" TEXT NOT NULL UNIQUE,

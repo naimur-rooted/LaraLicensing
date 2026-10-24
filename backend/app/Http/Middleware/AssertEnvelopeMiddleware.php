@@ -90,7 +90,7 @@ final class AssertEnvelopeMiddleware
             'HttpStatus' => $status,
             'Missing' => $missing,
         ];
-        Log::channel('lara-diag')->error('envelope.shape.violation', $ctx);
+        Log::channel('lara-diag')?->error('envelope.shape.violation', $ctx);
         throw new RuntimeException(
             'AssertEnvelopeMiddleware: response envelope violation ('
             .implode(',', $missing).') on '.$request->method().' /'.$request->path()

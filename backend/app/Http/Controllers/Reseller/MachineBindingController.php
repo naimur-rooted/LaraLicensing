@@ -52,14 +52,18 @@ final class MachineBindingController
         $result = DB::connection($conn)->transaction(
             fn (): array => $this->applyRelease($conn, (int) $license->LicenseId, $id, $this->requestId($request))
         );
+        $this->auditRelease($request, $license, $id);
 
+        return ApiEnvelope::success([$result], $this->requestId($request));
+    }
+
+    private function auditRelease(Request $request, License $license, int $id): void
+    {
         AuditWriter::write($request, 'MachineUnbound', 'MachineBindings', $id, [
             'LicenseId' => (int) $license->LicenseId,
             'LicenseKey' => (string) $license->LicenseKey,
             'ReleaseReason' => self::RELEASE_REASON_RESELLER,
         ]);
-
-        return ApiEnvelope::success([$result], $this->requestId($request));
     }
 
     public function clearCooldown(Request $request, string $licenseKey, string $bindingId): JsonResponse
@@ -70,13 +74,17 @@ final class MachineBindingController
         $result = DB::connection($conn)->transaction(
             fn (): array => $this->applyClearCooldown($conn, (int) $license->LicenseId, $id, $this->requestId($request))
         );
+        $this->auditClearCooldown($request, $license, $id);
 
+        return ApiEnvelope::success([$result], $this->requestId($request));
+    }
+
+    private function auditClearCooldown(Request $request, License $license, int $id): void
+    {
         AuditWriter::write($request, 'MachineCooldownCleared', 'MachineBindings', $id, [
             'LicenseId' => (int) $license->LicenseId,
             'LicenseKey' => (string) $license->LicenseKey,
         ]);
-
-        return ApiEnvelope::success([$result], $this->requestId($request));
     }
 
     private function applyRelease(string $conn, int $licenseId, int $bindingId, string $requestId): array
@@ -84,19 +92,8 @@ final class MachineBindingController
         $now = Carbon::now();
         $cooldownUntil = $now->copy()->addMinutes(BindingService::rebindCooldownMinutes());
         $row = $this->lookupBindingForUpdate($conn, $licenseId, $bindingId);
-
-        if ($row->ReleasedAt !== null) {
-            throw DomainConflictException::conflict('LicenseConflict', 'Machine binding is already released.');
-        }
-
-        DB::connection($conn)->table('MachineBindings')
-            ->where('MachineBindingId', $bindingId)
-            ->update([
-                'ReleasedAt' => $now,
-                'RebindCooldownUntil' => $cooldownUntil,
-                'UpdatedAt' => $now,
-            ]);
-
+        $this->assertBindingNotReleased($row);
+        $this->updateBindingReleased($conn, $bindingId, $now, $cooldownUntil);
         Log::info(self::LOG_RELEASE, ['requestId' => $requestId, 'licenseId' => $licenseId, 'machineBindingId' => $bindingId]);
 
         return $this->projectMachine((object) array_merge((array) $row, [
@@ -106,24 +103,42 @@ final class MachineBindingController
         ]));
     }
 
+    private function assertBindingNotReleased(object $row): void
+    {
+        if ($row->ReleasedAt !== null) {
+            throw DomainConflictException::conflict('LicenseConflict', 'Machine binding is already released.');
+        }
+    }
+
+    private function updateBindingReleased(string $conn, int $bindingId, Carbon $now, Carbon $cooldownUntil): void
+    {
+        DB::connection($conn)->table('MachineBindings')
+            ->where('MachineBindingId', $bindingId)
+            ->update([
+                'ReleasedAt' => $now,
+                'RebindCooldownUntil' => $cooldownUntil,
+                'UpdatedAt' => $now,
+            ]);
+    }
+
     private function applyClearCooldown(string $conn, int $licenseId, int $bindingId, string $requestId): array
     {
         $now = Carbon::now();
         $row = $this->lookupBindingForUpdate($conn, $licenseId, $bindingId);
-
-        DB::connection($conn)->table('MachineBindings')
-            ->where('MachineBindingId', $bindingId)
-            ->update([
-                'RebindCooldownUntil' => null,
-                'UpdatedAt' => $now,
-            ]);
-
+        $this->updateBindingCooldownCleared($conn, $bindingId, $now);
         Log::info(self::LOG_CLEAR_COOLDOWN, ['requestId' => $requestId, 'licenseId' => $licenseId, 'machineBindingId' => $bindingId]);
 
         return $this->projectMachine((object) array_merge((array) $row, [
             'RebindCooldownUntil' => null,
             'UpdatedAt' => (string) $now,
         ]));
+    }
+
+    private function updateBindingCooldownCleared(string $conn, int $bindingId, Carbon $now): void
+    {
+        DB::connection($conn)->table('MachineBindings')
+            ->where('MachineBindingId', $bindingId)
+            ->update(['RebindCooldownUntil' => null, 'UpdatedAt' => $now]);
     }
 
     private function lookupBindingForUpdate(string $conn, int $licenseId, int $bindingId): object
@@ -145,19 +160,18 @@ final class MachineBindingController
         if (preg_match(self::LICENSE_KEY_REGEX, $licenseKey) !== 1) {
             throw ValidationException::validationFailed('Invalid LicenseKey shape.');
         }
-
         $resellerId = (int) ($request->attributes->get('ResellerId') ?? 1);
         $license = License::query()->where('LicenseKey', $licenseKey)->first();
-
-        if ($license === null) {
-            throw NotFoundException::notFound('LicenseNotFound', 'License not found.');
-        }
-
-        if ($resellerId > 0 && (int) $license->ResellerId !== $resellerId) {
-            throw NotFoundException::notFound('LicenseNotFound', 'License not owned by reseller.');
-        }
+        $this->assertLicenseOwnership($license, $resellerId);
 
         return $license;
+    }
+
+    private function assertLicenseOwnership(?License $license, int $resellerId): void
+    {
+        if ($license === null || ($resellerId > 0 && (int) $license->ResellerId !== $resellerId)) {
+            throw NotFoundException::notFound('LicenseNotFound', 'License not found.');
+        }
     }
 
     private function resolveConnection(): string
@@ -172,23 +186,28 @@ final class MachineBindingController
 
     private function projectMachine(object $row): array
     {
-        $cooldown = isset($row->RebindCooldownUntil) && $row->RebindCooldownUntil !== null
-            ? Carbon::parse($row->RebindCooldownUntil)
-            : null;
-        $isCooldownActive = $cooldown !== null && $cooldown->isFuture();
+        $hasReleased = isset($row->ReleasedAt) && $row->ReleasedAt !== null;
+        $cooldown = isset($row->RebindCooldownUntil) && $row->RebindCooldownUntil !== null ? Carbon::parse($row->RebindCooldownUntil) : null;
 
+        return array_merge($this->projectMachineIdentity($row), [
+            'ReleasedAt' => $hasReleased ? (string) $row->ReleasedAt : null,
+            'RebindCooldownUntil' => isset($row->RebindCooldownUntil) ? (string) $row->RebindCooldownUntil : null,
+            'IsActive' => !$hasReleased,
+            'IsCooldownActive' => $cooldown !== null && $cooldown->isFuture(),
+        ]);
+    }
+
+    private function projectMachineIdentity(object $row): array
+    {
         return [
             'MachineBindingId' => (int) $row->MachineBindingId,
             'LicenseId' => (int) $row->LicenseId,
             'FingerprintHash' => (string) $row->FingerprintHash,
             'IP' => (string) ($row->IpAddress ?? '127.0.0.1'),
+            'ClientIp' => (string) ($row->IpAddress ?? '127.0.0.1'),
             'Hostname' => (string) ($row->Hostname ?? 'Workstation'),
             'FirstSeenAt' => (string) ($row->FirstSeenAt ?? ''),
             'LastSeenAt' => (string) ($row->LastSeenAt ?? ''),
-            'ReleasedAt' => isset($row->ReleasedAt) && $row->ReleasedAt !== null ? (string) $row->ReleasedAt : null,
-            'RebindCooldownUntil' => isset($row->RebindCooldownUntil) && $row->RebindCooldownUntil !== null ? (string) $row->RebindCooldownUntil : null,
-            'IsActive' => !isset($row->ReleasedAt) || $row->ReleasedAt === null,
-            'IsCooldownActive' => $isCooldownActive,
         ];
     }
 

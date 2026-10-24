@@ -15,6 +15,8 @@ class ProductSeeder extends Seeder
 {
     public function run(): void
     {
+        $jwtService = new \App\Services\JwtTokenService();
+        $keyPair = $jwtService->generateEd25519KeyPair();
         $product = Product::updateOrCreate(
             ['productSlug' => 'elementor-assistant'],
             [
@@ -22,7 +24,8 @@ class ProductSeeder extends Seeder
                 'productName' => 'Elementor Assistant Pro',
                 'category' => 'WordPressPlugin',
                 'description' => 'Autonomous styling and widget generation engine for Elementor.',
-                'ed25519PublicKey' => 'MCowBQYDK2VwAyEA9gM2jFq1n3i6jGk8n0y4q7w9e2r5t8y1u4i7o0p3a6s=',
+                'ed25519PublicKey' => $keyPair['public'],
+                'ed25519PrivateKey' => $keyPair['private'],
                 'webhookSecret' => 'whsec_elementor_prod_demo_9823478912',
                 'checkIntervalDays' => 7,
                 'isActive' => true,

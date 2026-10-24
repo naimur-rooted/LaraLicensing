@@ -237,7 +237,6 @@ final class IdempotencyKeyMiddleware
                 'ResponseHeadersJson' => $this->encodeHeaders($response->headers->all()),
                 'ResponseBody' => (string) $response->getContent(),
                 'CreatedAt' => $now,
-                'UpdatedAt' => $now,
                 'ExpiresAt' => $now->copy()->addSeconds($ttl),
             ]);
         } catch (Throwable $e) {

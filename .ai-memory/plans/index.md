@@ -16,5 +16,6 @@
 | 22-refactoring-and-logging-wrapper | Refactoring and Logging Wrapper | pending | 2026-08-10 | `pending/22-refactoring-and-logging-wrapper.md` |
 | 23-grounded-ai-pricing-architect-engine | Grounded AI Pricing Architect & Dynamic Deal Perks | completed | 2026-10-21 | `completed/23-grounded-ai-pricing-architect-engine.md` |
 | 24-reseller-portal-comprehensive-architecture-and-ui | Reseller Portal Architecture, Branded Minting & UI Enhancement | completed | 2026-10-22 | completed/24-reseller-portal-comprehensive-architecture-and-ui.md |
+| 25-comprehensive-three-actor-end-to-end-feature-testing-and-verification | Comprehensive Three-Actor End-to-End Feature Testing & Verification | completed | 2026-10-25 | `completed/25-comprehensive-three-actor-end-to-end-feature-testing-and-verification.md` |
 
 Completed plans live under `./completed/`.

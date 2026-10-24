@@ -61,6 +61,9 @@ final class IdempotencyCanonicalizer
         ksort($value, SORT_STRING);
         $pairs = [];
         foreach ($value as $key => $child) {
+            if ($key === 'RequestId' || $key === 'ServerTimestamp' || $key === 'RequestedAt') {
+                continue;
+            }
             $pairs[] = json_encode((string) $key, JSON_UNESCAPED_UNICODE) . ':' . self::encodeCanonical($child);
         }
 

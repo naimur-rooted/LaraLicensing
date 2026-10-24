@@ -40,6 +40,12 @@ final class RestoreOnceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        config()->set('database.connections.shard', [
+            'driver' => 'sqlite',
+            'database' => ':memory:',
+            'prefix' => '',
+            'foreign_key_constraints' => false,
+        ]);
         $this->createShardTables();
         $this->app->singleton(QuotaService::class);
         config()->set('lara.license_tiers', [

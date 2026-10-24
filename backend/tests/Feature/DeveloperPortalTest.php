@@ -16,6 +16,7 @@ class DeveloperPortalTest extends TestCase
     {
         parent::setUp();
         $this->artisan('migrate', ['--path' => 'database/migrations/root/2026_10_20_000001_create_root_products_table.php']);
+        $this->artisan('migrate', ['--path' => 'database/migrations/root/2026_10_21_000001_add_features_to_product_deals_table.php']);
         $this->seed(\Database\Seeders\ProductSeeder::class);
     }
 

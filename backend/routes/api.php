@@ -635,9 +635,32 @@ Route::prefix('v1/developer')->group(function (): void {
 Route::post('/v1/products/{slug}/licenses/issue', [\App\Http\Controllers\Developer\ProductController::class, 'webhookIssue'])
     ->name('api.products.licenses.issue');
 
-// Client License Handshake & Verification Endpoint (Periodic Cadence + Multi-Seat HWID)
+// Multi-Gateway Decoupled Webhook Ingestion (Stripe, LemonSqueezy, WooCommerce)
+Route::post('/v1/webhooks/stripe', [\App\Http\Controllers\Webhooks\PaymentWebhookController::class, 'handleStripe'])
+    ->name('api.webhooks.stripe');
+Route::post('/v1/webhooks/lemonsqueezy', [\App\Http\Controllers\Webhooks\PaymentWebhookController::class, 'handleLemonSqueezy'])
+    ->name('api.webhooks.lemonsqueezy');
+Route::post('/v1/webhooks/woocommerce', [\App\Http\Controllers\Webhooks\PaymentWebhookController::class, 'handleWooCommerce'])
+    ->name('api.webhooks.woocommerce');
+
+// Client License Handshake & Verification Endpoints (Periodic Cadence + Multi-Seat HWID)
+Route::post('/v1/verify', [\App\Http\Controllers\Developer\AdvancedLicensingController::class, 'verifyClient'])
+    ->name('api.v1.verify');
+Route::post('/v1/activate', [\App\Http\Controllers\Developer\AdvancedLicensingController::class, 'activate'])
+    ->name('api.v1.activate');
+Route::post('/v1/deactivate', [\App\Http\Controllers\Developer\AdvancedLicensingController::class, 'deactivate'])
+    ->name('api.v1.deactivate');
+Route::post('/v1/heartbeat', [\App\Http\Controllers\Developer\AdvancedLicensingController::class, 'heartbeat'])
+    ->name('api.v1.heartbeat');
+
 Route::post('/v1/products/{slug}/verify', [\App\Http\Controllers\Developer\AdvancedLicensingController::class, 'verifyClient'])
     ->name('api.products.verify');
+Route::post('/v1/products/{slug}/activate', [\App\Http\Controllers\Developer\AdvancedLicensingController::class, 'activate'])
+    ->name('api.products.activate');
+Route::post('/v1/products/{slug}/deactivate', [\App\Http\Controllers\Developer\AdvancedLicensingController::class, 'deactivate'])
+    ->name('api.products.deactivate');
+Route::post('/v1/products/{slug}/heartbeat', [\App\Http\Controllers\Developer\AdvancedLicensingController::class, 'heartbeat'])
+    ->name('api.products.heartbeat');
 
 // Reseller Wholesale Quotas & Custom Offers Endpoints
 Route::prefix('v1/reseller-wholesale/{resellerSlug}')->group(function (): void {

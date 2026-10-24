@@ -37,7 +37,13 @@ final class PrefixController
         $resellerId = $this->resolveResellerId($request);
         $prefixValue = $this->validateAndExtractPrefix($request);
         $this->assertPrefixIsUnique($prefixValue);
+        $prefix = $this->createPrefixRecord($resellerId, $prefixValue);
 
+        return ApiEnvelope::success([$this->project($prefix)], $this->requestId($request), 201);
+    }
+
+    private function createPrefixRecord(int $resellerId, string $prefixValue): Prefix
+    {
         $prefix = new Prefix();
         $prefix->ResellerId = $resellerId;
         $prefix->PrefixValue = $prefixValue;
@@ -46,11 +52,7 @@ final class PrefixController
         $prefix->UpdatedAt = Carbon::now();
         $prefix->save();
 
-        return ApiEnvelope::success(
-            results: [$this->project($prefix)],
-            requestId: $this->requestId($request),
-            httpCode: 201
-        );
+        return $prefix;
     }
 
     private function validateAndExtractPrefix(Request $request): string

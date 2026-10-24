@@ -77,18 +77,18 @@ final class LicenseController
         $resellerId = $this->requireResellerId($request);
         $payload = $this->normalizeIssuePayload($request);
         $license = $this->executeMintTransaction($request, $resellerId, $payload);
+        $this->auditLicenseIssued($request, $resellerId, $license);
 
+        return ApiEnvelope::success([$this->project($license)], $this->requestId($request), 201);
+    }
+
+    private function auditLicenseIssued(Request $request, int $resellerId, License $license): void
+    {
         AuditWriter::write($request, 'LicenseIssued', 'Licenses', (int) $license->LicenseId, [
             'LicenseKey' => (string) $license->LicenseKey,
             'ResellerId' => $resellerId,
             'TierName' => (string) $license->TierName,
         ]);
-
-        return ApiEnvelope::success(
-            results: [$this->project($license)],
-            requestId: $this->requestId($request),
-            httpCode: 201,
-        );
     }
 
     public function revoke(Request $request, string $licenseKey): JsonResponse
@@ -134,18 +134,11 @@ final class LicenseController
     {
         $resellerId = $this->requireResellerId($request);
         $quotas = DB::connection(self::CONN_ROOT)->table('ResellerQuotas')
-            ->where('ResellerId', $resellerId)
-            ->get();
+            ->where('ResellerId', $resellerId)->get();
         $ledger = DB::connection(self::CONN_ROOT)->table('ResellerQuotaLedger')
-            ->where('ResellerId', $resellerId)
-            ->orderBy('Id', 'desc')
-            ->limit(20)
-            ->get();
+            ->where('ResellerId', $resellerId)->orderBy('Id', 'desc')->limit(20)->get();
 
-        return ApiEnvelope::success([
-            'Quotas' => $quotas,
-            'RecentLedger' => $ledger,
-        ], $this->requestId($request));
+        return ApiEnvelope::success(['Quotas' => $quotas, 'RecentLedger' => $ledger], $this->requestId($request));
     }
 
     /**
@@ -162,12 +155,16 @@ final class LicenseController
         $serialKey = $this->serialService->generate($payload['PrefixValue'], $categoryId, self::DEFAULT_PRODUCT_VERSION);
         $license = $this->createLicenseRecord($request, $resellerId, $serialKey, $categoryId, $payload, $now);
         $this->createSerialRecord($license, $serialKey, $payload['EnvironmentName'], $now);
-        $ledgerId = $this->recordConsumptionLedger($resellerId, $categoryId, $tierId, $license, $payload['TierName'], $now);
-
-        $license->ResellerQuotaLedgerId = $ledgerId;
-        $license->save();
+        $this->attachConsumptionLedger($resellerId, $categoryId, $tierId, $license, $payload['TierName'], $now);
 
         return $license;
+    }
+
+    private function attachConsumptionLedger(int $resellerId, int $catId, int $tierId, License $license, string $tier, Carbon $now): void
+    {
+        $ledgerId = $this->recordConsumptionLedger($resellerId, $catId, $tierId, $license, $tier, $now);
+        $license->ResellerQuotaLedgerId = $ledgerId;
+        $license->save();
     }
 
     private function executeRevokeTransaction(Request $request, int $resellerId, string $licenseKey, string $reason): License
@@ -179,15 +176,18 @@ final class LicenseController
 
         $now = Carbon::now();
         $this->evaluateQuotaRestoration($license, $now);
+        $this->applyLicenseRevocation($license, $reason, $now);
 
+        return $license;
+    }
+
+    private function applyLicenseRevocation(License $license, string $reason, Carbon $now): void
+    {
         $license->Status = self::STATUS_REVOKED;
         $license->RevokedAt = $now;
         $license->RevokeReason = $reason;
         $license->save();
-
         Serial::query()->where('LicenseId', $license->LicenseId)->update(['IsRevoked' => true]);
-
-        return $license;
     }
 
     private function evaluateQuotaRestoration(License $license, Carbon $now): void
@@ -207,19 +207,16 @@ final class LicenseController
             ->where('LicenseCategoryId', $categoryId)
             ->decrement('LicensesConsumed', 1);
 
+        $this->insertRestoredLedger($resellerId, $categoryId, $license, $now);
+    }
+
+    private function insertRestoredLedger(int $resellerId, int $catId, License $license, Carbon $now): void
+    {
         DB::connection(self::CONN_ROOT)->table('ResellerQuotaLedger')->insert([
-            'ResellerId' => $resellerId,
-            'LicenseCategoryId' => $categoryId,
-            'LicenseTierId' => 1,
-            'TierName' => (string) $license->TierName,
-            'Delta' => 1,
-            'Action' => 'Restored',
-            'LedgerAction' => 'QuotaRestored',
-            'ReferenceId' => (string) $license->LicenseId,
-            'LicenseId' => (int) $license->LicenseId,
-            'OccurredAt' => $now,
-            'CreatedAt' => $now,
-            'UpdatedAt' => $now,
+            'ResellerId' => $resellerId, 'LicenseCategoryId' => $catId, 'LicenseTierId' => 1,
+            'TierName' => (string) $license->TierName, 'Delta' => 1, 'Action' => 'Restored',
+            'LedgerAction' => 'QuotaRestored', 'ReferenceId' => (string) $license->LicenseId,
+            'LicenseId' => (int) $license->LicenseId, 'OccurredAt' => $now, 'CreatedAt' => $now, 'UpdatedAt' => $now,
         ]);
     }
 
@@ -231,60 +228,49 @@ final class LicenseController
             ->where('LicenseTierId', $tierId)
             ->first();
 
-        if ($row === null) {
-            $row = $this->createDefaultQuota($resellerId, $categoryId, $tierId, $now);
-        }
+        $quota = $row ?? $this->createDefaultQuota($resellerId, $categoryId, $tierId, $now);
+        $this->assertQuotaNotExhausted($quota, $resellerId, $categoryId, $tierId);
+        $this->incrementQuotaConsumed($resellerId, $categoryId, $tierId);
+    }
 
+    private function assertQuotaNotExhausted(object $row, int $rId, int $cId, int $tId): void
+    {
         if ((int) $row->LicensesConsumed >= (int) $row->LicensesGranted) {
-            throw DomainConflictException::conflict(
-                'QuotaExhausted',
-                'Reseller quota exhausted. Consume allowance exceeded granted pool.',
-                [['Field' => 'Quota', 'Rule' => 'Exhausted', 'Value' => "{$resellerId}/{$categoryId}/{$tierId}"]]
-            );
+            throw DomainConflictException::conflict('QuotaExhausted', 'Reseller quota exhausted.', [
+                ['Field' => 'Quota', 'Rule' => 'Exhausted', 'Value' => "{$rId}/{$cId}/{$tId}"],
+            ]);
         }
+    }
 
+    private function incrementQuotaConsumed(int $rId, int $cId, int $tId): void
+    {
         DB::connection(self::CONN_ROOT)->table('ResellerQuotas')
-            ->where('ResellerId', $resellerId)
-            ->where('LicenseCategoryId', $categoryId)
-            ->where('LicenseTierId', $tierId)
+            ->where('ResellerId', $rId)
+            ->where('LicenseCategoryId', $cId)
+            ->where('LicenseTierId', $tId)
             ->increment('LicensesConsumed', 1);
     }
 
     private function createDefaultQuota(int $resellerId, int $categoryId, int $tierId, Carbon $now): object
     {
         DB::connection(self::CONN_ROOT)->table('ResellerQuotas')->insert([
-            'ResellerId' => $resellerId,
-            'LicenseCategoryId' => $categoryId,
-            'LicenseTierId' => $tierId,
-            'LicensesGranted' => 500,
-            'LicensesConsumed' => 0,
-            'PeriodStart' => $now,
-            'CreatedAt' => $now,
-            'UpdatedAt' => $now,
+            'ResellerId' => $resellerId, 'LicenseCategoryId' => $categoryId, 'LicenseTierId' => $tierId,
+            'LicensesGranted' => 500, 'LicensesConsumed' => 0, 'PeriodStart' => $now,
+            'CreatedAt' => $now, 'UpdatedAt' => $now,
         ]);
 
         return DB::connection(self::CONN_ROOT)->table('ResellerQuotas')
-            ->where('ResellerId', $resellerId)
-            ->where('LicenseCategoryId', $categoryId)
-            ->where('LicenseTierId', $tierId)
-            ->first();
+            ->where('ResellerId', $resellerId)->where('LicenseCategoryId', $categoryId)
+            ->where('LicenseTierId', $tierId)->first();
     }
 
-    private function recordConsumptionLedger(int $resellerId, int $categoryId, int $tierId, License $license, string $tierName, Carbon $now): int
+    private function recordConsumptionLedger(int $rId, int $catId, int $tierId, License $license, string $tier, Carbon $now): int
     {
         return (int) DB::connection(self::CONN_ROOT)->table('ResellerQuotaLedger')->insertGetId([
-            'ResellerId' => $resellerId,
-            'LicenseCategoryId' => $categoryId,
-            'LicenseTierId' => $tierId,
-            'TierName' => $tierName,
-            'Delta' => -1,
-            'Action' => 'Consumed',
-            'LedgerAction' => 'QuotaConsumed',
-            'ReferenceId' => (string) $license->LicenseId,
-            'LicenseId' => (int) $license->LicenseId,
-            'OccurredAt' => $now,
-            'CreatedAt' => $now,
-            'UpdatedAt' => $now,
+            'ResellerId' => $rId, 'LicenseCategoryId' => $catId, 'LicenseTierId' => $tierId,
+            'TierName' => $tier, 'Delta' => -1, 'Action' => 'Consumed', 'LedgerAction' => 'QuotaConsumed',
+            'ReferenceId' => (string) $license->LicenseId, 'LicenseId' => (int) $license->LicenseId,
+            'OccurredAt' => $now, 'CreatedAt' => $now, 'UpdatedAt' => $now,
         ]);
     }
 
@@ -300,6 +286,14 @@ final class LicenseController
         $license->IssuedByUserId = $this->requireIssuerId($request);
         $license->IssuerActorType = self::ISSUER_ACTOR_RESELLER;
         $license->LicenseCategoryId = $categoryId;
+        $this->fillLicenseAttributes($license, $payload, $now);
+        $license->save();
+
+        return $license;
+    }
+
+    private function fillLicenseAttributes(License $license, array $payload, Carbon $now): void
+    {
         $license->TierName = $payload['TierName'];
         $license->EnvironmentName = $payload['EnvironmentName'];
         $license->ProductVersion = self::DEFAULT_PRODUCT_VERSION;
@@ -307,9 +301,6 @@ final class LicenseController
         $license->IssuedAt = $now;
         $license->ExpiresAt = $payload['ExpiresAt'] !== null ? Carbon::parse($payload['ExpiresAt']) : null;
         $license->Version = 1;
-        $license->save();
-
-        return $license;
     }
 
     private function createSerialRecord(License $license, string $serialKey, string $envName, Carbon $now): void
@@ -325,31 +316,26 @@ final class LicenseController
 
     private function assertPrefixOwnership(int $resellerId, string $prefixValue): void
     {
-        $row = DB::connection(self::CONN_ROOT)->table('Prefixes')
-            ->where('PrefixValue', $prefixValue)
-            ->first();
-
+        $row = DB::connection(self::CONN_ROOT)->table('Prefixes')->where('PrefixValue', $prefixValue)->first();
         if ($row === null) {
-            throw NotFoundException::notFound(
-                'PrefixNotFound',
-                'Prefix does not exist in registry.',
-                [['Field' => 'PrefixValue', 'Rule' => 'NotFound', 'Value' => $prefixValue]]
-            );
+            throw NotFoundException::notFound('PrefixNotFound', 'Prefix does not exist in registry.', [
+                ['Field' => 'PrefixValue', 'Rule' => 'NotFound', 'Value' => $prefixValue],
+            ]);
         }
+        $this->assertPrefixActiveAndOwned($row, $resellerId, $prefixValue);
+    }
 
+    private function assertPrefixActiveAndOwned(object $row, int $resellerId, string $prefixValue): void
+    {
         if ((int) $row->ResellerId !== $resellerId) {
-            throw AuthException::forbidden(
-                'PrefixForbidden',
-                [['Field' => 'PrefixValue', 'Rule' => 'OwnershipMismatch', 'Value' => $prefixValue]]
-            );
+            throw AuthException::forbidden('PrefixForbidden', [
+                ['Field' => 'PrefixValue', 'Rule' => 'OwnershipMismatch', 'Value' => $prefixValue],
+            ]);
         }
-
         if ((bool) $row->IsActive === false) {
-            throw DomainConflictException::conflict(
-                'PrefixDisabled',
-                'Requested prefix is disabled.',
-                [['Field' => 'PrefixValue', 'Rule' => 'Inactive', 'Value' => $prefixValue]]
-            );
+            throw DomainConflictException::conflict('PrefixDisabled', 'Requested prefix is disabled.', [
+                ['Field' => 'PrefixValue', 'Rule' => 'Inactive', 'Value' => $prefixValue],
+            ]);
         }
     }
 
@@ -359,18 +345,13 @@ final class LicenseController
     private function normalizeIssuePayload(LicenseIssueRequest $request): array
     {
         $v = $request->raw();
-        $prefix = strtoupper(trim((string) ($v['PrefixValue'] ?? '')));
-        $tierName = (string) ($v['TierName'] ?? 'Tier1');
-        $envName = (string) ($v['EnvironmentName'] ?? 'Production');
-        $catName = isset($v['LicenseCategory']) && $v['LicenseCategory'] !== null ? (string) $v['LicenseCategory'] : self::DEFAULT_CATEGORY_NAME;
-        $expires = isset($v['ExpiresAt']) && $v['ExpiresAt'] !== null ? (string) $v['ExpiresAt'] : null;
 
         return [
-            'PrefixValue' => $prefix,
-            'TierName' => $tierName,
-            'EnvironmentName' => $envName,
-            'LicenseCategory' => $catName,
-            'ExpiresAt' => $expires,
+            'PrefixValue' => strtoupper(trim((string) ($v['PrefixValue'] ?? ''))),
+            'TierName' => (string) ($v['TierName'] ?? 'Tier1'),
+            'EnvironmentName' => (string) ($v['EnvironmentName'] ?? 'Production'),
+            'LicenseCategory' => isset($v['LicenseCategory']) ? (string) $v['LicenseCategory'] : self::DEFAULT_CATEGORY_NAME,
+            'ExpiresAt' => isset($v['ExpiresAt']) ? (string) $v['ExpiresAt'] : null,
         ];
     }
 
@@ -428,12 +409,54 @@ final class LicenseController
             throw DomainConflictException::custom('LicenseRevoked', 'Revoked licenses cannot be renewed.', [['Field' => 'Status', 'Rule' => 'Revoked']]);
         }
 
-        $license->ExpiresAt = $newExpiresAt;
-        $license->Version = ((int) $license->Version) + 1;
-        $license->UpdatedAt = Carbon::now();
-        $license->save();
+        $this->enforceIfMatch($request, $license);
+        $this->persistRenewal($request, $license, $newExpiresAt);
 
         return $license;
+    }
+
+    private function enforceIfMatch(Request $request, License $license): void
+    {
+        $header = (string) ($request->attributes->get('lara.if_match') ?? $request->header('If-Match') ?? '');
+        $current = EntityHasher::hashSingleResource($this->project($license), $this->requestId($request));
+        if (EntityHasher::ifMatchMatches($header, $current)) {
+            return;
+        }
+
+        $details = [
+            ['Field' => 'If-Match', 'Rule' => 'ETagMismatch'],
+            ['Field' => 'ServerVersion', 'Rule' => 'Current', 'Value' => (string) (int) $license->Version],
+        ];
+        throw ValidationException::custom('PreconditionFailed', 'The license was modified since it was last read. Re-fetch and retry.', $details);
+    }
+
+    private function persistRenewal(LicenseRenewRequest $request, License $license, Carbon $newExpiresAt): void
+    {
+        $now = Carbon::now();
+        $conn = $license->getConnectionName() ?: self::SHARD_CONNECTION;
+        DB::connection($conn)->transaction(function () use ($license, $newExpiresAt, $request, $now, $conn): void {
+            $license->ExpiresAt = $newExpiresAt;
+            $license->Version = ((int) $license->Version) + 1;
+            $license->UpdatedAt = $now;
+            $license->save();
+
+            $this->insertRenewLedger($conn, $license, $request, $now);
+        });
+    }
+
+    private function insertRenewLedger(string $conn, License $license, Request $request, Carbon $now): void
+    {
+        DB::connection($conn)->table('LicenseLedger')->insert([
+            'ResellerId' => (int) $license->ResellerId,
+            'TierName' => (string) ($license->TierName ?? 'Tier1'),
+            'LedgerAction' => 'LicenseRenewed',
+            'Delta' => 0,
+            'LicenseId' => (int) $license->LicenseId,
+            'QuotaRequestId' => null,
+            'RequestId' => $this->requestId($request),
+            'ActorUserId' => $this->requireIssuerId($request),
+            'CreatedAt' => $now->format('Y-m-d\TH:i:s\Z'),
+        ]);
     }
 
     private function requireFutureExpiresAt(string $raw): Carbon
@@ -458,6 +481,21 @@ final class LicenseController
      */
     private function project(License $license): array
     {
+        return array_merge($this->projectIdentity($license), [
+            'Status' => (string) $license->Status,
+            'IssuedAt' => $this->isoOrEmpty($license->IssuedAt),
+            'ExpiresAt' => $this->isoOrEmpty($license->ExpiresAt),
+            'RevokedAt' => $this->isoOrEmpty($license->RevokedAt),
+            'RevokeReason' => (string) ($license->RevokeReason ?? ''),
+            'Version' => (int) $license->Version,
+        ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function projectIdentity(License $license): array
+    {
         return [
             'LicenseId' => (int) $license->LicenseId,
             'LicenseKey' => (string) $license->LicenseKey,
@@ -468,12 +506,6 @@ final class LicenseController
             'TierName' => (string) $license->TierName,
             'EnvironmentName' => (string) $license->EnvironmentName,
             'ProductVersion' => (string) $license->ProductVersion,
-            'Status' => (string) $license->Status,
-            'IssuedAt' => $this->isoOrEmpty($license->IssuedAt),
-            'ExpiresAt' => $this->isoOrEmpty($license->ExpiresAt),
-            'RevokedAt' => $this->isoOrEmpty($license->RevokedAt),
-            'RevokeReason' => (string) ($license->RevokeReason ?? ''),
-            'Version' => (int) $license->Version,
         ];
     }
 

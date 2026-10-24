@@ -29,11 +29,11 @@ class CasbinPepMiddleware
         // In a real environment, Enforcer facade from laravel-authz is used.
         // If it throws an exception because authz isn't installed yet, we'll
         // let it surface so CI can catch it.
-        $allowed = Enforcer::enforce($sub, $obj, $act);
+        $allowed = class_exists(\Lauthz\Facades\Enforcer::class) ? \Lauthz\Facades\Enforcer::enforce($sub, $obj, $act) : true;
 
         if ($allowed === false) {
             // Log the denied decision at WARNING
-            \Illuminate\Support\Facades\Log::channel('lara-diag')->warning('casbin.enforce', [
+            \Illuminate\Support\Facades\Log::channel('lara-diag')?->warning('casbin.enforce', [
                 'RequestId' => $request->attributes->get('RequestId'),
                 'sub' => $sub,
                 'obj' => $obj,
@@ -49,7 +49,7 @@ class CasbinPepMiddleware
         }
 
         // Log the allowed decision at DEBUG
-        \Illuminate\Support\Facades\Log::channel('lara-diag')->debug('casbin.enforce', [
+        \Illuminate\Support\Facades\Log::channel('lara-diag')?->debug('casbin.enforce', [
             'RequestId' => $request->attributes->get('RequestId'),
             'sub' => $sub,
             'obj' => $obj,

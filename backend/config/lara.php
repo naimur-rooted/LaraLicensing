@@ -369,6 +369,8 @@ return [
         'ValidationInputInvalid',
         'ValidationInvalidRole',
         'ValidationInvalidVersion',
+        'WebhookSignatureInvalid',
+        'WebhookPayloadInvalid',
 
         'VerifyHashInvalid',
         'VerifyKeyConsumed',
@@ -491,6 +493,8 @@ return [
         'ValidationInputInvalid' => ['status' => 400],
         'ValidationInvalidRole' => ['status' => 400],
         'ValidationInvalidVersion' => ['status' => 400],
+        'WebhookSignatureInvalid' => ['status' => 401],
+        'WebhookPayloadInvalid' => ['status' => 422],
 
         'VerifyHashInvalid' => ['status' => 400],
         'VerifyKeyConsumed' => ['status' => 409],

@@ -124,6 +124,9 @@ scripts/.demo_license_cache.json
 
 backend/database/product_*.sqlite
 backend/database/lara_shard_*.sqlite
+backend/database/shard_*.sqlite
+backend/repodb/
+backend/database/*.sqlite-journal
 
 # Raw prompt extracts
 .ai-memory/all_prompts_single_box.md

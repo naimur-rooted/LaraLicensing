@@ -61,16 +61,73 @@ class ProductService
         return $product->load('deals');
     }
 
-    /** Provision an isolated SQLite shard for the product. */
+    /** Provision an isolated SQLite shard for the product in repodb/. */
     private function provisionProductShard(string $slug): void
     {
-        $shardPath = database_path("product_{$slug}.sqlite");
-        if (!file_exists($shardPath)) {
-            touch($shardPath);
-            $pdo = new PDO("sqlite:{$shardPath}");
+        $targetPaths = [
+            base_path("repodb/product_{$slug}.sqlite"),
+            database_path("product_{$slug}.sqlite"),
+        ];
+        foreach ($targetPaths as $path) {
+            $this->ensureSqliteShardReady($path);
+        }
+    }
+
+    private function ensureSqliteShardReady(string $path): void
+    {
+        $dir = dirname($path);
+        if (!is_dir($dir)) {
+            mkdir($dir, 0777, true);
+        }
+        if (!file_exists($path)) {
+            touch($path);
+            $pdo = new PDO("sqlite:{$path}");
             $pdo->exec('PRAGMA journal_mode = WAL;');
             $pdo->exec('PRAGMA busy_timeout = 5000;');
+            $this->initProductShardSchema($pdo);
         }
+    }
+
+    private function initProductShardSchema(PDO $pdo): void
+    {
+        $pdo->exec('CREATE TABLE IF NOT EXISTS Licenses (
+            LicenseId INTEGER PRIMARY KEY AUTOINCREMENT,
+            LicenseKey VARCHAR(128) NOT NULL UNIQUE,
+            ProductSlug VARCHAR(64) NOT NULL,
+            CustomerEmail VARCHAR(128) NOT NULL,
+            DealCode VARCHAR(40) NOT NULL DEFAULT "DEFAULT",
+            Status VARCHAR(32) NOT NULL DEFAULT "Active",
+            IssuedAt DATETIME,
+            CreatedAt DATETIME,
+            UpdatedAt DATETIME
+        );');
+        $this->initSerialsAndBindingsTables($pdo);
+    }
+
+    private function initSerialsAndBindingsTables(PDO $pdo): void
+    {
+        $pdo->exec('CREATE TABLE IF NOT EXISTS Serials (
+            SerialId INTEGER PRIMARY KEY AUTOINCREMENT,
+            SerialValue VARCHAR(128) NOT NULL UNIQUE,
+            LicenseKey VARCHAR(128),
+            ProductSlug VARCHAR(64) NOT NULL,
+            CustomerEmail VARCHAR(128) NOT NULL,
+            IsRevoked INTEGER NOT NULL DEFAULT 0,
+            IssuedAt DATETIME,
+            CreatedAt DATETIME,
+            UpdatedAt DATETIME
+        );');
+        $pdo->exec('CREATE TABLE IF NOT EXISTS MachineBindings (
+            MachineBindingId INTEGER PRIMARY KEY AUTOINCREMENT,
+            SerialValue VARCHAR(128) NOT NULL,
+            FingerprintHash VARCHAR(64) NOT NULL,
+            IpAddress VARCHAR(45),
+            Hostname VARCHAR(128),
+            FirstSeenAt DATETIME,
+            LastSeenAt DATETIME,
+            CreatedAt DATETIME,
+            UpdatedAt DATETIME
+        );');
     }
 
     /** Create a deal/pricing package for a product. */
@@ -159,12 +216,9 @@ Integrate LaraLicensing into this application using the following contract:
 MARKDOWN;
     }
 
-    /** Generate mock Ed25519 keypair for offline token verification. */
+    /** Generate Ed25519 keypair for offline token verification. */
     private function generateKeyPair(): array
     {
-        return [
-            'public' => 'MCowBQYDK2VwAyEA' . Str::random(40) . '=',
-            'private' => 'MC4CAQAwBQYDK2VwBCIEI' . Str::random(40) . '=',
-        ];
+        return (new JwtTokenService())->generateEd25519KeyPair();
     }
 }

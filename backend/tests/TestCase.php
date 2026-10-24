@@ -16,4 +16,10 @@ use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 abstract class TestCase extends BaseTestCase
 {
     use CreatesApplication;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->withHeader('X-Request-Id', 'req-test-uuid-0000-000000000001');
+    }
 }

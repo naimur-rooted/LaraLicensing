@@ -106,7 +106,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 'Details' => DetailsRedactor::redact($e->details),
             ]);
             // Plan 11 SS-01: full trace goes to lara-diag only; never to caller.
-            Log::channel('lara-diag')->debug('lara.exception.trace', [
+            Log::channel('lara-diag')?->debug('lara.exception.trace', [
                 'RequestId' => $requestId,
                 'ErrorId' => $e->errorId,
                 'ErrorCode' => $e->errorCode,
@@ -116,7 +116,7 @@ return Application::configure(basePath: dirname(__DIR__))
             ]);
 
             // Plan 18 Step 93/101: audit trail for admin errors UI
-            Log::channel('lara-audit-errors')->info('lara.exception', [
+            Log::channel('lara-audit-errors')?->info('lara.exception', [
                 'RequestedAt' => now()->toIso8601String(),
                 'RequestId' => $requestId,
                 'ErrorId' => $e->errorId,
@@ -246,7 +246,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 'Method' => $request->method(),
             ]);
             // Plan 11 SS-01: unhandled trace to lara-diag; response envelope stays trace-free.
-            Log::channel('lara-diag')->error('lara.unhandled.trace', [
+            Log::channel('lara-diag')?->error('lara.unhandled.trace', [
                 'RequestId' => $requestId,
                 'ErrorId' => $errorId,
                 'Exception' => $e::class,
