@@ -12,13 +12,23 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SplatRouteImport } from './routes/$'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
+import { Route as DocsRouteImport } from './routes/docs'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as LicensingModelsRouteImport } from './routes/licensing-models'
+import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as RegisterRouteImport } from './routes/register'
+import { Route as ResellerInfoRouteImport } from './routes/reseller-info'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as SecurityRouteImport } from './routes/security'
+import { Route as StatusRouteImport } from './routes/status'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedPortalRouteImport } from './routes/_authenticated/portal'
 import { Route as AdminLoginRouteImport } from './routes/admin.login'
 import { Route as E2eErrorHarnessRouteImport } from './routes/e2e.error-harness'
+import { Route as SolutionsChromeExtensionsRouteImport } from './routes/solutions.chrome-extensions'
+import { Route as SolutionsDesktopRouteImport } from './routes/solutions.desktop'
+import { Route as SolutionsOfflineRouteImport } from './routes/solutions.offline'
+import { Route as SolutionsWordpressRouteImport } from './routes/solutions.wordpress'
 import { Route as AuthenticatedAccountProfileRouteImport } from './routes/_authenticated/account.profile'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
 import { Route as AuthenticatedAdminApiDocsRouteImport } from './routes/_authenticated/admin.api-docs'
@@ -70,9 +80,24 @@ const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DocsRoute = DocsRouteImport.update({
+  id: '/docs',
+  path: '/docs',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
   id: '/forgot-password',
   path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LicensingModelsRoute = LicensingModelsRouteImport.update({
+  id: '/licensing-models',
+  path: '/licensing-models',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PricingRoute = PricingRouteImport.update({
+  id: '/pricing',
+  path: '/pricing',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RegisterRoute = RegisterRouteImport.update({
@@ -80,9 +105,24 @@ const RegisterRoute = RegisterRouteImport.update({
   path: '/register',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ResellerInfoRoute = ResellerInfoRouteImport.update({
+  id: '/reseller-info',
+  path: '/reseller-info',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SecurityRoute = SecurityRouteImport.update({
+  id: '/security',
+  path: '/security',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StatusRoute = StatusRouteImport.update({
+  id: '/status',
+  path: '/status',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
@@ -103,6 +143,27 @@ const AdminLoginRoute = AdminLoginRouteImport.update({
 const E2eErrorHarnessRoute = E2eErrorHarnessRouteImport.update({
   id: '/e2e/error-harness',
   path: '/e2e/error-harness',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SolutionsChromeExtensionsRoute =
+  SolutionsChromeExtensionsRouteImport.update({
+    id: '/solutions/chrome-extensions',
+    path: '/solutions/chrome-extensions',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const SolutionsDesktopRoute = SolutionsDesktopRouteImport.update({
+  id: '/solutions/desktop',
+  path: '/solutions/desktop',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SolutionsOfflineRoute = SolutionsOfflineRouteImport.update({
+  id: '/solutions/offline',
+  path: '/solutions/offline',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SolutionsWordpressRoute = SolutionsWordpressRouteImport.update({
+  id: '/solutions/wordpress',
+  path: '/solutions/wordpress',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedAccountProfileRoute =
@@ -320,13 +381,23 @@ const AuthenticatedResellerResellerIdLicensesLicenseKeyRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
+  '/docs': typeof DocsRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/licensing-models': typeof LicensingModelsRoute
+  '/pricing': typeof PricingRoute
   '/register': typeof RegisterRoute
+  '/reseller-info': typeof ResellerInfoRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/security': typeof SecurityRoute
+  '/status': typeof StatusRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/portal': typeof AuthenticatedPortalRouteWithChildren
   '/admin/login': typeof AdminLoginRoute
   '/e2e/error-harness': typeof E2eErrorHarnessRoute
+  '/solutions/chrome-extensions': typeof SolutionsChromeExtensionsRoute
+  '/solutions/desktop': typeof SolutionsDesktopRoute
+  '/solutions/offline': typeof SolutionsOfflineRoute
+  '/solutions/wordpress': typeof SolutionsWordpressRoute
   '/account/profile': typeof AuthenticatedAccountProfileRoute
   '/admin/api-docs': typeof AuthenticatedAdminApiDocsRoute
   '/admin/app-updates': typeof AuthenticatedAdminAppUpdatesRoute
@@ -367,12 +438,22 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
+  '/docs': typeof DocsRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/licensing-models': typeof LicensingModelsRoute
+  '/pricing': typeof PricingRoute
   '/register': typeof RegisterRoute
+  '/reseller-info': typeof ResellerInfoRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/security': typeof SecurityRoute
+  '/status': typeof StatusRoute
   '/portal': typeof AuthenticatedPortalRouteWithChildren
   '/admin/login': typeof AdminLoginRoute
   '/e2e/error-harness': typeof E2eErrorHarnessRoute
+  '/solutions/chrome-extensions': typeof SolutionsChromeExtensionsRoute
+  '/solutions/desktop': typeof SolutionsDesktopRoute
+  '/solutions/offline': typeof SolutionsOfflineRoute
+  '/solutions/wordpress': typeof SolutionsWordpressRoute
   '/account/profile': typeof AuthenticatedAccountProfileRoute
   '/admin/api-docs': typeof AuthenticatedAdminApiDocsRoute
   '/admin/app-updates': typeof AuthenticatedAdminAppUpdatesRoute
@@ -413,13 +494,23 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
+  '/docs': typeof DocsRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/licensing-models': typeof LicensingModelsRoute
+  '/pricing': typeof PricingRoute
   '/register': typeof RegisterRoute
+  '/reseller-info': typeof ResellerInfoRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/security': typeof SecurityRoute
+  '/status': typeof StatusRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/portal': typeof AuthenticatedPortalRouteWithChildren
   '/admin/login': typeof AdminLoginRoute
   '/e2e/error-harness': typeof E2eErrorHarnessRoute
+  '/solutions/chrome-extensions': typeof SolutionsChromeExtensionsRoute
+  '/solutions/desktop': typeof SolutionsDesktopRoute
+  '/solutions/offline': typeof SolutionsOfflineRoute
+  '/solutions/wordpress': typeof SolutionsWordpressRoute
   '/_authenticated/account/profile': typeof AuthenticatedAccountProfileRoute
   '/_authenticated/admin/api-docs': typeof AuthenticatedAdminApiDocsRoute
   '/_authenticated/admin/app-updates': typeof AuthenticatedAdminAppUpdatesRoute
@@ -462,13 +553,23 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/$'
+    | '/docs'
     | '/forgot-password'
+    | '/licensing-models'
+    | '/pricing'
     | '/register'
+    | '/reseller-info'
     | '/reset-password'
+    | '/security'
+    | '/status'
     | '/admin'
     | '/portal'
     | '/admin/login'
     | '/e2e/error-harness'
+    | '/solutions/chrome-extensions'
+    | '/solutions/desktop'
+    | '/solutions/offline'
+    | '/solutions/wordpress'
     | '/account/profile'
     | '/admin/api-docs'
     | '/admin/app-updates'
@@ -509,12 +610,22 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/$'
+    | '/docs'
     | '/forgot-password'
+    | '/licensing-models'
+    | '/pricing'
     | '/register'
+    | '/reseller-info'
     | '/reset-password'
+    | '/security'
+    | '/status'
     | '/portal'
     | '/admin/login'
     | '/e2e/error-harness'
+    | '/solutions/chrome-extensions'
+    | '/solutions/desktop'
+    | '/solutions/offline'
+    | '/solutions/wordpress'
     | '/account/profile'
     | '/admin/api-docs'
     | '/admin/app-updates'
@@ -554,13 +665,23 @@ export interface FileRouteTypes {
     | '/'
     | '/$'
     | '/_authenticated'
+    | '/docs'
     | '/forgot-password'
+    | '/licensing-models'
+    | '/pricing'
     | '/register'
+    | '/reseller-info'
     | '/reset-password'
+    | '/security'
+    | '/status'
     | '/_authenticated/admin'
     | '/_authenticated/portal'
     | '/admin/login'
     | '/e2e/error-harness'
+    | '/solutions/chrome-extensions'
+    | '/solutions/desktop'
+    | '/solutions/offline'
+    | '/solutions/wordpress'
     | '/_authenticated/account/profile'
     | '/_authenticated/admin/api-docs'
     | '/_authenticated/admin/app-updates'
@@ -603,11 +724,21 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   SplatRoute: typeof SplatRoute
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
+  DocsRoute: typeof DocsRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
+  LicensingModelsRoute: typeof LicensingModelsRoute
+  PricingRoute: typeof PricingRoute
   RegisterRoute: typeof RegisterRoute
+  ResellerInfoRoute: typeof ResellerInfoRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  SecurityRoute: typeof SecurityRoute
+  StatusRoute: typeof StatusRoute
   AdminLoginRoute: typeof AdminLoginRoute
   E2eErrorHarnessRoute: typeof E2eErrorHarnessRoute
+  SolutionsChromeExtensionsRoute: typeof SolutionsChromeExtensionsRoute
+  SolutionsDesktopRoute: typeof SolutionsDesktopRoute
+  SolutionsOfflineRoute: typeof SolutionsOfflineRoute
+  SolutionsWordpressRoute: typeof SolutionsWordpressRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -633,11 +764,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/docs': {
+      id: '/docs'
+      path: '/docs'
+      fullPath: '/docs'
+      preLoaderRoute: typeof DocsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/forgot-password': {
       id: '/forgot-password'
       path: '/forgot-password'
       fullPath: '/forgot-password'
       preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/licensing-models': {
+      id: '/licensing-models'
+      path: '/licensing-models'
+      fullPath: '/licensing-models'
+      preLoaderRoute: typeof LicensingModelsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pricing': {
+      id: '/pricing'
+      path: '/pricing'
+      fullPath: '/pricing'
+      preLoaderRoute: typeof PricingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/register': {
@@ -647,11 +799,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RegisterRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/reseller-info': {
+      id: '/reseller-info'
+      path: '/reseller-info'
+      fullPath: '/reseller-info'
+      preLoaderRoute: typeof ResellerInfoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/reset-password': {
       id: '/reset-password'
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/security': {
+      id: '/security'
+      path: '/security'
+      fullPath: '/security'
+      preLoaderRoute: typeof SecurityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/status': {
+      id: '/status'
+      path: '/status'
+      fullPath: '/status'
+      preLoaderRoute: typeof StatusRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/admin': {
@@ -680,6 +853,34 @@ declare module '@tanstack/react-router' {
       path: '/e2e/error-harness'
       fullPath: '/e2e/error-harness'
       preLoaderRoute: typeof E2eErrorHarnessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/solutions/chrome-extensions': {
+      id: '/solutions/chrome-extensions'
+      path: '/solutions/chrome-extensions'
+      fullPath: '/solutions/chrome-extensions'
+      preLoaderRoute: typeof SolutionsChromeExtensionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/solutions/desktop': {
+      id: '/solutions/desktop'
+      path: '/solutions/desktop'
+      fullPath: '/solutions/desktop'
+      preLoaderRoute: typeof SolutionsDesktopRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/solutions/offline': {
+      id: '/solutions/offline'
+      path: '/solutions/offline'
+      fullPath: '/solutions/offline'
+      preLoaderRoute: typeof SolutionsOfflineRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/solutions/wordpress': {
+      id: '/solutions/wordpress'
+      path: '/solutions/wordpress'
+      fullPath: '/solutions/wordpress'
+      preLoaderRoute: typeof SolutionsWordpressRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/account/profile': {
@@ -1117,11 +1318,21 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SplatRoute: SplatRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
+  DocsRoute: DocsRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
+  LicensingModelsRoute: LicensingModelsRoute,
+  PricingRoute: PricingRoute,
   RegisterRoute: RegisterRoute,
+  ResellerInfoRoute: ResellerInfoRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  SecurityRoute: SecurityRoute,
+  StatusRoute: StatusRoute,
   AdminLoginRoute: AdminLoginRoute,
   E2eErrorHarnessRoute: E2eErrorHarnessRoute,
+  SolutionsChromeExtensionsRoute: SolutionsChromeExtensionsRoute,
+  SolutionsDesktopRoute: SolutionsDesktopRoute,
+  SolutionsOfflineRoute: SolutionsOfflineRoute,
+  SolutionsWordpressRoute: SolutionsWordpressRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
