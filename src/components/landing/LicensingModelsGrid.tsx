@@ -63,50 +63,50 @@ export function LicensingModelsGrid() {
   ];
 
   return (
-    <section id="licensing-models" className="py-20 border-b border-border/60 bg-muted/10">
+    <section id="licensing-models" className="py-24 border-b border-border/60 bg-muted/10">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="text-center max-w-3xl mx-auto space-y-3 mb-14">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold tracking-wide uppercase">
-            <Sparkles className="size-3.5" />
+        <div className="text-center max-w-3xl mx-auto space-y-4 mb-16">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-semibold tracking-wide uppercase">
+            <Sparkles className="size-4" />
             <span>Versatile Entitlements</span>
           </div>
-          <h2 className="text-3xl font-bold tracking-tight text-foreground" style={{ fontFamily: "var(--font-display)" }}>
+          <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-foreground leading-[1.12]" style={{ fontFamily: "var(--font-display)" }}>
             Implement any licensing model with zero hassle
           </h2>
-          <p className="text-sm text-muted-foreground leading-relaxed">
+          <p className="text-base sm:text-lg text-muted-foreground leading-relaxed">
             Every software business is unique. LaraLicensing natively supports every monetization strategy without requiring complex database migrations or custom billing adapters.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {models.map((m, idx) => {
             const Icon = m.icon;
             return (
               <div
                 key={idx}
-                className="group relative rounded-2xl border border-border/70 bg-card p-6 shadow-xs hover:border-primary/50 hover:shadow-md transition-all duration-200 flex flex-col justify-between"
+                className="group relative rounded-2xl border border-border/70 bg-card p-7 shadow-xs hover:border-primary/50 hover:shadow-lg transition-all duration-200 flex flex-col justify-between"
               >
-                <div className="space-y-3">
+                <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <div className={`p-2.5 rounded-xl ${m.bg} ${m.color} group-hover:scale-105 transition-transform`}>
-                      <Icon className="size-5" />
+                    <div className={`p-3 rounded-xl ${m.bg} ${m.color} group-hover:scale-105 transition-transform`}>
+                      <Icon className="size-6" />
                     </div>
-                    <span className="text-[10px] font-semibold font-mono uppercase px-2 py-0.5 rounded-md bg-muted text-muted-foreground">
+                    <span className="text-xs font-semibold font-mono uppercase px-2.5 py-1 rounded-md bg-muted text-muted-foreground">
                       {m.badge}
                     </span>
                   </div>
 
-                  <h3 className="text-base font-semibold text-foreground group-hover:text-primary transition-colors">
+                  <h3 className="text-lg font-bold text-foreground group-hover:text-primary transition-colors">
                     {m.title}
                   </h3>
 
-                  <p className="text-xs text-muted-foreground leading-relaxed">
+                  <p className="text-sm text-muted-foreground leading-relaxed">
                     {m.description}
                   </p>
                 </div>
 
-                <div className="pt-4 mt-4 border-t border-border/40 flex items-center gap-1.5 text-[11px] font-medium text-primary">
-                  <CheckCircle2 className="size-3.5 text-emerald-500" />
+                <div className="pt-5 mt-5 border-t border-border/40 flex items-center gap-2 text-xs font-medium text-primary">
+                  <CheckCircle2 className="size-4 text-emerald-500" />
                   <span>Configurable in 1 click</span>
                 </div>
               </div>

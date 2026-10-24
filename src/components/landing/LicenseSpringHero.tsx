@@ -20,57 +20,55 @@ export function LicenseSpringHero() {
         />
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center space-y-6">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center space-y-7">
         {/* Top Eyebrow Badge */}
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-primary/20 bg-primary/5 text-primary text-xs font-medium shadow-2xs backdrop-blur-xs">
-          <Sparkles className="size-3.5 text-amber-500" />
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-primary/25 bg-primary/5 text-primary text-sm font-semibold shadow-xs backdrop-blur-xs">
+          <Sparkles className="size-4 text-amber-500" />
           <span>Next-Gen Multi-Tenant Licensing Engine • Split-DB Shards & Ed25519</span>
         </div>
 
         {/* Main Headline */}
         <h1
-          className="mx-auto max-w-4xl text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-foreground leading-[1.12]"
+          className="mx-auto max-w-5xl text-5xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-foreground leading-[1.08]"
           style={{ fontFamily: "var(--font-display)" }}
         >
           Unlock Growth with Enterprise-Grade{" "}
-          <span className="bg-gradient-to-r from-sky-600 via-blue-600 to-indigo-600 bg-clip-text text-transparent">
+          <span className="bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 bg-clip-text text-transparent">
             Software Licensing
           </span>
         </h1>
 
         {/* Subtitle */}
-        <p className="mx-auto max-w-2xl text-base sm:text-lg text-muted-foreground leading-relaxed">
+        <p className="mx-auto max-w-3xl text-lg sm:text-xl lg:text-2xl text-muted-foreground/90 leading-relaxed font-normal">
           Modern licensing platform for desktop software, Chrome extensions, WordPress plugins, and SaaS. Enforce hardware node-locking, machine seat quotas, offline signed JWTs, and automated webhook minting.
         </p>
 
         {/* Primary CTA Buttons matching LicenseSpring */}
-        <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+        <div className="flex flex-wrap items-center justify-center gap-4 pt-3">
           <Link
             to="/portal/home"
-            className="inline-flex h-11 items-center gap-2 rounded-full bg-primary px-6 text-sm font-semibold text-primary-foreground shadow-md hover:bg-primary/90 transition-all hover:scale-[1.02] active:scale-[0.98]"
+            className="inline-flex h-13 items-center gap-2.5 rounded-full bg-primary px-8 text-base font-semibold text-primary-foreground shadow-lg hover:bg-primary/90 transition-all hover:scale-[1.02] active:scale-[0.98]"
           >
             <span>Get Started Free</span>
-            <ArrowRight className="size-4" />
+            <ArrowRight className="size-5" />
           </Link>
 
           <a
-            href="http://localhost:5050"
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex h-11 items-center gap-2 rounded-full border border-border bg-background px-6 text-sm font-semibold text-foreground shadow-2xs hover:bg-muted transition-colors"
+            href="#code-showcase"
+            className="inline-flex h-13 items-center gap-2.5 rounded-full border border-border bg-background/80 backdrop-blur-sm px-8 text-base font-semibold text-foreground shadow-sm hover:bg-muted transition-colors"
           >
-            <span>Test Storefront Sandbox</span>
-            <ExternalLink className="size-3.5 text-muted-foreground" />
+            <Terminal className="size-4.5 text-primary" />
+            <span>Interactive Code Demo</span>
           </a>
         </div>
 
         {/* Supported Languages & Platforms Matrix matching Cryptlex / LicenseSpring */}
-        <div className="pt-10 space-y-3">
-          <p className="text-xs uppercase font-semibold tracking-wider text-muted-foreground/80">
+        <div className="pt-12 space-y-4">
+          <p className="text-sm uppercase font-semibold tracking-wider text-muted-foreground">
             Works across all major platforms, languages & frameworks
           </p>
 
-          <div className="flex flex-wrap items-center justify-center gap-2 max-w-3xl mx-auto">
+          <div className="flex flex-wrap items-center justify-center gap-2.5 max-w-4xl mx-auto">
             {[
               { name: "Python", icon: "🐍" },
               { name: "Chrome Extensions", icon: "🧩" },
@@ -86,7 +84,7 @@ export function LicenseSpringHero() {
             ].map((p, i) => (
               <span
                 key={i}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border/70 bg-card/60 backdrop-blur-xs text-xs font-medium text-foreground shadow-2xs hover:border-primary/40 transition-colors"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-border/70 bg-card/70 backdrop-blur-xs text-sm font-medium text-foreground shadow-xs hover:border-primary/50 transition-colors"
               >
                 <span>{p.icon}</span>
                 <span>{p.name}</span>

@@ -49,19 +49,19 @@ export function LicenseSpringHeader() {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/60 bg-background/95 backdrop-blur-md">
       {/* Top Navigation Bar */}
-      <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex h-18 w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Brand Logo */}
-        <Link to="/" className="flex items-center gap-2.5 transition-opacity hover:opacity-90">
-          <div className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-tr from-sky-500 via-blue-600 to-indigo-600 text-white shadow-sm shadow-blue-500/20">
-            <Shield className="size-5" />
+        <Link to="/" className="flex items-center gap-3 transition-opacity hover:opacity-90">
+          <div className="flex size-10 items-center justify-center rounded-xl bg-gradient-to-tr from-sky-500 via-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/25">
+            <Shield className="size-5.5" />
           </div>
-          <span className="text-lg font-bold tracking-tight text-foreground" style={{ fontFamily: "var(--font-display)" }}>
+          <span className="text-xl font-bold tracking-tight text-foreground" style={{ fontFamily: "var(--font-display)" }}>
             lara<span className="text-primary font-semibold">licensing</span>
           </span>
         </Link>
 
         {/* Center Nav Links with LicenseSpring style dropdowns */}
-        <nav className="hidden lg:flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+        <nav className="hidden lg:flex items-center gap-2 text-sm font-semibold text-muted-foreground">
           {/* Platform Mega Menu Trigger */}
           <div className="relative" ref={menuRef}>
             <button
@@ -71,12 +71,12 @@ export function LicenseSpringHeader() {
                 setIsGetStartedOpen(false);
               }}
               onMouseEnter={() => setIsPlatformMenuOpen(true)}
-              className={`flex items-center gap-1 px-3 py-2 rounded-md transition-colors ${
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg transition-colors ${
                 isPlatformMenuOpen ? "text-foreground bg-muted/60 font-semibold" : "hover:text-foreground hover:bg-muted/40"
               }`}
             >
               <span>Platform</span>
-              <ChevronDown className={`size-3.5 transition-transform duration-200 ${isPlatformMenuOpen ? "rotate-180" : ""}`} />
+              <ChevronDown className={`size-4 transition-transform duration-200 ${isPlatformMenuOpen ? "rotate-180" : ""}`} />
             </button>
 
             {/* Mega Menu Dropdown Card matching LicenseSpring screenshot */}
@@ -321,25 +321,22 @@ export function LicenseSpringHeader() {
             )}
           </div>
 
-          <Link to="/portal/home" className="px-3 py-2 rounded-md hover:text-foreground hover:bg-muted/40 transition-colors">
-            Developers
+          <Link to="/portal/home" className="px-3.5 py-2 rounded-lg hover:text-foreground hover:bg-muted/40 transition-colors">
+            Developers & Docs
           </Link>
-          <a href="http://localhost:5050" target="_blank" rel="noreferrer" className="px-3 py-2 rounded-md hover:text-foreground hover:bg-muted/40 transition-colors flex items-center gap-1">
-            Storefront Sandbox <ExternalLink className="size-2.5 opacity-60" />
-          </a>
-          <a href="#licensing-models" className="px-3 py-2 rounded-md hover:text-foreground hover:bg-muted/40 transition-colors">
+          <a href="#licensing-models" className="px-3.5 py-2 rounded-lg hover:text-foreground hover:bg-muted/40 transition-colors">
             Licensing Models
           </a>
-          <a href="#comparison" className="px-3 py-2 rounded-md hover:text-foreground hover:bg-muted/40 transition-colors">
+          <a href="#comparison" className="px-3.5 py-2 rounded-lg hover:text-foreground hover:bg-muted/40 transition-colors">
             Why LaraLicensing
           </a>
         </nav>
 
         {/* Right Action Buttons */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-3">
           <Link
             to="/admin/login"
-            className="text-xs font-medium text-muted-foreground hover:text-foreground px-3 py-2 rounded-md transition-colors"
+            className="text-sm font-semibold text-muted-foreground hover:text-foreground px-3.5 py-2 rounded-lg transition-colors"
           >
             Login
           </Link>
@@ -348,10 +345,10 @@ export function LicenseSpringHeader() {
           <div className="relative">
             <Link
               to="/portal/home"
-              className="inline-flex h-9 items-center gap-1.5 rounded-full bg-zinc-950 px-4 text-xs font-medium text-white shadow-sm hover:bg-zinc-800 transition-colors dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-200"
+              className="inline-flex h-10 items-center gap-2 rounded-full bg-zinc-950 px-5 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800 transition-colors dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-200"
             >
               <span>Get Started</span>
-              <ChevronDown className="size-3" />
+              <ChevronDown className="size-3.5" />
             </Link>
           </div>
         </div>

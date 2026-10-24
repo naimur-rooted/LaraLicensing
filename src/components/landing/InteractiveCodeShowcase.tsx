@@ -155,35 +155,35 @@ public class LaraLicenseClient {
   };
 
   return (
-    <section className="py-20 border-b border-border/60 bg-muted/20">
+    <section id="code-showcase" className="py-24 border-b border-border/60 bg-muted/20 scroll-mt-20">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
           {/* Left Text Column matching Cryptlex / LicenseSpring */}
-          <div className="lg:col-span-5 space-y-4">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold tracking-wide uppercase">
-              <Terminal className="size-3.5" />
+          <div className="lg:col-span-5 space-y-5">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-semibold tracking-wide uppercase">
+              <Terminal className="size-4" />
               <span>Developer-First Integration</span>
             </div>
 
-            <h2 className="text-3xl font-bold tracking-tight text-foreground" style={{ fontFamily: "var(--font-display)" }}>
+            <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-foreground leading-[1.12]" style={{ fontFamily: "var(--font-display)" }}>
               Market-ready in a few lines of code
             </h2>
 
-            <p className="text-sm text-muted-foreground leading-relaxed">
+            <p className="text-base sm:text-lg text-muted-foreground leading-relaxed">
               Integrating LaraLicensing into your software is straightforward and fast. With lightweight headless REST endpoints, Ed25519 public keys, and offline JWT caching, you can implement bulletproof node-locking in minutes, not weeks.
             </p>
 
-            <ul className="space-y-2.5 pt-2 text-xs text-foreground/90 font-medium">
-              <li className="flex items-center gap-2">
-                <span className="size-1.5 rounded-full bg-emerald-500" />
+            <ul className="space-y-3.5 pt-2 text-sm text-foreground/90 font-medium">
+              <li className="flex items-center gap-2.5">
+                <span className="size-2 rounded-full bg-emerald-500 shrink-0" />
                 <span>Zero bloated native C++ SDK dependencies required.</span>
               </li>
-              <li className="flex items-center gap-2">
-                <span className="size-1.5 rounded-full bg-emerald-500" />
+              <li className="flex items-center gap-2.5">
+                <span className="size-2 rounded-full bg-emerald-500 shrink-0" />
                 <span>Automatic machine seat node-locking & offline caching.</span>
               </li>
-              <li className="flex items-center gap-2">
-                <span className="size-1.5 rounded-full bg-emerald-500" />
+              <li className="flex items-center gap-2.5">
+                <span className="size-2 rounded-full bg-emerald-500 shrink-0" />
                 <span>AI Blueprint Generator produces tailored drop-in code via Gemini.</span>
               </li>
             </ul>
@@ -191,10 +191,10 @@ public class LaraLicenseClient {
 
           {/* Right Code Block Column */}
           <div className="lg:col-span-7">
-            <div className="rounded-2xl border border-border/80 bg-zinc-950 dark:bg-zinc-900 shadow-xl overflow-hidden">
+            <div className="rounded-2xl border border-border/80 bg-zinc-950 dark:bg-zinc-900 shadow-2xl overflow-hidden">
               {/* Code Tab Bar */}
-              <div className="flex items-center justify-between border-b border-zinc-800 bg-zinc-900/80 px-4 py-2.5">
-                <div className="flex items-center gap-1.5">
+              <div className="flex items-center justify-between border-b border-zinc-800 bg-zinc-900/80 px-4 py-3">
+                <div className="flex items-center gap-2">
                   <span className="size-3 rounded-full bg-rose-500/80" />
                   <span className="size-3 rounded-full bg-amber-500/80" />
                   <span className="size-3 rounded-full bg-emerald-500/80" />
@@ -202,11 +202,11 @@ public class LaraLicenseClient {
                 </div>
 
                 {/* Language Selectors */}
-                <div className="flex items-center gap-1 bg-zinc-950/70 p-0.5 rounded-lg border border-zinc-800">
+                <div className="flex items-center gap-1 bg-zinc-950/70 p-1 rounded-lg border border-zinc-800">
                   <button
                     type="button"
                     onClick={() => setActiveTab("python")}
-                    className={`px-2 py-1 rounded text-[11px] font-medium transition-colors ${
+                    className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
                       activeTab === "python" ? "bg-zinc-800 text-white font-semibold" : "text-zinc-400 hover:text-white"
                     }`}
                   >
@@ -215,7 +215,7 @@ public class LaraLicenseClient {
                   <button
                     type="button"
                     onClick={() => setActiveTab("chrome")}
-                    className={`px-2 py-1 rounded text-[11px] font-medium transition-colors ${
+                    className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
                       activeTab === "chrome" ? "bg-zinc-800 text-white font-semibold" : "text-zinc-400 hover:text-white"
                     }`}
                   >
@@ -224,7 +224,7 @@ public class LaraLicenseClient {
                   <button
                     type="button"
                     onClick={() => setActiveTab("wordpress")}
-                    className={`px-2 py-1 rounded text-[11px] font-medium transition-colors ${
+                    className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
                       activeTab === "wordpress" ? "bg-zinc-800 text-white font-semibold" : "text-zinc-400 hover:text-white"
                     }`}
                   >
@@ -233,7 +233,7 @@ public class LaraLicenseClient {
                   <button
                     type="button"
                     onClick={() => setActiveTab("csharp")}
-                    className={`px-2 py-1 rounded text-[11px] font-medium transition-colors ${
+                    className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
                       activeTab === "csharp" ? "bg-zinc-800 text-white font-semibold" : "text-zinc-400 hover:text-white"
                     }`}
                   >
@@ -243,7 +243,7 @@ public class LaraLicenseClient {
               </div>
 
               {/* Code Viewer */}
-              <div className="relative p-5 font-mono text-xs text-zinc-100 overflow-x-auto max-h-[360px]">
+              <div className="relative p-5 font-mono text-[13px] text-zinc-100 overflow-x-auto max-h-[380px]">
                 <pre className="leading-relaxed">
                   <code>{current.code}</code>
                 </pre>
