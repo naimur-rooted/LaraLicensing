@@ -12,7 +12,7 @@ export const Route = createFileRoute("/_authenticated")({
     if (location.pathname.startsWith("/admin")) {
       throw redirect({ to: "/admin/login", search: { redirect: location.href } });
     }
-    throw redirect({ to: "/register", search: { redirect: location.href } });
+    throw redirect({ to: "/login", search: { redirect: location.href } });
   },
   component: AuthenticatedLayout,
 });

@@ -47,6 +47,7 @@ function DeveloperRegisterPage() {
     <AuthCard
       title="Create Developer Account"
       description="Select your platform subscription tier and bootstrap your product licensing workspace."
+      headerBadge="Developer Portal"
       asideHeadline="Ship software licenses like a Fortune 500 company."
       asideBody="Empowering desktop tool creators, Chrome extension builders, and SaaS vendors with enterprise node-locking and decoy pricing."
       asideTrustPoints={TRUST_POINTS}
@@ -55,10 +56,10 @@ function DeveloperRegisterPage() {
         <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-muted-foreground w-full">
           <span>Already have an account?</span>
           <Link
-            to="/admin/login"
-            className="font-medium text-primary hover:underline"
+            to="/login"
+            className="font-semibold text-primary hover:underline"
           >
-            Sign In / Operator Console &rarr;
+            Sign In &rarr;
           </Link>
         </div>
       }
@@ -70,7 +71,7 @@ function DeveloperRegisterPage() {
             <div className="flex-1">
               <p>{errorMessage}</p>
               {errorMessage.includes("already exists") && (
-                <Link to="/admin/login" className="font-semibold underline mt-1 block">
+                <Link to="/login" className="font-semibold underline mt-1 block">
                   Click here to sign in
                 </Link>
               )}

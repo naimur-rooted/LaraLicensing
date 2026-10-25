@@ -32,6 +32,7 @@ export interface AuthCardProps {
   readonly asideBody: string;
   readonly asideTrustPoints: ReadonlyArray<AuthCardTrustPoint>;
   readonly asideFooterNote?: string;
+  readonly headerBadge?: string;
   readonly children: ReactNode;
   readonly footerSlot?: ReactNode;
 }
@@ -53,7 +54,7 @@ export function AuthCard(props: AuthCardProps) {
               <Link to="/" className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline transition-colors">
                 ← Back to Landing Page
               </Link>
-              <span className="text-xs text-muted-foreground">Admin Console</span>
+              <span className="text-xs text-muted-foreground">{props.headerBadge ?? "Licensing Portal"}</span>
             </div>
             <AuthMobileBrand />
             <div className="surface-elevated rounded-2xl p-8 fade-in">

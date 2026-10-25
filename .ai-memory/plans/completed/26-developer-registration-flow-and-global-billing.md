@@ -1,7 +1,7 @@
 # Plan 26: Developer Registration Flow, Operator Console Isolation & Global Billing Architecture
 
 **Plan ID:** `26-developer-registration-flow-and-global-billing`  
-**Status:** In Progress  
+**Status:** Completed  
 **Normative Specification:** `02-spec/21-app/53-developer-registration-and-billing-architecture-spec.md`  
 **Parent Goals:**  
 1. Decouple public sign-up from internal platform operator administration.

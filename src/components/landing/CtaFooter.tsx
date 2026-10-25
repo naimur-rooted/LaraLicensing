@@ -33,13 +33,13 @@ const CTA_ENTRIES: readonly CtaEntry[] = [
     Id: "ResellerConsole",
     Label: "Reseller console",
     Description: "Sell licenses under a prefix, request quota, audit ledger.",
-    To: "/admin/login",
+    To: "/login",
   },
   {
     Id: "EndUserPortal",
     Label: "End-user portal",
     Description: "Look up a serial, verify a machine, download updates.",
-    To: "/admin/login",
+    To: "/login",
   },
 ] as const;
 

@@ -37,7 +37,7 @@ function useResellerSignOut() {
 
   return () => {
     clearLaraSession();
-    void navigate({ to: "/admin/login", replace: true });
+    void navigate({ to: "/login", replace: true });
   };
 }
 

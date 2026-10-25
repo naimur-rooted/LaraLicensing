@@ -86,7 +86,7 @@ function ResetPasswordPage() {
       });
       setMessage(reply);
       setTimeout(() => {
-        void navigate({ to: "/admin/login" });
+        void navigate({ to: "/login" });
       }, 1500);
     } catch (failure) {
       setError(formatLaraApiError(failure));
@@ -105,7 +105,7 @@ function ResetPasswordPage() {
       asideFooterNote="Audit-logged. Rate-limited. Tokens expire in 60 minutes."
       footerSlot={
         <Link
-          to="/admin/login"
+          to="/login"
           className="font-medium text-foreground underline underline-offset-4 hover:underline"
         >
           Back to sign in

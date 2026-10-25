@@ -200,5 +200,23 @@
         "MaxActivations": 5,
         "IsRevoked": false,
         "RegisteredAt": "2026-10-25T11:39:12.704689Z"
+    },
+    "LARA-F8IZ-0001": {
+        "SerialId": 1130771674,
+        "SerialValue": "LARA-F8IZ-0001",
+        "Category": "Yearly",
+        "TierName": "Scale",
+        "CustomerName": "Jane Doe",
+        "CustomerEmail": "approve-test@domain.com",
+        "Status": "active",
+        "ExpiresAt": "2027-10-25T13:07:31.606Z",
+        "Features": [
+            "core.reports",
+            "core.dashboards",
+            "addon.exports"
+        ],
+        "MaxActivations": 5,
+        "IsRevoked": false,
+        "RegisteredAt": "2026-10-25T13:07:32.566882Z"
     }
 }

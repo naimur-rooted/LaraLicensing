@@ -76,7 +76,7 @@ function ForgotPasswordPage() {
         <>
           Remembered it after all?{" "}
           <Link
-            to="/admin/login"
+            to="/login"
             className="font-medium text-foreground underline underline-offset-4 hover:underline"
           >
             Back to sign in

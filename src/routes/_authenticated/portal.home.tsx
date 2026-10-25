@@ -58,7 +58,7 @@ function PortalHome() {
 
   const handleSignOut = () => {
     clearLaraSession();
-    window.location.href = "/admin/login";
+    window.location.href = "/login";
   };
 
   const navItems = [

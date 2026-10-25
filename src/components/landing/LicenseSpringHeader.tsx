@@ -295,7 +295,7 @@ export function LicenseSpringHeader() {
         {/* Right Action Buttons */}
         <div className="flex items-center gap-3">
           <Link
-            to="/admin/login"
+            to="/login"
             className="text-sm font-semibold text-muted-foreground hover:text-foreground px-3.5 py-2 rounded-lg transition-colors cursor-pointer"
           >
             Login

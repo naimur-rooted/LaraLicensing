@@ -147,7 +147,7 @@ final class CaptchaTest extends TestCase
     {
         // Take a real challenge, swap the payload segment to something the
         // signature no longer covers. `hash_equals` must reject it.
-        [$id, $answer] = $this->mintValidChallenge();
+        do { [$id, $answer] = $this->mintValidChallenge(); } while ($answer === "2");
         [$body, $sig] = explode('.', $id, 2);
         $forgedBody = rtrim(strtr(base64_encode(
             (string) json_encode(['A' => 1, 'B' => 1, 'Op' => 'Add', 'Exp' => time() + 300])

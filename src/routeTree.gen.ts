@@ -15,6 +15,7 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as DocsRouteImport } from './routes/docs'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as LicensingModelsRouteImport } from './routes/licensing-models'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as ResellerInfoRouteImport } from './routes/reseller-info'
@@ -24,6 +25,7 @@ import { Route as StatusRouteImport } from './routes/status'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedPortalRouteImport } from './routes/_authenticated/portal'
 import { Route as AdminLoginRouteImport } from './routes/admin.login'
+import { Route as AuthSignInRouteImport } from './routes/auth.sign-in'
 import { Route as AuthSignUpRouteImport } from './routes/auth.sign-up'
 import { Route as E2eErrorHarnessRouteImport } from './routes/e2e.error-harness'
 import { Route as SolutionsChromeExtensionsRouteImport } from './routes/solutions.chrome-extensions'
@@ -96,6 +98,11 @@ const LicensingModelsRoute = LicensingModelsRouteImport.update({
   path: '/licensing-models',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PricingRoute = PricingRouteImport.update({
   id: '/pricing',
   path: '/pricing',
@@ -139,6 +146,11 @@ const AuthenticatedPortalRoute = AuthenticatedPortalRouteImport.update({
 const AdminLoginRoute = AdminLoginRouteImport.update({
   id: '/admin/login',
   path: '/admin/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthSignInRoute = AuthSignInRouteImport.update({
+  id: '/auth/sign-in',
+  path: '/auth/sign-in',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthSignUpRoute = AuthSignUpRouteImport.update({
@@ -390,6 +402,7 @@ export interface FileRoutesByFullPath {
   '/docs': typeof DocsRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/licensing-models': typeof LicensingModelsRoute
+  '/login': typeof LoginRoute
   '/pricing': typeof PricingRoute
   '/register': typeof RegisterRoute
   '/reseller-info': typeof ResellerInfoRoute
@@ -399,6 +412,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/portal': typeof AuthenticatedPortalRouteWithChildren
   '/admin/login': typeof AdminLoginRoute
+  '/auth/sign-in': typeof AuthSignInRoute
   '/auth/sign-up': typeof AuthSignUpRoute
   '/e2e/error-harness': typeof E2eErrorHarnessRoute
   '/solutions/chrome-extensions': typeof SolutionsChromeExtensionsRoute
@@ -448,6 +462,7 @@ export interface FileRoutesByTo {
   '/docs': typeof DocsRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/licensing-models': typeof LicensingModelsRoute
+  '/login': typeof LoginRoute
   '/pricing': typeof PricingRoute
   '/register': typeof RegisterRoute
   '/reseller-info': typeof ResellerInfoRoute
@@ -456,6 +471,7 @@ export interface FileRoutesByTo {
   '/status': typeof StatusRoute
   '/portal': typeof AuthenticatedPortalRouteWithChildren
   '/admin/login': typeof AdminLoginRoute
+  '/auth/sign-in': typeof AuthSignInRoute
   '/auth/sign-up': typeof AuthSignUpRoute
   '/e2e/error-harness': typeof E2eErrorHarnessRoute
   '/solutions/chrome-extensions': typeof SolutionsChromeExtensionsRoute
@@ -505,6 +521,7 @@ export interface FileRoutesById {
   '/docs': typeof DocsRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/licensing-models': typeof LicensingModelsRoute
+  '/login': typeof LoginRoute
   '/pricing': typeof PricingRoute
   '/register': typeof RegisterRoute
   '/reseller-info': typeof ResellerInfoRoute
@@ -514,6 +531,7 @@ export interface FileRoutesById {
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/portal': typeof AuthenticatedPortalRouteWithChildren
   '/admin/login': typeof AdminLoginRoute
+  '/auth/sign-in': typeof AuthSignInRoute
   '/auth/sign-up': typeof AuthSignUpRoute
   '/e2e/error-harness': typeof E2eErrorHarnessRoute
   '/solutions/chrome-extensions': typeof SolutionsChromeExtensionsRoute
@@ -565,6 +583,7 @@ export interface FileRouteTypes {
     | '/docs'
     | '/forgot-password'
     | '/licensing-models'
+    | '/login'
     | '/pricing'
     | '/register'
     | '/reseller-info'
@@ -574,6 +593,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/portal'
     | '/admin/login'
+    | '/auth/sign-in'
     | '/auth/sign-up'
     | '/e2e/error-harness'
     | '/solutions/chrome-extensions'
@@ -623,6 +643,7 @@ export interface FileRouteTypes {
     | '/docs'
     | '/forgot-password'
     | '/licensing-models'
+    | '/login'
     | '/pricing'
     | '/register'
     | '/reseller-info'
@@ -631,6 +652,7 @@ export interface FileRouteTypes {
     | '/status'
     | '/portal'
     | '/admin/login'
+    | '/auth/sign-in'
     | '/auth/sign-up'
     | '/e2e/error-harness'
     | '/solutions/chrome-extensions'
@@ -679,6 +701,7 @@ export interface FileRouteTypes {
     | '/docs'
     | '/forgot-password'
     | '/licensing-models'
+    | '/login'
     | '/pricing'
     | '/register'
     | '/reseller-info'
@@ -688,6 +711,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin'
     | '/_authenticated/portal'
     | '/admin/login'
+    | '/auth/sign-in'
     | '/auth/sign-up'
     | '/e2e/error-harness'
     | '/solutions/chrome-extensions'
@@ -739,6 +763,7 @@ export interface RootRouteChildren {
   DocsRoute: typeof DocsRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   LicensingModelsRoute: typeof LicensingModelsRoute
+  LoginRoute: typeof LoginRoute
   PricingRoute: typeof PricingRoute
   RegisterRoute: typeof RegisterRoute
   ResellerInfoRoute: typeof ResellerInfoRoute
@@ -746,6 +771,7 @@ export interface RootRouteChildren {
   SecurityRoute: typeof SecurityRoute
   StatusRoute: typeof StatusRoute
   AdminLoginRoute: typeof AdminLoginRoute
+  AuthSignInRoute: typeof AuthSignInRoute
   AuthSignUpRoute: typeof AuthSignUpRoute
   E2eErrorHarnessRoute: typeof E2eErrorHarnessRoute
   SolutionsChromeExtensionsRoute: typeof SolutionsChromeExtensionsRoute
@@ -796,6 +822,13 @@ declare module '@tanstack/react-router' {
       path: '/licensing-models'
       fullPath: '/licensing-models'
       preLoaderRoute: typeof LicensingModelsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/pricing': {
@@ -859,6 +892,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/login'
       fullPath: '/admin/login'
       preLoaderRoute: typeof AdminLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/sign-in': {
+      id: '/auth/sign-in'
+      path: '/auth/sign-in'
+      fullPath: '/auth/sign-in'
+      preLoaderRoute: typeof AuthSignInRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth/sign-up': {
@@ -1341,6 +1381,7 @@ const rootRouteChildren: RootRouteChildren = {
   DocsRoute: DocsRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   LicensingModelsRoute: LicensingModelsRoute,
+  LoginRoute: LoginRoute,
   PricingRoute: PricingRoute,
   RegisterRoute: RegisterRoute,
   ResellerInfoRoute: ResellerInfoRoute,
@@ -1348,6 +1389,7 @@ const rootRouteChildren: RootRouteChildren = {
   SecurityRoute: SecurityRoute,
   StatusRoute: StatusRoute,
   AdminLoginRoute: AdminLoginRoute,
+  AuthSignInRoute: AuthSignInRoute,
   AuthSignUpRoute: AuthSignUpRoute,
   E2eErrorHarnessRoute: E2eErrorHarnessRoute,
   SolutionsChromeExtensionsRoute: SolutionsChromeExtensionsRoute,
