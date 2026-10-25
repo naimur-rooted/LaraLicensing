@@ -58,6 +58,9 @@ Route::middleware('rate.auth:reset')->post('/Auth/ResetPassword', ResetPasswordC
 
 Route::middleware(['auth:sanctum', 'session.active'])->post('/Auth/Logout', LogoutController::class)->name('api.auth.logout');
 Route::middleware(['auth:sanctum', 'session.active'])->get('/Auth/Me', [MeController::class, 'show'])->name('api.auth.me');
+Route::middleware(['auth:sanctum', 'session.active'])->get('/Users/Me', [MeController::class, 'show'])->name('api.users.me');
+Route::middleware(['auth:sanctum', 'session.active'])->get('/v1/users/me', [MeController::class, 'show'])->name('api.v1.users.me');
+Route::middleware(['auth:sanctum', 'session.active'])->get('/api/v1/users/me', [MeController::class, 'show'])->name('api.compat.v1.users.me');
 Route::middleware(['auth:sanctum', 'session.active'])->get('/Me/Capabilities', [MeController::class, 'capabilities'])->name('api.me.capabilities');
 
 // v0.300.0. Public readiness probe for cPanel deploys and load balancers.

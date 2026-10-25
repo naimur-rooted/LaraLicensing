@@ -78,6 +78,18 @@ return Application::configure(basePath: dirname(__DIR__))
             'casbin.pep' => \App\Http\Middleware\CasbinPepMiddleware::class,
         ]);
 
+        $middleware->redirectGuestsTo(function (Request $request): ?string {
+            $isApi = $request->expectsJson() || $request->is(
+                'Api/*', 'App/*', 'api/*', 'app/*',
+                'Users/*', 'users/*', 'Auth/*', 'auth/*',
+                'Verify/*', 'verify/*', 'v1/*', 'Admin/*', 'admin/*',
+                'Reseller/*', 'reseller/*', 'Developer/*', 'developer/*',
+                'Me/*', 'me/*'
+            );
+
+            return $isApi ? null : '/login';
+        });
+
     })
     ->withExceptions(function (Exceptions $exceptions) {
         // Plan 06 step 6: LaraException -> envelope; unknown -> ServerError.
@@ -220,8 +232,10 @@ return Application::configure(basePath: dirname(__DIR__))
             );
         });
 
-        $exceptions->render(function (\Illuminate\Auth\AuthenticationException $e, Request $request) {
-            if (! $request->expectsJson() && ! $request->is('Api/*', 'App/*', 'api/*', 'app/*')) {
+        $isApi = fn (Request $req): bool => $req->expectsJson() || $req->is('Api/*', 'App/*', 'api/*', 'app/*', 'Users/*', 'users/*', 'Auth/*', 'auth/*', 'Verify/*', 'verify/*', 'v1/*', 'Admin/*', 'admin/*', 'Reseller/*', 'reseller/*', 'Developer/*', 'developer/*', 'Me/*', 'me/*');
+
+        $exceptions->render(function (\Illuminate\Auth\AuthenticationException $e, Request $request) use ($isApi) {
+            if (! $isApi($request)) {
                 return null;
             }
             $requestId = (string) ($request->attributes->get('lara.request_id') ?: ($request->headers->get('X-Request-Id') ?? ''));
@@ -237,8 +251,8 @@ return Application::configure(basePath: dirname(__DIR__))
             );
         });
 
-        $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\NotFoundHttpException $e, Request $request) {
-            if (! $request->expectsJson() && ! $request->is('Api/*', 'App/*', 'api/*', 'app/*')) {
+        $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\NotFoundHttpException $e, Request $request) use ($isApi) {
+            if (! $isApi($request)) {
                 return null;
             }
             $requestId = (string) ($request->attributes->get('lara.request_id') ?: ($request->headers->get('X-Request-Id') ?? ''));
@@ -254,8 +268,8 @@ return Application::configure(basePath: dirname(__DIR__))
             );
         });
 
-        $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException $e, Request $request) {
-            if (! $request->expectsJson() && ! $request->is('Api/*', 'App/*', 'api/*', 'app/*')) {
+        $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException $e, Request $request) use ($isApi) {
+            if (! $isApi($request)) {
                 return null;
             }
             $requestId = (string) ($request->attributes->get('lara.request_id') ?: ($request->headers->get('X-Request-Id') ?? ''));
@@ -271,7 +285,7 @@ return Application::configure(basePath: dirname(__DIR__))
             );
         });
 
-        $exceptions->render(function (\Throwable $e, Request $request) {
+        $exceptions->render(function (\Throwable $e, Request $request) use ($isApi) {
             // Only fires if no earlier renderer matched.
             if ($e instanceof LaraException) {
                 return null; // handled above; defensive
@@ -297,7 +311,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 'Previous' => optional($e->getPrevious())?->getMessage(),
             ]);
             // Plan 06 step 77: same web/JSON split as the LaraException renderer.
-            if (! $request->expectsJson() && ! $request->is('Api/*', 'App/*', 'api/*', 'app/*')) {
+            if (! $isApi($request)) {
                 return \Inertia\Inertia::render('Error', [
                     'status' => 500,
                     'errorCode' => 'ServerError',

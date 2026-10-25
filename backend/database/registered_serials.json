@@ -308,5 +308,23 @@
         "MaxActivations": 5,
         "IsRevoked": false,
         "RegisteredAt": "2026-10-25T17:59:26.653235Z"
+    },
+    "LARA-19KZ-0001": {
+        "SerialId": 2358348657,
+        "SerialValue": "LARA-19KZ-0001",
+        "Category": "Yearly",
+        "TierName": "Scale",
+        "CustomerName": "Jane Doe",
+        "CustomerEmail": "approve-test@domain.com",
+        "Status": "active",
+        "ExpiresAt": "2027-10-25T19:48:21.051Z",
+        "Features": [
+            "core.reports",
+            "core.dashboards",
+            "addon.exports"
+        ],
+        "MaxActivations": 5,
+        "IsRevoked": false,
+        "RegisteredAt": "2026-10-25T19:48:21.445036Z"
     }
 }

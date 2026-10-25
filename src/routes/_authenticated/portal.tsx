@@ -1,6 +1,7 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Navigate, Outlet, createFileRoute, useRouterState } from "@tanstack/react-router";
 
+import { RoutePending, RouteErrorState } from "../../components/shell/RouteFallbacks";
 import { meQueryOptions } from "../../lib/lara-me";
 
 /**
@@ -21,6 +22,15 @@ export const Route = createFileRoute("/_authenticated/portal")({
   head: () => ({
     meta: [{ title: "Portal | Licensing Portal" }, { name: "robots", content: "noindex,nofollow" }],
   }),
+  pendingComponent: () => (
+    <RoutePending
+      title="Developer Portal"
+      description="Verifying developer session and workspace..."
+    />
+  ),
+  errorComponent: ({ error, reset }) => (
+    <RouteErrorState title="Developer Portal" error={error} reset={reset} />
+  ),
   component: PortalRedirect,
 });
 

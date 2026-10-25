@@ -78,3 +78,30 @@ test('impersonation active returns Me.Impersonation with TargetUserId', function
     $this->assertArrayHasKey('Impersonation', $me);
     $this->assertSame($targetUser->id, $me['Impersonation']['TargetUserId']);
 });
+
+test('authenticated GET /Users/Me returns 200 with single resource array per user contracts spec', function () {
+    $this->seedWithProfile('default');
+    
+    $identity = DemoIdentities::all()[0];
+    
+    $loginRes = $this->postJson('/Api/Auth/Login', [
+        'Email' => $identity['Email'],
+        'Password' => DemoIdentities::password(),
+    ]);
+    
+    $token = $loginRes->json()['Results']['AccessToken'];
+    
+    $res = $this->withToken($token)->getJson('/Users/Me');
+    
+    $res->assertStatus(200);
+    $json = $res->json();
+    $this->assertTrue($json['Status']['IsSuccess']);
+    $this->assertIsArray($json['Results']);
+    $this->assertCount(1, $json['Results']);
+    
+    $me = $json['Results'][0];
+    $this->assertArrayHasKey('UserId', $me);
+    $this->assertArrayHasKey('Email', $me);
+    $this->assertArrayHasKey('RoleName', $me);
+    $this->assertSame($identity['Role'], $me['RoleName']);
+});

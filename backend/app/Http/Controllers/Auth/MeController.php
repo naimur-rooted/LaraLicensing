@@ -19,32 +19,58 @@ class MeController extends Controller
         /** @var User $user */
         $user = $request->user();
         $requestId = (string) $request->attributes->get('X-Request-Id', '');
+        $roleName = $this->resolveRoleName($user);
+        $me = $this->composeMeData($user, $roleName);
 
-        $me = [
-            'UserId' => (int) $user->getKey(),
-            'Id' => (int) $user->getKey(),
-            'Email' => (string) $user->Email,
-            'Role' => $user->getPrimaryRole(),
-            'Capabilities' => $user->getCapabilities(),
-        ];
-        $me = $this->attachImpersonation($user, $me);
+        if ($request->is('*Users/Me*', '*users/me*')) {
+            return ApiEnvelope::success([$me], $requestId);
+        }
 
         return ApiEnvelope::success(['Me' => $me], $requestId);
     }
 
+    private function resolveRoleName(User $user): string
+    {
+        $roleName = $user->getPrimaryRole() ?? 'EndUser';
+        $isDeveloper = $roleName === 'Developer' || $roleName === 'AppBuilder';
+
+        return $isDeveloper ? 'EndUser' : $roleName;
+    }
+
+    private function composeMeData(User $user, string $roleName): array
+    {
+        $displayName = (string) ($user->DisplayName ?? $user->Name ?? explode('@', (string) $user->Email)[0]);
+        $me = [
+            'UserId' => (int) $user->getKey(),
+            'Id' => (int) $user->getKey(),
+            'Email' => (string) $user->Email,
+            'Role' => $user->getPrimaryRole() ?? 'EndUser',
+            'RoleName' => $roleName,
+            'ResellerId' => $user->ResellerId ? (int) $user->ResellerId : null,
+            'DisplayName' => $displayName,
+            'Capabilities' => $user->getCapabilities(),
+        ];
+
+        return $this->attachImpersonation($user, $me);
+    }
+
     private function attachImpersonation(User $user, array $me): array
     {
-        $active = ImpersonationIndex::query()
-            ->where('ImpersonatorUserId', (int) $user->getKey())
-            ->whereNull('EndedAt')
-            ->latest('StartedAt')
-            ->first();
+        try {
+            $active = ImpersonationIndex::query()
+                ->where('ImpersonatorUserId', (int) $user->getKey())
+                ->whereNull('EndedAt')
+                ->latest('StartedAt')
+                ->first();
 
-        if ($active !== null) {
-            $me['Impersonation'] = [
-                'TargetUserId' => (int) $active->TargetUserId,
-                'SessionId' => (string) $active->SessionId,
-            ];
+            if ($active !== null) {
+                $me['Impersonation'] = [
+                    'TargetUserId' => (int) $active->TargetUserId,
+                    'SessionId' => (string) $active->SessionId,
+                ];
+            }
+        } catch (\Throwable) {
+            // Defensive: if ImpersonationIndex table does not exist or fails, do not crash Me
         }
 
         return $me;
