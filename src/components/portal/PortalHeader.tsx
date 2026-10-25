@@ -36,7 +36,7 @@ export function PortalHeader({
             <Shield className="size-4 text-primary" />
           </div>
           <span className="font-bold tracking-tight text-sm text-foreground hidden sm:inline-block">
-            LaraLicensing <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-muted text-muted-foreground ml-1">Portal</span>
+            LaraLicensing <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-primary/10 text-primary font-semibold ml-1">Developer Studio</span>
           </span>
         </div>
       </div>

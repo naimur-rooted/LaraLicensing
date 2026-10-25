@@ -35,7 +35,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
             return redirect("/reseller/{$tenantId}");
         }
-        if ($role === 'EndUser') {
+        if (in_array($role, ['Developer', 'AppBuilder', 'EndUser'], true)) {
             return redirect('/portal/home');
         }
 

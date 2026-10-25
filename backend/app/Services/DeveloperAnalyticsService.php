@@ -17,6 +17,14 @@ class DeveloperAnalyticsService
     /**
      * Get aggregate overview metrics for a developer.
      */
+    public function getOverview(int $userId): array
+    {
+        return $this->getOverviewMetrics($userId);
+    }
+
+    /**
+     * Get aggregate overview metrics for a developer.
+     */
     public function getOverviewMetrics(?int $userId = null, ?string $filterSlug = null): array
     {
         if ($userId === null || $userId <= 0) {

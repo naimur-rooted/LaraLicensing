@@ -29,7 +29,7 @@ export const Route = createFileRoute("/_authenticated/portal/home")({
 function PortalHome() {
   const meQuery = useQuery(meQueryOptions());
   const me = meQuery.data?.[0];
-  const displayName = me?.DisplayName ?? me?.Email ?? "Portal User";
+  const displayName = me?.DisplayName ?? me?.Email ?? "Developer User";
   const customerEmail = me?.Email ?? "user@licensingportal.local";
   const [selectedSerial, setSelectedSerial] = useState("");
   const [activeTab, setActiveTab] = useState<PortalTabId>("overview");
