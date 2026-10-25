@@ -31,7 +31,7 @@ export function LicenseSpringFooter() {
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li><Link to="/portal/home" className="hover:text-foreground transition-colors">Overview Dashboard</Link></li>
               <li><Link to="/portal/home" className="hover:text-foreground transition-colors">Products & Deals</Link></li>
-              <li><Link to="/portal/home" className="hover:text-foreground transition-colors">Reseller Wholesale Hub</Link></li>
+              <li><Link to="/portal/home" className="hover:text-foreground transition-colors">Developer Studio</Link></li>
               <li><Link to="/portal/home" className="hover:text-foreground transition-colors">Fraud Guard & Telemetry</Link></li>
               <li><Link to="/portal/home" className="hover:text-foreground transition-colors">Webhook Integrations</Link></li>
             </ul>
@@ -53,7 +53,7 @@ export function LicenseSpringFooter() {
           <div className="space-y-3">
             <h4 className="text-sm font-bold text-foreground uppercase tracking-wider">Developers</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><Link to="/admin/login" className="hover:text-foreground transition-colors">Admin Console</Link></li>
+              <li><Link to="/portal/home" className="hover:text-foreground transition-colors">Developer Console</Link></li>
               <li><Link to="/portal/home" className="hover:text-foreground transition-colors">AI Integration Blueprint</Link></li>
               <li><a href="#code-showcase" className="hover:text-foreground transition-colors">Interactive Code SDKs</a></li>
               <li><span className="hover:text-foreground transition-colors cursor-pointer">Ed25519 Public Keys</span></li>

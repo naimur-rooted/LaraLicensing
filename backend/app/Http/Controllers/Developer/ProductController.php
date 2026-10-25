@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Developer;
 
+use App\Exceptions\AuthException;
 use App\Exceptions\NotFoundException;
 use App\Exceptions\ValidationException;
 use App\Http\Controllers\Controller;
@@ -44,8 +45,10 @@ class ProductController extends Controller
             throw ValidationException::invalidInput('productName is required.');
         }
         $userId = $this->resolveUserId($request);
-        $effectiveUserId = $userId > 0 ? $userId : 1;
-        $product = $this->productService->createProduct($effectiveUserId, $request->all());
+        if ($userId <= 0) {
+            throw AuthException::unauthorized('Authentication is required.');
+        }
+        $product = $this->productService->createProduct($userId, $request->all());
         AuditWriter::write($request, 'ProductCreated', 'Products', (int) $product->ProductId, [
             'ProductSlug' => (string) $product->productSlug,
             'ProductName' => (string) $product->productName,

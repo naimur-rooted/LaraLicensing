@@ -80,7 +80,7 @@ class DeveloperAnalyticsService
     {
         return [
             'activations' => ['current' => 0, 'max' => 50, 'label' => 'Activations'],
-            'trialActivations' => ['current' => 0, 'max' => 100, 'label' => 'Trial Activations'],
+            'trialActivations' => ['current' => 0, 'max' => 20000, 'label' => 'Trial Activations'],
             'licenses' => ['current' => 0, 'max' => 100, 'label' => 'Licenses'],
             'users' => ['current' => 0, 'max' => null, 'label' => 'Users'],
             'releases' => ['current' => 0, 'max' => 50, 'label' => 'Releases'],
@@ -91,7 +91,7 @@ class DeveloperAnalyticsService
     {
         $zeroQuotas = [
             'activations' => ['used' => 0, 'total' => 50],
-            'trialActivations' => ['used' => 0, 'total' => 100],
+            'trialActivations' => ['used' => 0, 'total' => 20000],
             'apiRequests' => ['used' => 0, 'total' => 100000],
             'users' => ['used' => 0, 'total' => 50],
             'releases' => ['used' => 0, 'total' => 50],

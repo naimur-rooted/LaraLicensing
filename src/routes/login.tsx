@@ -6,7 +6,7 @@ import { CustomerLoginForm } from "@/components/auth/CustomerLoginForm";
 import { RuntimeModeFlipButton } from "@/components/shell/RuntimeModeFlipButton";
 
 export const Route = createFileRoute("/login")({
-  validateSearch: (search: Record<string, unknown>) => ({
+  validateSearch: (search: Record<string, unknown>): { redirect?: string } => ({
     redirect: typeof search.redirect === "string" ? search.redirect : undefined,
   }),
   head: () => ({
@@ -53,19 +53,15 @@ function CustomerLoginPage() {
         asideTrustPoints={CUSTOMER_TRUST_POINTS}
         asideFooterNote="Session-scoped tokens, rate-limited and audit-logged."
         footerSlot={
-          <div className="flex flex-col gap-2.5 text-xs text-muted-foreground w-full">
-            <div className="flex items-center justify-between">
-              <span>Don't have an account?</span>
-              <Link to="/register" className="font-semibold text-primary hover:underline">
-                Create Developer Account &rarr;
-              </Link>
-            </div>
-            <div className="flex items-center justify-between border-t border-border/40 pt-2 text-[11px]">
-              <span>Platform Operator?</span>
-              <Link to="/admin/login" className="text-muted-foreground hover:text-foreground hover:underline">
-                Operator Console &rarr;
-              </Link>
-            </div>
+          <div className="flex items-center justify-between text-xs text-muted-foreground w-full">
+            <span>Don't have an account?</span>
+            <Link
+              to="/register"
+              search={{ plan: "STARTER" }}
+              className="font-semibold text-primary hover:underline"
+            >
+              Create Developer Account &rarr;
+            </Link>
           </div>
         }
       >

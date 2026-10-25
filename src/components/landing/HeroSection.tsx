@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { Sparkles } from "lucide-react";
 
-import { RuntimeModeSwitch } from "../runtime-mode-switch";
+import { RuntimeModeSwitch } from "@/components/shell/RuntimeModeSwitch";
 
 export function HeroSection() {
   return (
@@ -34,12 +34,6 @@ export function HeroSection() {
             className="inline-flex h-11 items-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
           >
             Start Free Developer Trial
-          </Link>
-          <Link
-            to="/admin/login"
-            className="inline-flex h-11 items-center rounded-md border border-input bg-background px-5 text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-          >
-            Operator Console
           </Link>
           <RuntimeModeSwitch />
         </div>

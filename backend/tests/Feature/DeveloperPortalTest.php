@@ -78,8 +78,10 @@ class DeveloperPortalTest extends TestCase
 
     public function test_can_create_product_and_provisions_sqlite_shard(): void
     {
+        $user = new User();
+        $user->UserId = 1;
         $slug = 'test-scraper-' . time();
-        $response = $this->postJson('/api/v1/developer/products', [
+        $response = $this->actingAs($user)->postJson('/api/v1/developer/products', [
             'productName' => 'Test Lead Scraper',
             'productSlug' => $slug,
             'category' => 'ChromeExtension',
@@ -89,6 +91,16 @@ class DeveloperPortalTest extends TestCase
             ->assertJsonPath('Data.productSlug', $slug);
         $this->assertFileExists(database_path("product_{$slug}.sqlite"));
         $this->cleanUpShard($slug);
+    }
+
+    public function test_unauthenticated_caller_cannot_create_product(): void
+    {
+        $response = $this->postJson('/api/v1/developer/products', [
+            'productName' => 'Unauthorized Product',
+            'productSlug' => 'unauthorized-tool',
+            'category' => 'ChromeExtension',
+        ]);
+        $response->assertStatus(401);
     }
 
     public function test_can_add_custom_pricing_deal(): void

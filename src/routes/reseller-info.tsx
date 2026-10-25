@@ -61,7 +61,7 @@ function ResellerInfoPage() {
             </p>
             <div className="pt-2">
               <Link
-                to="/admin/login"
+                to="/login"
                 className="inline-flex h-11 items-center gap-2 rounded-full bg-primary px-6 text-sm font-semibold text-primary-foreground shadow-md hover:bg-primary/90 transition-colors"
               >
                 <span>Access Reseller Hub</span>
