@@ -48,32 +48,10 @@ export const ZERO_STATE_OVERVIEW: OverviewData = {
   timeline: [],
   activationsByCountry: [],
   productsCount: 0,
-  trialExpiresOn: "Nov 20, 2026",
+  trialExpiresOn: "Active",
 };
 
-export const PREVIEW_OVERVIEW_DATA: OverviewData = {
-  kpis: {
-    activations: { current: 14, max: 50, label: "Activations" },
-    trialActivations: { current: 3, max: 20000, label: "Trial Activations" },
-    licenses: { current: 18, max: null, label: "Licenses" },
-    users: { current: 4, max: 50, label: "Users" },
-    releases: { current: 2, max: 50, label: "Releases" },
-  },
-  timeline: [
-    { date: "2026-10-01", shortDate: "10/01", activations: 1, trialActivations: 0 },
-    { date: "2026-10-05", shortDate: "10/05", activations: 3, trialActivations: 1 },
-    { date: "2026-10-10", shortDate: "10/10", activations: 6, trialActivations: 1 },
-    { date: "2026-10-15", shortDate: "10/15", activations: 10, trialActivations: 2 },
-    { date: "2026-10-20", shortDate: "10/20", activations: 14, trialActivations: 3 },
-  ],
-  activationsByCountry: [
-    { country: "United States", code: "US", count: 8, percentage: 57 },
-    { country: "Germany", code: "DE", count: 4, percentage: 29 },
-    { country: "United Kingdom", code: "GB", count: 2, percentage: 14 },
-  ],
-  productsCount: 1,
-  trialExpiresOn: "Nov 20, 2026",
-};
+export const PREVIEW_OVERVIEW_DATA: OverviewData = ZERO_STATE_OVERVIEW;
 
 export function mapOverviewData(raw: any): OverviewData {
   if (raw?.kpis) {

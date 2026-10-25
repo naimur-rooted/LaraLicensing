@@ -1,6 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 import { z } from "zod";
 import { list, read, write } from "./preview-store";
+import { getApiBaseUrl } from "./lara-api-client";
 
 export const CustomerLicenseRequestStatus = {
   Pending: "Pending",
@@ -252,7 +253,7 @@ export async function approveCustomerLicenseRequest(
   await write<CustomerLicenseRequest>("customer-requests", requestId, updated);
 
   try {
-    fetch("http://127.0.0.1:8000/api/Serials/Register", {
+    fetch(`${getApiBaseUrl()}/api/Serials/Register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -347,7 +348,7 @@ export async function deactivateCustomerLicense(
 
     // Sync revocation to backend API and registered_serials.json
     try {
-      fetch("http://127.0.0.1:8000/api/Serials/Revoke", {
+      fetch(`${getApiBaseUrl()}/api/Serials/Revoke`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -436,7 +437,7 @@ export async function getSerialDevices(serialValue: string): Promise<{
 }> {
   const clean = serialValue.trim().toUpperCase();
   try {
-    const res = await fetch(`http://127.0.0.1:8000/api/Serials/${encodeURIComponent(clean)}`);
+    const res = await fetch(`${getApiBaseUrl()}/api/Serials/${encodeURIComponent(clean)}`);
     if (res.ok) {
       const json = await res.json();
       if (json.Data) {
@@ -463,7 +464,7 @@ export async function getSerialDevices(serialValue: string): Promise<{
 export async function unbindCustomerLicenseDevice(serialValue: string, deviceId: string): Promise<boolean> {
   const clean = serialValue.trim().toUpperCase();
   try {
-    await fetch(`http://127.0.0.1:8000/api/Serials/UnbindDevice`, {
+    await fetch(`${getApiBaseUrl()}/api/Serials/UnbindDevice`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ SerialValue: clean, DeviceId: deviceId }),
@@ -497,7 +498,7 @@ export async function cancelCustomerSubscriptionRenewal(requestId: string): Prom
 
   if (current.IssuedLicenseKey) {
     try {
-      fetch("http://127.0.0.1:8000/api/Serials/CancelRenewal", {
+      fetch(`${getApiBaseUrl()}/api/Serials/CancelRenewal`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ SerialValue: current.IssuedLicenseKey }),

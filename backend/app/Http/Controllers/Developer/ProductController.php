@@ -24,7 +24,7 @@ class ProductController extends Controller
     public function index(Request $request): JsonResponse
     {
         $userId = $this->resolveUserId($request);
-        $products = $this->productService->listProducts($userId);
+        $products = $userId > 0 ? $this->productService->listProducts($userId) : collect();
         return response()->json(['IsSuccess' => true, 'Data' => $products]);
     }
 
@@ -44,7 +44,8 @@ class ProductController extends Controller
             throw ValidationException::invalidInput('productName is required.');
         }
         $userId = $this->resolveUserId($request);
-        $product = $this->productService->createProduct($userId, $request->all());
+        $effectiveUserId = $userId > 0 ? $userId : 1;
+        $product = $this->productService->createProduct($effectiveUserId, $request->all());
         AuditWriter::write($request, 'ProductCreated', 'Products', (int) $product->ProductId, [
             'ProductSlug' => (string) $product->productSlug,
             'ProductName' => (string) $product->productName,
@@ -55,7 +56,7 @@ class ProductController extends Controller
     private function resolveUserId(Request $request): int
     {
         $userId = (int) ($request->user()?->UserId ?? auth()->id() ?? auth('sanctum')->id());
-        return $userId > 0 ? $userId : 1;
+        return $userId > 0 ? $userId : 0;
     }
 
     public function addDeal(string $slug, Request $request): JsonResponse

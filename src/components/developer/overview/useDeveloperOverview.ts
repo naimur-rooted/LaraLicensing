@@ -5,7 +5,7 @@ import { getRuntimeMode } from "@/lib/runtime-mode";
 import {
   type OverviewData,
   type OverviewProductOption,
-  PREVIEW_OVERVIEW_DATA,
+  ZERO_STATE_OVERVIEW,
   mapOverviewData,
   createOverviewAuthHeaders,
 } from "./overview-types";
@@ -19,7 +19,7 @@ export function useDeveloperOverview() {
 
   const fetchOverview = useCallback(async (slug = selectedProduct) => {
     if (isPreviewMode) {
-      setData(PREVIEW_OVERVIEW_DATA);
+      setData(ZERO_STATE_OVERVIEW);
       return;
     }
     setIsRefreshing(true);
@@ -40,7 +40,7 @@ export function useDeveloperOverview() {
   useEffect(() => {
     fetchOverview();
     if (isPreviewMode) {
-      setProductsList([{ slug: "preview-app", name: "Sample Desktop Suite" }]);
+      setProductsList([]);
       return;
     }
     fetch(`${getApiBaseUrl()}/api/v1/developer/products`, {

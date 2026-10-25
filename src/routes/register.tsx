@@ -3,6 +3,7 @@ import { useState } from "react";
 import { ShieldCheck, Database, KeyRound, AlertCircle } from "lucide-react";
 import { AuthCard, type AuthCardTrustPoint } from "@/components/auth/AuthCard";
 import { DeveloperRegisterForm } from "@/components/auth/DeveloperRegisterForm";
+import { RuntimeModeFlipButton } from "@/components/shell/RuntimeModeFlipButton";
 
 export const Route = createFileRoute("/register")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -83,6 +84,7 @@ function DeveloperRegisterPage() {
           onSuccess={() => navigate({ to: "/portal/home", replace: true })}
           onError={(msg) => setErrorMessage(msg)}
         />
+        <RuntimeModeFlipButton />
       </div>
     </AuthCard>
   );

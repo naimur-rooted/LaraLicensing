@@ -19,6 +19,9 @@ class DeveloperAnalyticsService
      */
     public function getOverviewMetrics(?int $userId = null, ?string $filterSlug = null): array
     {
+        if ($userId === null || $userId <= 0) {
+            return $this->buildZeroStateMetrics();
+        }
         $products = $this->fetchProductsForAnalytics($userId, $filterSlug);
         if ($products->isEmpty()) {
             return $this->buildZeroStateMetrics();

@@ -20,6 +20,18 @@ import {
   TrendingUp,
 } from "lucide-react";
 import type { DeveloperProductItem, ProductDealItem } from "./DeveloperProductsDashboard";
+import { getApiBaseUrl } from "@/lib/lara-api-client";
+import { getLaraAccessToken } from "@/lib/lara-api-session";
+
+function getDeveloperHeaders(): HeadersInit {
+  const token = getLaraAccessToken();
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+    "Content-Type": "application/json",
+  };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  return headers;
+}
 
 interface AiPricingArchitectDialogProps {
   isOpen: boolean;
@@ -51,9 +63,9 @@ export function AiPricingArchitectDialog({
     setAppliedSuccess(false);
 
     try {
-      const res = await fetch("http://127.0.0.1:8000/api/v1/developer/ai/design-pricing", {
+      const res = await fetch(`${getApiBaseUrl()}/api/v1/developer/ai/design-pricing`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getDeveloperHeaders(),
         body: JSON.stringify({
           productSlug: product.productSlug,
           userPrompt: finalPrompt,
@@ -80,9 +92,9 @@ export function AiPricingArchitectDialog({
     setErrorMessage(null);
 
     try {
-      const res = await fetch(`http://127.0.0.1:8000/api/v1/developer/products/${product.productSlug}/apply-ai-deals`, {
+      const res = await fetch(`${getApiBaseUrl()}/api/v1/developer/products/${product.productSlug}/apply-ai-deals`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getDeveloperHeaders(),
         body: JSON.stringify({ deals: suggestedDeals }),
       });
 

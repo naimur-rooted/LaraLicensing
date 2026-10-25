@@ -6,6 +6,18 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, Box, Sparkles, CheckCircle2, Loader2, Bot } from "lucide-react";
 import type { DeveloperProductItem, ProductDealItem } from "./DeveloperProductsDashboard";
+import { getApiBaseUrl } from "@/lib/lara-api-client";
+import { getLaraAccessToken } from "@/lib/lara-api-session";
+
+function getDeveloperHeaders(): HeadersInit {
+  const token = getLaraAccessToken();
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+    "Content-Type": "application/json",
+  };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  return headers;
+}
 
 interface CreateProductDialogProps {
   isOpen: boolean;
@@ -90,9 +102,9 @@ export function CreateProductDialog({ isOpen, onOpenChange, onProductCreated }: 
         promptText = `Strategy Model: ${strategyNames[aiStrategy]}. Killer Features & Value Proposition: ${aiKillerFeatures || 'Standard category capabilities'}. Target Price Range: ${aiTargetPrice || 'Market competitive'}. Output packages with software-specific feature perks that directly deliver on this value proposition and output the detected seatUnitName (e.g. Discord Servers, Profiles, Stores, Nodes).`;
       }
 
-      const res = await fetch("http://127.0.0.1:8000/api/v1/developer/ai/design-pricing", {
+      const res = await fetch(`${getApiBaseUrl()}/api/v1/developer/ai/design-pricing`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getDeveloperHeaders(),
         body: JSON.stringify({
           productSlug: cleanSlug || "draft-product",
           productName: name,
@@ -192,9 +204,9 @@ export function CreateProductDialog({ isOpen, onOpenChange, onProductCreated }: 
 
     // Provision real SQLite shard and deals on the backend
     try {
-      await fetch("http://127.0.0.1:8000/api/v1/developer/products", {
+      await fetch(`${getApiBaseUrl()}/api/v1/developer/products`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getDeveloperHeaders(),
         body: JSON.stringify({
           productSlug: cleanSlug,
           productName: productName.trim(),

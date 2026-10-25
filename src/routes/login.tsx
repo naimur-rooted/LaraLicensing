@@ -3,6 +3,7 @@ import { KeyRound, ShieldCheck, Sparkles } from "lucide-react";
 
 import { AuthCard, type AuthCardTrustPoint } from "@/components/auth/AuthCard";
 import { CustomerLoginForm } from "@/components/auth/CustomerLoginForm";
+import { RuntimeModeFlipButton } from "@/components/shell/RuntimeModeFlipButton";
 
 export const Route = createFileRoute("/login")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -68,6 +69,7 @@ function CustomerLoginPage() {
       }
     >
       <CustomerLoginForm redirectTo={search.redirect} />
+      <RuntimeModeFlipButton />
     </AuthCard>
   );
 }

@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { getApiBaseUrl } from "@/lib/lara-api-client";
+import { getLaraAccessToken } from "@/lib/lara-api-session";
 
 interface ChatMessage {
   id: string;
@@ -78,9 +80,13 @@ export function DeveloperSupportChatbot({ userName = "Naimur" }: DeveloperSuppor
         text: m.text,
       }));
 
-      const res = await fetch("http://127.0.0.1:8000/api/v1/developer/ai/chat", {
+      const token = getLaraAccessToken();
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      const res = await fetch(`${getApiBaseUrl()}/api/v1/developer/ai/chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({
           message: text,
           history: historyPayload,

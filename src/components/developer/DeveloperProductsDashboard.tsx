@@ -39,6 +39,19 @@ import {
 } from "lucide-react";
 import { CreateProductDialog } from "./CreateProductDialog";
 import { AiPricingArchitectDialog } from "./AiPricingArchitectDialog";
+import { getApiBaseUrl } from "@/lib/lara-api-client";
+import { getLaraAccessToken } from "@/lib/lara-api-session";
+import { getRuntimeMode } from "@/lib/runtime-mode";
+
+function getDeveloperHeaders(): HeadersInit {
+  const token = getLaraAccessToken();
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+    "Content-Type": "application/json",
+  };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  return headers;
+}
 
 export interface ProductDealItem {
   ProductDealId?: number;
@@ -93,9 +106,9 @@ export function DeveloperProductsDashboard({ onOpenPlanModal }: DeveloperProduct
   const handleGenerateBlueprintCode = async (product: DeveloperProductItem, framework: string) => {
     setIsGeneratingBlueprintCode(true);
     try {
-      const res = await fetch(`http://127.0.0.1:8000/api/v1/developer/products/${product.productSlug}/blueprint-code`, {
+      const res = await fetch(`${getApiBaseUrl()}/api/v1/developer/products/${product.productSlug}/blueprint-code`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getDeveloperHeaders(),
         body: JSON.stringify({
           framework,
           notes: blueprintNotes,
@@ -117,10 +130,13 @@ export function DeveloperProductsDashboard({ onOpenPlanModal }: DeveloperProduct
   const [currentTier, setCurrentTier] = useState("Free Starter");
 
   React.useEffect(() => {
-    fetch("http://127.0.0.1:8000/api/v1/developer/products")
+    if (getRuntimeMode().Mode === "preview") return;
+    fetch(`${getApiBaseUrl()}/api/v1/developer/products`, {
+      headers: getDeveloperHeaders(),
+    })
       .then((res) => res.json())
       .then((data) => {
-        if (data.IsSuccess && Array.isArray(data.Data) && data.Data.length > 0) {
+        if (data.IsSuccess && Array.isArray(data.Data)) {
           setProducts(data.Data);
         }
       })
@@ -180,10 +196,10 @@ export function DeveloperProductsDashboard({ onOpenPlanModal }: DeveloperProduct
 
     try {
       const res = await fetch(
-        `http://127.0.0.1:8000/api/v1/developer/products/${editingProduct.productSlug}/deals/${editingDealId}`,
+        `${getApiBaseUrl()}/api/v1/developer/products/${editingProduct.productSlug}/deals/${editingDealId}`,
         {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
+          headers: getDeveloperHeaders(),
           body: JSON.stringify({
             dealName: editDealName,
             dealCode: editDealCode,
@@ -222,9 +238,10 @@ export function DeveloperProductsDashboard({ onOpenPlanModal }: DeveloperProduct
 
     try {
       const res = await fetch(
-        `http://127.0.0.1:8000/api/v1/developer/products/${product.productSlug}/deals/${deal.ProductDealId}`,
+        `${getApiBaseUrl()}/api/v1/developer/products/${product.productSlug}/deals/${deal.ProductDealId}`,
         {
           method: "DELETE",
+          headers: getDeveloperHeaders(),
         }
       );
       const data = await res.json();
@@ -296,9 +313,9 @@ ${dealsList}
     };
 
     try {
-      await fetch(`http://127.0.0.1:8000/api/v1/developer/products/${targetProduct.productSlug}/deals`, {
+      await fetch(`${getApiBaseUrl()}/api/v1/developer/products/${targetProduct.productSlug}/deals`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getDeveloperHeaders(),
         body: JSON.stringify(newDeal),
       });
     } catch {}

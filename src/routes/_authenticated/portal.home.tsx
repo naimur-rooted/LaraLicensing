@@ -9,6 +9,7 @@ import { PortalTabContent } from "@/components/portal/PortalTabContent";
 import type { PortalTabId } from "@/components/portal/portal-types";
 import { meQueryOptions } from "@/lib/lara-me";
 import { clearLaraSession } from "@/lib/lara-api-session";
+import { RuntimeModeFlipButton } from "@/components/shell/RuntimeModeFlipButton";
 
 export const Route = createFileRoute("/_authenticated/portal/home")({
   ssr: false,
@@ -82,6 +83,7 @@ function PortalHome() {
       </div>
 
       <DeveloperSupportChatbot userName={displayName} />
+      <RuntimeModeFlipButton />
       <PlatformSubscriptionModal
         isOpen={isGlobalPlanModalOpen}
         onOpenChange={setIsGlobalPlanModalOpen}
