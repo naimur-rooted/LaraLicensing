@@ -2,6 +2,9 @@ import { z } from "zod";
 
 import { HttpMethodType, requestLaraApi } from "./lara-api-client";
 import { setLaraAccessToken, setLaraRefreshToken } from "./lara-api-session";
+import { getRuntimeMode } from "./runtime-mode";
+import { write } from "./preview-store";
+import type { MeUser } from "@/generated/api/schema";
 
 const tokenResultSchema = z.object({
   AccessToken: z.string().min(1),
@@ -12,12 +15,6 @@ const tokenResultSchema = z.object({
 
 export type LaraTokenResult = z.infer<typeof tokenResultSchema>;
 
-/**
- * Plan 09 login modernization. Login payload accepted by the Laravel
- * backend at POST /Api/Auth/Login. RememberMe extends AuthSession TTL
- * to `lara.remember_me_ttl_minutes`. CaptchaChallengeId + CaptchaAnswer
- * satisfy LoginCaptchaRequired (returned after N consecutive failures).
- */
 export interface LaraLoginRequest {
   Email: string;
   Password: string;
@@ -34,7 +31,20 @@ const captchaChallengeSchema = z.object({
 
 export type LaraCaptchaChallenge = z.infer<typeof captchaChallengeSchema>;
 
+async function createPreviewLoginSession(email: string): Promise<LaraTokenResult> {
+  const clean = email.replace(/[^a-zA-Z0-9]/g, "_");
+  const access = `seed_access_${clean}_${Date.now()}`;
+  const refresh = `seed_refresh_${clean}_${Date.now()}`;
+  setLaraAccessToken(access);
+  setLaraRefreshToken(refresh);
+
+  return { AccessToken: access, RefreshToken: refresh, TokenType: "Bearer", ExpiresIn: 3600 };
+}
+
 export async function loginToLaraApi(input: LaraLoginRequest): Promise<LaraTokenResult> {
+  if (getRuntimeMode().Mode === "preview") {
+    return createPreviewLoginSession(input.Email);
+  }
   const [result] = await requestLaraApi("/Auth/Token", tokenResultSchema, {
     method: HttpMethodType.Post,
     body: input,
@@ -46,6 +56,13 @@ export async function loginToLaraApi(input: LaraLoginRequest): Promise<LaraToken
 }
 
 export async function fetchLoginCaptcha(): Promise<LaraCaptchaChallenge> {
+  if (getRuntimeMode().Mode === "preview") {
+    return {
+      ChallengeId: "preview-captcha-challenge",
+      Question: "5 + 3",
+      ExpiresAt: new Date(Date.now() + 300000).toISOString(),
+    };
+  }
   const [result] = await requestLaraApi("/Auth/Captcha", captchaChallengeSchema, {
     method: HttpMethodType.Get,
   });
@@ -53,19 +70,6 @@ export async function fetchLoginCaptcha(): Promise<LaraCaptchaChallenge> {
   return result;
 }
 
-/**
- * v0.300.0. Bootstrap-only registration.
- *
- * Root cause this exists: `POST /Api/Auth/Register` has shipped since the
- * first-user-bootstrap turn but no frontend surface consumed it, leaving
- * fresh installs unable to mint their own SuperAdmin without curl. The
- * backend returns `Token` (a plaintext Sanctum PAT bound to the newly
- * opened AuthSession), NOT the `AccessToken`/`RefreshToken` pair the
- * `/Auth/Token` endpoint returns; we persist it as the access token so
- * the console lets the new SuperAdmin in immediately. No refresh token
- * is minted here on purpose (bootstrap is a one-shot); the user
- * re-authenticates via /admin/login once ExpiresAt elapses.
- */
 const registerResultSchema = z.object({
   UserId: z.number().int().positive(),
   Email: z.string().email(),
@@ -122,9 +126,49 @@ const developerRegisterResultSchema = z.object({
 
 export type LaraDeveloperRegisterResult = z.infer<typeof developerRegisterResultSchema>;
 
+async function writePreviewMeUser(email: string, displayName?: string): Promise<void> {
+  try {
+    await write<MeUser>("me", "current", {
+      Id: "01H00000000000000DEV00001",
+      Email: email,
+      DisplayName: displayName ?? "Developer",
+      Roles: ["Developer", "AppBuilder", "EndUser"],
+      ResellerId: null,
+      CreatedAt: new Date().toISOString(),
+      UpdatedAt: new Date().toISOString(),
+    });
+  } catch {
+    // preview store optional
+  }
+}
+
+function buildPreviewDeveloperResult(email: string, token: string): LaraDeveloperRegisterResult {
+  return {
+    UserId: 999,
+    Email: email,
+    Role: "Developer",
+    SessionId: "preview-developer-session",
+    ExpiresAt: new Date(Date.now() + 86400000).toISOString(),
+    Token: token,
+  };
+}
+
+async function createPreviewDeveloperSession(
+  input: LaraDeveloperRegisterRequest,
+): Promise<LaraDeveloperRegisterResult> {
+  const token = `seed_access_developer_${Date.now()}`;
+  setLaraAccessToken(token);
+  setLaraRefreshToken(`seed_refresh_developer_${Date.now()}`);
+  await writePreviewMeUser(input.Email, input.DisplayName);
+  return buildPreviewDeveloperResult(input.Email, token);
+}
+
 export async function registerDeveloperViaLara(
   input: LaraDeveloperRegisterRequest,
 ): Promise<LaraDeveloperRegisterResult> {
+  if (getRuntimeMode().Mode === "preview") {
+    return createPreviewDeveloperSession(input);
+  }
   const [result] = await requestLaraApi(
     "/v1/auth/developer-register",
     developerRegisterResultSchema,

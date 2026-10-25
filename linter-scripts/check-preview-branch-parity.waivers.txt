@@ -16,7 +16,6 @@
 #     linter fails if a waiver becomes stale (file no longer imports
 #     `requestLaraApi` or is already fully branched).
 src/lib/lara-app-updates.ts
-src/lib/lara-auth.ts
 src/lib/lara-impersonation.ts
 src/lib/lara-metrics.ts
 src/lib/lara-password-reset.ts

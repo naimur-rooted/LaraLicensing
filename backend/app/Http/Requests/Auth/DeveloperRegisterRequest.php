@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Auth;
 
+use App\Exceptions\ValidationException;
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -33,5 +35,19 @@ final class DeveloperRegisterRequest extends FormRequest
             'SelectedPlan' => ['required', 'string', 'in:STARTER,ESSENTIAL,PRO,MAX'],
             'BillingInterval' => ['nullable', 'string', 'in:monthly,annual,biennial'],
         ];
+    }
+
+    protected function failedValidation(Validator $validator): void
+    {
+        $errors = [];
+        foreach ($validator->errors()->toArray() as $field => $messages) {
+            foreach ((array) $messages as $msg) {
+                $errors[] = ['Field' => (string) $field, 'Rule' => (string) $msg];
+            }
+        }
+        throw ValidationException::validationFailed(
+            'Developer registration payload failed validation.',
+            $errors,
+        );
     }
 }

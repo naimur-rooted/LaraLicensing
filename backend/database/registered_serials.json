@@ -218,5 +218,41 @@
         "MaxActivations": 5,
         "IsRevoked": false,
         "RegisteredAt": "2026-10-25T13:07:32.566882Z"
+    },
+    "LARA-DLBG-0001": {
+        "SerialId": 4173710985,
+        "SerialValue": "LARA-DLBG-0001",
+        "Category": "Yearly",
+        "TierName": "Scale",
+        "CustomerName": "Jane Doe",
+        "CustomerEmail": "approve-test@domain.com",
+        "Status": "active",
+        "ExpiresAt": "2027-10-25T13:44:58.322Z",
+        "Features": [
+            "core.reports",
+            "core.dashboards",
+            "addon.exports"
+        ],
+        "MaxActivations": 5,
+        "IsRevoked": false,
+        "RegisteredAt": "2026-10-25T13:44:58.801424Z"
+    },
+    "LARA-7HEZ-0001": {
+        "SerialId": 3478001832,
+        "SerialValue": "LARA-7HEZ-0001",
+        "Category": "Yearly",
+        "TierName": "Scale",
+        "CustomerName": "Jane Doe",
+        "CustomerEmail": "approve-test@domain.com",
+        "Status": "active",
+        "ExpiresAt": "2027-10-25T13:49:42.515Z",
+        "Features": [
+            "core.reports",
+            "core.dashboards",
+            "addon.exports"
+        ],
+        "MaxActivations": 5,
+        "IsRevoked": false,
+        "RegisteredAt": "2026-10-25T13:49:43.067407Z"
     }
 }
