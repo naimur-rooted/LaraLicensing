@@ -13,22 +13,6 @@ use Throwable;
 
 /**
  * v0.300.0. Unauthenticated readiness probe: GET /Api/Public/Health.
- *
- * Root cause this exists: cPanel deploys, GitHub Actions release smoke
- * tests, and load-balancer probes have no cheap unauthenticated endpoint
- * to confirm the app boots and can reach Root. Every other route is
- * gated by Sanctum or requires an idempotency key; probes were forced to
- * hit `/Api/Auth/Login` and interpret 4xx envelopes as "up", which is
- * both wrong (rate-limit exhaustion masquerades as down) and pollutes
- * the login audit trail.
- *
- * Contract:
- *  - Status: 200 when boot ok + Root connectivity ok; 503 when Root ping fails.
- *  - Envelope: standard `ApiEnvelope::success` / `failure`.
- *  - Results[0]: { App, Version, RootDb, Time }. No secrets, no shard
- *    fanout (shard health lives on the authenticated
- *    Admin\MetricsController::shardStatus surface).
- *  - Failure code: `ServiceUnavailable` (already in the closed set).
  */
 final class HealthController
 {
@@ -36,7 +20,7 @@ final class HealthController
 
     public function __invoke(Request $request): JsonResponse
     {
-        $requestId = (string) $request->headers->get('X-Request-Id', '');
+        $requestId = (string) ($request->attributes->get('lara.request_id') ?: $request->headers->get('X-Request-Id', ''));
         $rootOk = $this->pingRoot();
         $payload = [
             'App' => (string) config('app.name', 'Licensing Portal'),
@@ -49,6 +33,12 @@ final class HealthController
 
             return ApiEnvelope::success([$payload], $requestId);
         }
+
+        return $this->buildFailureResponse($requestId, $payload);
+    }
+
+    private function buildFailureResponse(string $requestId, array $payload): JsonResponse
+    {
         Log::error('public.health.root_down', ['RequestId' => $requestId]);
 
         return ApiEnvelope::failure(
@@ -57,7 +47,7 @@ final class HealthController
             requestId: $requestId,
             httpCode: 503,
             message: 'Service Unavailable',
-            extraAttributes: ['Payload' => $payload],
+            extraAttributes: ['Category' => 'Internal', 'Payload' => $payload],
         );
     }
 

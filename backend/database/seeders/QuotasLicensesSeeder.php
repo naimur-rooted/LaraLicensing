@@ -28,8 +28,9 @@ final class QuotasLicensesSeeder extends Seeder
                 continue;
             }
 
-            $this->seedQuotas((int)$reseller->ResellerId);
-            $this->seedLicenses((int)$reseller->ResellerId);
+            $this->seedQuotas((int) $reseller->ResellerId);
+            $this->seedLicenses((int) $reseller->ResellerId);
+            $this->seedQuotaRequests((int) $reseller->ResellerId);
         }
 
         $this->command?->line('  QuotasLicensesSeeder: domain populated.');
@@ -37,7 +38,6 @@ final class QuotasLicensesSeeder extends Seeder
 
     private function seedQuotas(int $resellerId): void
     {
-        // Category 3 = Monthly, Tier 1 = Tier1
         DB::connection(self::CONN_SHARD)->statement(
             'INSERT INTO "Quotas" ("ResellerId","LicenseCategoryId","LicenseTierId","LicensesGranted","LicensesConsumed","PeriodStart")
              VALUES (?,3,1,500,25,NOW()) ON CONFLICT DO NOTHING',
@@ -49,12 +49,23 @@ final class QuotasLicensesSeeder extends Seeder
     {
         $prefix = DB::connection(self::CONN_ROOT)->selectOne('SELECT "PrefixValue" FROM "Prefixes" WHERE "ResellerId" = ?', [$resellerId])?->PrefixValue ?? 'LARA';
 
-        for ($i = 1; $i <= 5; $i++) {
+        for ($i = 1; $i <= 120; $i++) {
             $key = sprintf("%s-E2E-TEST-%04d", $prefix, $i);
             DB::connection(self::CONN_SHARD)->statement(
                 'INSERT INTO "Licenses" ("LicenseKey","PrefixValue","ResellerId","IssuedByUserId","TierName","EnvironmentName","Status")
-                 VALUES (?,?,1,1,\'Tier1\',\'Production\',\'Active\') ON CONFLICT DO NOTHING',
+                 VALUES (?,?,?,1,\'Tier1\',\'Production\',\'Active\') ON CONFLICT DO NOTHING',
                 [$key, $prefix, $resellerId]
+            );
+        }
+    }
+
+    private function seedQuotaRequests(int $resellerId): void
+    {
+        for ($i = 1; $i <= 24; $i++) {
+            DB::connection(self::CONN_SHARD)->statement(
+                'INSERT INTO "QuotaRequests" ("ResellerId","LicenseCategoryId","LicenseTierId","RequestedDelta","Status","Justification")
+                 VALUES (?,3,1,100,1,\'Scaling for growth\') ON CONFLICT DO NOTHING',
+                [$resellerId]
             );
         }
     }

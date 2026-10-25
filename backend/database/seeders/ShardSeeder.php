@@ -52,18 +52,29 @@ final class ShardSeeder extends Seeder
 
     public function run(): void
     {
-        $env = (string) config('app.env', 'production');
+        if ($this->shouldSkipForEmptyProfile()) {
+            return;
+        }
+        $this->assertEnvironmentAllowed((string) config('app.env', 'production'));
+        $initialStatus = $this->resolveInitialStatus();
+        foreach (self::DEMO_RESELLERS as $row) {
+            $this->seedOne($row, $initialStatus);
+        }
+    }
+
+    private function shouldSkipForEmptyProfile(): bool
+    {
+        $profile = (string) ($_ENV['SEED_PROFILE'] ?? $_SERVER['SEED_PROFILE'] ?? env('SEED_PROFILE') ?: '');
+        return $profile === 'empty';
+    }
+
+    private function assertEnvironmentAllowed(string $env): void
+    {
         if (! in_array($env, self::ALLOWED_ENVS, true)) {
             throw new RuntimeException(
                 "ShardSeeder: refusing to run under APP_ENV='{$env}'. "
                 . 'Demo records are dev-only; use the Admin Console to provision production shards.'
             );
-        }
-
-        $initialStatus = $this->resolveInitialStatus();
-
-        foreach (self::DEMO_RESELLERS as $row) {
-            $this->seedOne($row, $initialStatus);
         }
     }
 

@@ -24,18 +24,21 @@ use Illuminate\Support\Facades\Config;
  * `InternalException::custom('BackupCorrupt', ..., [Field=/encryption/epoch,
  * Rule=KekUnresolved])` so callers get a spec-conformant error.
  */
-final class ConfigSecretsProvider implements SecretsProviderContract
+class ConfigSecretsProvider implements SecretsProviderContract
 {
     private const CONFIG_KEY = 'br.kek_material';
 
     public function getKekMaterial(string $ref): string
     {
         $map = Config::get(self::CONFIG_KEY, []);
-        $encoded = is_array($map) ? ($map[$ref] ?? null) : null;
-        if (!is_string($encoded) || $encoded === '') {
+        $val = is_array($map) ? ($map[$ref] ?? null) : (is_string($map) ? $map : null);
+        if (!is_string($val) || $val === '') {
             throw $this->fail(BrCryptoConstants::RULE_KEK_UNRESOLVED, $ref);
         }
-        $raw = self::base64UrlDecode($encoded);
+        if (strlen($val) === BrCryptoConstants::KEK_LEN) {
+            return $val;
+        }
+        $raw = self::base64UrlDecode($val);
         if ($raw === false || strlen($raw) !== BrCryptoConstants::KEK_LEN) {
             throw $this->fail(BrCryptoConstants::RULE_KEK_LEN, $ref);
         }

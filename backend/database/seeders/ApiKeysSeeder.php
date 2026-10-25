@@ -22,7 +22,7 @@ final class ApiKeysSeeder extends Seeder
         foreach ($resellers as $reseller) {
             DB::connection(self::CONN_ROOT)->statement(
                 'INSERT INTO "ApiKeys" ("ResellerId", "KeyId", "KeyHash", "Description", "IsActive") 
-                 VALUES (?, ?, ?, ?, TRUE)',
+                 VALUES (?, ?, ?, ?, ?)',
                 [$reseller->ResellerId, "ak_" . bin2hex(random_bytes(4)), hash('sha256', 'test_key'), "E2E Test Key", true]
             );
         }

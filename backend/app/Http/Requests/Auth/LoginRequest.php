@@ -16,7 +16,7 @@ use Illuminate\Foundation\Http\FormRequest;
 final class LoginRequest extends FormRequest
 {
     private const EMAIL_MAX = 254;
-    private const PASSWORD_MIN = 8;
+    private const PASSWORD_MIN = 1;
     private const PASSWORD_MAX = 4096;
     private const CAPTCHA_ID_MAX = 512;
     private const CAPTCHA_ANSWER_MAX = 16;

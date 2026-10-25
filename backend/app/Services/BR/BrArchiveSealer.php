@@ -45,7 +45,7 @@ use Illuminate\Support\Facades\Log;
  * 15-line function cap held by splitting into `deriveMaterial`,
  * `assertReady`, `logInit`.
  */
-final class BrArchiveSealer
+class BrArchiveSealer
 {
     private const LOG_INIT = 'br.export.sealer.initialized';
     private const LOG_SEAL = 'br.export.sealer.chunk_sealed';

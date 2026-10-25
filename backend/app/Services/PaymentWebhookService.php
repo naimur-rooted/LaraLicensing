@@ -187,7 +187,17 @@ class PaymentWebhookService
     public function recordEvent(string $gateway, array $data, string $serial, Request $request): void
     {
         $this->ensureWebhookTableExists();
-        $now = Carbon::now();
+        $this->insertWebhookEventRow($gateway, $data, $serial, Carbon::now());
+        $this->recordToProductShard($data['productSlug'], $serial, $data['customerEmail'], $data['dealCode']);
+        AuditWriter::write($request, 'WebhookIngested', 'WebhookEvents', $data['eventId'], [
+            'Gateway' => $gateway,
+            'ProductSlug' => $data['productSlug'],
+            'SerialValue' => $serial,
+        ]);
+    }
+
+    private function insertWebhookEventRow(string $gateway, array $data, string $serial, Carbon $now): void
+    {
         DB::connection('root')->table('WebhookEvents')->insert([
             'EventId' => $data['eventId'],
             'Gateway' => $gateway,
@@ -198,12 +208,6 @@ class PaymentWebhookService
             'PayloadJson' => (string) json_encode($data),
             'created_at' => $now,
             'updated_at' => $now,
-        ]);
-        $this->recordToProductShard($data['productSlug'], $serial, $data['customerEmail'], $data['dealCode']);
-        AuditWriter::write($request, 'WebhookIngested', 'WebhookEvents', $data['eventId'], [
-            'Gateway' => $gateway,
-            'ProductSlug' => $data['productSlug'],
-            'SerialValue' => $serial,
         ]);
     }
 

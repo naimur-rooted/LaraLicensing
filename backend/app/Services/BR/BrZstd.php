@@ -25,7 +25,7 @@ use App\Exceptions\LaraException;
  *
  * 15-line function cap held.
  */
-final class BrZstd
+class BrZstd
 {
     private const ERR_UNAVAILABLE = 'BackupZstdUnavailable';
     private const REASON_EXT_MISSING = 'php.ext-zstd.not-loaded';

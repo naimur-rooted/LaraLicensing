@@ -45,7 +45,7 @@ use Throwable;
  * 15-line function cap held by splitting into `preflight`,
  * `processJob`, `materializeArchive`, `handleFailure`.
  */
-final class BrExportWorker
+class BrExportWorker
 {
     private const KIND = BrJobKind::Export;
     private const REASON_WORKER_FAILURE = 'worker.unhandled_exception';
@@ -188,36 +188,64 @@ final class BrExportWorker
         $path = $this->storage->reserve($archiveId, $requestId);
         try {
             $this->sealer->initialize($archiveId, $requestId);
-            $schema = $this->schemaCollector->collect($requestId);
-            $closedSets = $this->closedSetsCollector->collect($requestId);
-            $features = $this->featuresCollector->collect($requestId);
-            $licenses = $this->licensesCollector->collect($requestId);
-            $rbac = $this->rbacCollector->collect($requestId);
-            $domain = $this->domainCollector->collect($requestId);
-            $files = $this->filesCollector->collect($requestId);
-            $secrets = $this->secretsCollector->collect($requestId);
-            $bodies = [$schema['RelPath'] => $schema['Jsonl'], $closedSets['RelPath'] => $closedSets['Jsonl'], $features['RelPath'] => $features['Jsonl'], $licenses['RelPath'] => $licenses['Jsonl'], $rbac['RelPath'] => $rbac['Jsonl'], $files['RelPath'] => $files['Jsonl'], $secrets['RelPath'] => $secrets['Body']] + $domain['Bodies'];
-            $descriptors = $this->chunks->writeShadowChunks($this->storage, $archiveId, $requestId, $bodies, $domain['RelPaths'], $this->sealer);
+            $scopes = $this->collectAllArchiveScopes($requestId);
+            $descriptors = $this->chunks->writeShadowChunks($this->storage, $archiveId, $requestId, $scopes['bodies'], $scopes['domain']['RelPaths'], $this->sealer);
             $merkleRoot = BrMerkleRoot::compute(array_map(static fn ($c) => $c['sha256'], $descriptors));
-            $scopeOverrides = [
-                'schema' => ['contentHash' => $schema['ContentHash'], 'migrations' => $schema['Migrations']],
-                'closedSets' => ['contentHash' => $closedSets['ContentHash'], 'setCount' => $closedSets['SetCount'], 'valueCount' => $closedSets['ValueCount']],
-                'features' => ['contentHash' => $features['ContentHash'], 'featureCount' => $features['FeatureCount'], 'defaultCount' => $features['DefaultCount']],
-                'licenses' => ['contentHash' => $licenses['ContentHash'], 'licenseCount' => $licenses['LicenseCount'], 'epochCount' => $licenses['EpochCount'], 'featureLinkCount' => $licenses['FeatureLinkCount']],
-                'rbac' => ['contentHash' => $rbac['ContentHash'], 'userRoleCount' => $rbac['UserRoleCount'], 'casbinRuleCount' => $rbac['CasbinRuleCount'], 'bootstrapPresent' => $rbac['BootstrapPresent']],
-                'domain' => ['contentHash' => $domain['ContentHash'], 'tables' => $domain['Tables']],
-                'files' => ['contentHash' => $files['ContentHash'], 'objectCount' => $files['ObjectCount'], 'totalBytes' => $files['TotalBytes'], 'index' => $files['IndexPath']],
-                'secretsEnvelope' => ['contentHash' => $secrets['ContentHash'], 'algorithm' => $secrets['Algorithm'], 'epoch' => $secrets['Epoch'], 'kid' => $secrets['Kid']],
-            ];
             $encryption = $this->sealer->manifestEncryption();
-            $written = $this->manifest->writeShadowManifest($this->storage, $archiveId, $this->appVersion(), $userId, $requestId, $descriptors, $merkleRoot, $scopeOverrides, $schema['SchemaHash'], $encryption);
+            $written = $this->manifest->writeShadowManifest($this->storage, $archiveId, $this->appVersion(), $userId, $requestId, $descriptors, $merkleRoot, $this->buildScopeOverrides($scopes), $scopes['schema']['SchemaHash'], $encryption);
             $this->storage->finalize($archiveId, $requestId);
         } catch (Throwable $e) {
             $this->storage->abort($archiveId, $requestId);
             throw $e;
         }
 
-        return ['StoragePath' => $path, 'Bytes' => $this->storage->sizeBytes($archiveId), 'ManifestSha256' => $written['Sha256'], 'MerkleRoot' => $merkleRoot, 'ChunkCount' => count($descriptors), 'SchemaHash' => $schema['SchemaHash'], 'MigrationCount' => count($schema['Migrations']), 'ClosedSetCount' => $closedSets['SetCount'], 'ClosedSetValueCount' => $closedSets['ValueCount'], 'FeatureCount' => $features['FeatureCount'], 'FeatureDefaultCount' => $features['DefaultCount'], 'LicenseCount' => $licenses['LicenseCount'], 'LicenseEpochCount' => $licenses['EpochCount'], 'LicenseFeatureLinkCount' => $licenses['FeatureLinkCount'], 'UserRoleCount' => $rbac['UserRoleCount'], 'CasbinRuleCount' => $rbac['CasbinRuleCount'], 'BootstrapPresent' => $rbac['BootstrapPresent'], 'DomainTableCount' => $domain['TableCount'], 'DomainRowCount' => $domain['TotalRowCount'], 'DomainTables' => $domain['Tables'], 'FileObjectCount' => $files['ObjectCount'], 'FileTotalBytes' => $files['TotalBytes'], 'SecretRowCount' => $secrets['RowCount'], 'SecretEpoch' => $secrets['Epoch'], 'SecretKid' => $secrets['Kid'], 'EncryptionEpoch' => $encryption['epoch'], 'EncryptionKid' => $encryption['kid']];
+        return $this->buildMaterializeSummary($path, $archiveId, $written['Sha256'], $merkleRoot, $descriptors, $scopes, $encryption);
+    }
+
+    private function collectAllArchiveScopes(string $requestId): array
+    {
+        $schema = $this->schemaCollector->collect($requestId);
+        $closedSets = $this->closedSetsCollector->collect($requestId);
+        $features = $this->featuresCollector->collect($requestId);
+        $licenses = $this->licensesCollector->collect($requestId);
+        $rbac = $this->rbacCollector->collect($requestId);
+        $domain = $this->domainCollector->collect($requestId);
+        $files = $this->filesCollector->collect($requestId);
+        $secrets = $this->secretsCollector->collect($requestId);
+        $bodies = [$schema['RelPath'] => $schema['Jsonl'], $closedSets['RelPath'] => $closedSets['Jsonl'], $features['RelPath'] => $features['Jsonl'], $licenses['RelPath'] => $licenses['Jsonl'], $rbac['RelPath'] => $rbac['Jsonl'], $files['RelPath'] => $files['Jsonl'], $secrets['RelPath'] => $secrets['Body']] + $domain['Bodies'];
+
+        return compact('schema', 'closedSets', 'features', 'licenses', 'rbac', 'domain', 'files', 'secrets', 'bodies');
+    }
+
+    private function buildScopeOverrides(array $s): array
+    {
+        return [
+            'schema' => ['contentHash' => $s['schema']['ContentHash'], 'migrations' => $s['schema']['Migrations']],
+            'closedSets' => ['contentHash' => $s['closedSets']['ContentHash'], 'setCount' => $s['closedSets']['SetCount'], 'valueCount' => $s['closedSets']['ValueCount']],
+            'features' => ['contentHash' => $s['features']['ContentHash'], 'featureCount' => $s['features']['FeatureCount'], 'defaultCount' => $s['features']['DefaultCount']],
+            'licenses' => ['contentHash' => $s['licenses']['ContentHash'], 'licenseCount' => $s['licenses']['LicenseCount'], 'epochCount' => $s['licenses']['EpochCount'], 'featureLinkCount' => $s['licenses']['FeatureLinkCount']],
+            'rbac' => ['contentHash' => $s['rbac']['ContentHash'], 'userRoleCount' => $s['rbac']['UserRoleCount'], 'casbinRuleCount' => $s['rbac']['CasbinRuleCount'], 'bootstrapPresent' => $s['rbac']['BootstrapPresent']],
+            'domain' => ['contentHash' => $s['domain']['ContentHash'], 'tables' => $s['domain']['Tables']],
+            'files' => ['contentHash' => $s['files']['ContentHash'], 'objectCount' => $s['files']['ObjectCount'], 'totalBytes' => $s['files']['TotalBytes'], 'index' => $s['files']['IndexPath']],
+            'secretsEnvelope' => ['contentHash' => $s['secrets']['ContentHash'], 'algorithm' => $s['secrets']['Algorithm'], 'epoch' => $s['secrets']['Epoch'], 'kid' => $s['secrets']['Kid']],
+        ];
+    }
+
+    private function buildMaterializeSummary(string $path, string $aid, string $mSha, string $merkle, array $desc, array $s, array $enc): array
+    {
+        return [
+            'StoragePath' => $path, 'Bytes' => $this->storage->sizeBytes($aid), 'ManifestSha256' => $mSha, 'MerkleRoot' => $merkle,
+            'ChunkCount' => count($desc), 'SchemaHash' => $s['schema']['SchemaHash'], 'MigrationCount' => count($s['schema']['Migrations']),
+            'ClosedSetCount' => $s['closedSets']['SetCount'], 'ClosedSetValueCount' => $s['closedSets']['ValueCount'],
+            'FeatureCount' => $s['features']['FeatureCount'], 'FeatureDefaultCount' => $s['features']['DefaultCount'],
+            'LicenseCount' => $s['licenses']['LicenseCount'], 'LicenseEpochCount' => $s['licenses']['EpochCount'],
+            'LicenseFeatureLinkCount' => $s['licenses']['FeatureLinkCount'], 'UserRoleCount' => $s['rbac']['UserRoleCount'],
+            'CasbinRuleCount' => $s['rbac']['CasbinRuleCount'], 'BootstrapPresent' => $s['rbac']['BootstrapPresent'],
+            'DomainTableCount' => $s['domain']['TableCount'], 'DomainRowCount' => $s['domain']['TotalRowCount'], 'DomainTables' => $s['domain']['Tables'],
+            'FileObjectCount' => $s['files']['ObjectCount'], 'FileTotalBytes' => $s['files']['TotalBytes'],
+            'SecretRowCount' => $s['secrets']['RowCount'], 'SecretEpoch' => $s['secrets']['Epoch'], 'SecretKid' => $s['secrets']['Kid'],
+            'EncryptionEpoch' => $enc['epoch'], 'EncryptionKid' => $enc['kid'],
+        ];
     }
 
 

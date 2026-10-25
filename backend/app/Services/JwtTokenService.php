@@ -7,7 +7,7 @@ namespace App\Services;
 /**
  * Service to generate and verify asymmetric Ed25519 and HMAC offline activation tokens.
  */
-final class JwtTokenService
+class JwtTokenService
 {
     private const SECRET = 'dGVzdC1zZWNyZXQtMzItY2hhcnMtbG9uZy1leGFjdGx5LSEh';
 

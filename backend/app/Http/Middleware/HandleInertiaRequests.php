@@ -41,23 +41,26 @@ class HandleInertiaRequests extends Middleware
         $role = $user ? $this->effectiveRole((int) $user->UserId) : null;
 
         return array_merge(parent::share($request), [
-            'auth' => [
-                'user' => $user ? [
-                    'UserId' => $user->UserId,
-                    'Email' => $user->Email,
-                    'DisplayName' => $user->DisplayName ?? $user->Email,
-                    'RoleName' => $role,
-                    'TenantId' => $user->TenantId,
-                ] : null,
-            ],
-            'lara' => [
-                'version' => config('app.version', '0.0.0'),
-            ],
+            'auth' => ['user' => $this->buildAuthUserPayload($user, $role)],
+            'lara' => ['version' => config('app.version', '0.0.0')],
             'update' => $this->updateBanner($role),
-            'flash' => [
-                'message' => $request->session()->get('message'),
-            ],
+            'flash' => ['message' => $request->session()->get('message')],
         ]);
+    }
+
+    private function buildAuthUserPayload($user, ?string $role): ?array
+    {
+        if (!$user) {
+            return null;
+        }
+
+        return [
+            'UserId' => $user->UserId,
+            'Email' => $user->Email,
+            'DisplayName' => $user->DisplayName ?? $user->Email,
+            'RoleName' => $role,
+            'TenantId' => $user->TenantId,
+        ];
     }
 
     /**
@@ -83,25 +86,26 @@ class HandleInertiaRequests extends Middleware
             return null;
         }
         $current = (string) config('lara.self_update.installed_client_version', '0.0.0');
-        $picked = app(SelfUpdateService::class)->latestManifest(
-            (string) config('lara.self_update.banner_product', 'lara-cli'),
-            (string) config('lara.self_update.channel', 'Stable'),
-            (string) config('lara.self_update.banner_platform', 'WindowsAmd64'),
-        );
-        if ($picked === null) {
-            return null;
-        }
-        $latest = (string) $picked['Update']->Version;
-        if (version_compare($latest, $current, '<=')) {
+        $picked = $this->fetchLatestUpdateManifest();
+        if ($picked === null || version_compare((string) $picked['Update']->Version, $current, '<=')) {
             return null;
         }
 
         return [
-            'LatestVersion' => $latest,
+            'LatestVersion' => (string) $picked['Update']->Version,
             'CurrentVersion' => $current,
             'ReleaseNotesUrl' => $picked['Update']->ReleaseNotesUrl,
             'ViewUpdateHref' => (string) config('lara.self_update.banner_view_update_href', '/app/update'),
         ];
+    }
+
+    private function fetchLatestUpdateManifest(): ?array
+    {
+        return app(SelfUpdateService::class)->latestManifest(
+            (string) config('lara.self_update.banner_product', 'lara-cli'),
+            (string) config('lara.self_update.channel', 'Stable'),
+            (string) config('lara.self_update.banner_platform', 'WindowsAmd64'),
+        );
     }
 
     /**

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Admin;
 
+use App\Http\Controllers\Admin\FeatureController;
+
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Feature\Support\SeedHelpers;
 use App\Lib\DemoIdentities;

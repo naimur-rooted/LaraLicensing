@@ -56,7 +56,7 @@ use Illuminate\Support\Facades\Log;
  *
  * 15-line function cap held via helper splits.
  */
-final class BrDomainDriftCheck
+class BrDomainDriftCheck
 {
     private const ERR_CORRUPT = C::ERR_BACKUP_CORRUPT;
     private const FIELD_ROOT = '/scope/domain';

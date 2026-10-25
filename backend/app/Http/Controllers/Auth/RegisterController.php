@@ -7,7 +7,6 @@ namespace App\Http\Controllers\Auth;
 use App\Exceptions\AuthException;
 
 
-use App\Exceptions\LaraException;
 use App\Http\Requests\Auth\RegisterRequest;
 use App\Models\User;
 use App\Services\AuthSessionService;

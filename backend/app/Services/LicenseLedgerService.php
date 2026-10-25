@@ -22,7 +22,7 @@ use Illuminate\Support\Facades\DB;
  * Ordering is `CreatedAt ASC, LicenseLedgerId ASC` so ties within the
  * same instant remain deterministic per spec 21-app/48 §Ledger contract.
  */
-final class LicenseLedgerService
+class LicenseLedgerService
 {
     public const CONNECTION = 'shard';
     public const TABLE = 'LicenseLedger';

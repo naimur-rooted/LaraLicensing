@@ -25,7 +25,9 @@ class EndUserVerificationTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->artisan('migrate', ['--path' => 'database/migrations/root/2026_10_20_000001_create_root_products_table.php']);
+        if (!\Illuminate\Support\Facades\Schema::connection('root')->hasTable('Products')) {
+            $this->artisan('migrate', ['--path' => 'database/migrations/root/2026_10_20_000001_create_root_products_table.php']);
+        }
         $this->seed(ProductSeeder::class);
         $this->product = Product::firstOrFail();
         $this->shardPath = database_path("product_{$this->product->productSlug}.sqlite");

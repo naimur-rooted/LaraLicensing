@@ -55,7 +55,7 @@ class FraudAlertService
     {
         $shardPath = database_path("product_{$productSlug}.sqlite");
         if (!file_exists($shardPath)) {
-            return ['isSuccess' => false, 'message' => 'Product shard not found.'];
+            touch($shardPath);
         }
 
         $pdo = new PDO("sqlite:{$shardPath}");
@@ -88,7 +88,7 @@ class FraudAlertService
     {
         $shardPath = database_path("product_{$productSlug}.sqlite");
         if (!file_exists($shardPath)) {
-            return ['isSuccess' => false, 'message' => 'Product shard not found.'];
+            touch($shardPath);
         }
 
         $pdo = new PDO("sqlite:{$shardPath}");

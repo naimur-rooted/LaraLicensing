@@ -14,7 +14,9 @@ final class AdvancedLicensingTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->artisan('migrate', ['--path' => 'database/migrations/root/2026_10_19_000001_create_root_pricing_plans_table.php']);
+        if (!\Illuminate\Support\Facades\Schema::connection('root')->hasTable('PricingPlans')) {
+            $this->artisan('migrate', ['--path' => 'database/migrations/root/2026_10_19_000001_create_root_pricing_plans_table.php']);
+        }
         $this->seed(\Database\Seeders\PricingPlanSeeder::class);
     }
 

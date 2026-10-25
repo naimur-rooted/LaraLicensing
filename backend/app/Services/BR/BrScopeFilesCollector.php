@@ -68,7 +68,7 @@ use Throwable;
  * 15-line function cap held by splitting into `resolveSources`,
  * `collectOne`, `readRows`, `mapRow`, `canonicalizeIndex`, `aggregate`.
  */
-final class BrScopeFilesCollector
+class BrScopeFilesCollector
 {
     private const CONN_ROOT = 'root';
     private const REL_PATH_INDEX = 'scope/files/index.jsonl.zst';

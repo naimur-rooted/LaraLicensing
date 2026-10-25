@@ -41,7 +41,7 @@ use Throwable;
  *  - All function bodies capped at 15 lines. Errors bubble as
  *    `LaraException` and are logged with a stable code before rethrow.
  */
-final class BrBackfillService
+class BrBackfillService
 {
     private const CONN = 'root';
     private const LOCK_NAME = 'br.global';
@@ -120,6 +120,13 @@ final class BrBackfillService
         return 1;
     }
 
+    private function zeroHash(): mixed
+    {
+        $isSqlite = DB::connection(self::CONN)->getDriverName() === 'sqlite';
+
+        return $isSqlite ? self::ZERO_HASH : DB::raw("'" . self::ZERO_HASH . "'::bytea");
+    }
+
     private function insertGenesisAudit(string $shardId, string $requestId): void
     {
         DB::connection(self::CONN)->table(self::AUDIT_TABLE)->insert([
@@ -129,8 +136,8 @@ final class BrBackfillService
             'ActorKind'          => 'worker',
             'RequestId'          => $requestId,
             'Payload'            => json_encode(['Reason' => 'day_one_backfill', 'ShardId' => $shardId]),
-            'PrevHash'           => DB::raw("'" . self::ZERO_HASH . "'::bytea"),
-            'RowHash'            => DB::raw("'" . self::ZERO_HASH . "'::bytea"),
+            'PrevHash'           => $this->zeroHash(),
+            'RowHash'            => $this->zeroHash(),
             'ShardId'            => $shardId,
             'SchemaVersion'      => 1,
         ]);
@@ -171,8 +178,8 @@ final class BrBackfillService
             'ActorKind'          => 'worker',
             'RequestId'          => $requestId,
             'Payload'            => json_encode(['Kind' => $kind->value] + $payload),
-            'PrevHash'           => DB::raw("'" . self::ZERO_HASH . "'::bytea"),
-            'RowHash'            => DB::raw("'" . self::ZERO_HASH . "'::bytea"),
+            'PrevHash'           => $this->zeroHash(),
+            'RowHash'            => $this->zeroHash(),
             'ShardId'            => self::LOCK_NAME,
             'SchemaVersion'      => 1,
         ]);

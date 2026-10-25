@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Auth;
 
+use App\Http\Controllers\Auth\MeController;
+
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Feature\Support\SeedHelpers;
 use App\Lib\DemoIdentities;
@@ -53,12 +55,18 @@ test('impersonation active returns Me.Impersonation with TargetUserId', function
     ]);
     $token = $loginRes->json()['Results']['AccessToken'];
     
-    // Find target user
-    $targetUser = User::where('email', '!=', $adminIdentity['Email'])->first();
+    // Find target user (must be a non-admin, e.g. EndUser)
+    $targetUser = User::where('Email', 'user@licensingportal.local')->first()
+        ?? User::where('email', '!=', $adminIdentity['Email'])->get()->first(fn ($u) => $u->getPrimaryRole() !== 'Admin');
     
     // Start Impersonation
-    $impRes = $this->withToken($token)->postJson("/Api/Admin/Users/{$targetUser->id}/Impersonate");
-    $impRes->assertStatus(200);
+    $impRes = $this->withToken($token)->withHeaders([
+        'X-Request-Id' => 'req-test-imp-00000001',
+        'Idempotency-Key' => 'idemp-test-imp-00000001',
+    ])->postJson("/Api/Admin/Users/{$targetUser->id}/Impersonate", [
+        'Reason' => 'Investigating user issue for customer support',
+    ]);
+    $impRes->assertStatus(201);
     
     // Now request Me
     $res = $this->withToken($token)->getJson('/Api/Auth/Me');

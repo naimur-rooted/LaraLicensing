@@ -48,6 +48,59 @@ final class User extends Authenticatable
 
     public function getAuthPassword(): string
     {
-        return (string) $this->PasswordHash;
+        return (string) ($this->attributes['PasswordHash'] ?? $this->attributes['password_hash'] ?? $this->attributes['password'] ?? '');
+    }
+
+    public function getPasswordAttribute(): ?string
+    {
+        return (string) ($this->attributes['PasswordHash'] ?? $this->attributes['password_hash'] ?? $this->attributes['password'] ?? '');
+    }
+
+    public function getEmailAttribute(): ?string
+    {
+        return (string) ($this->attributes['Email'] ?? $this->attributes['email'] ?? '');
+    }
+
+    public function getIdAttribute(): ?int
+    {
+        $id = $this->attributes['UserId'] ?? $this->attributes['user_id'] ?? $this->attributes['id'] ?? null;
+        return $id !== null ? (int) $id : null;
+    }
+
+    public function setEmailAttribute($value): void
+    {
+        $this->attributes['Email'] = (string) $value;
+    }
+
+    public function setPasswordAttribute($value): void
+    {
+        $this->attributes['PasswordHash'] = (string) $value;
+    }
+
+    public function getPrimaryRole(): string
+    {
+        try {
+            $roleName = \Illuminate\Support\Facades\DB::connection('root')
+                ->table('UserRoles as ur')
+                ->join('Roles as r', 'r.RoleId', '=', 'ur.RoleId')
+                ->where('ur.UserId', (int) $this->getKey())
+                ->value('r.RoleName');
+
+            return $roleName ?: 'EndUser';
+        } catch (\Throwable) {
+            return 'EndUser';
+        }
+    }
+
+    public function getCapabilities(): array
+    {
+        $role = $this->getPrimaryRole();
+        if ($role === 'Admin' || $role === 'SuperAdmin') {
+            return ['*'];
+        }
+        if ($role === 'Reseller') {
+            return ['reseller.*'];
+        }
+        return ['portal.*'];
     }
 }

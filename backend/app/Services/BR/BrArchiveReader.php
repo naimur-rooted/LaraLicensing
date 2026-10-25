@@ -34,7 +34,7 @@ use Illuminate\Support\Facades\Log;
  * log `br.import.reader.rejected` with `RequestId`, `Path`, `Rule`
  * and re-throw. 15-line function cap held via helper splits.
  */
-final class BrArchiveReader
+class BrArchiveReader
 {
     private const TRAILER_BYTES = 32;
     private const ERR_CORRUPT = C::ERR_BACKUP_CORRUPT;

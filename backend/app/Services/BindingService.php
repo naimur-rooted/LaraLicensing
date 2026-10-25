@@ -41,7 +41,7 @@ use Illuminate\Support\Facades\Log;
  *    the outcome tokens from spec 30 §Observability so log-based
  *    correlation still works today.
  */
-final class BindingService
+class BindingService
 {
     private const CONN = 'shard';
     private const OUTCOME_BOUND = 'Bound';

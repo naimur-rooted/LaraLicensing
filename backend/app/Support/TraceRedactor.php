@@ -122,8 +122,10 @@ final class TraceRedactor
     private static function keyIsSensitive(string $key, array $keys): bool
     {
         $lower = strtolower($key);
+        $clean = str_replace(['-', '_'], '', $lower);
         foreach ($keys as $needle) {
-            if ($needle !== '' && str_contains($lower, $needle)) {
+            $needleClean = str_replace(['-', '_'], '', $needle);
+            if ($needle !== '' && (str_contains($lower, $needle) || ($needleClean !== '' && str_contains($clean, $needleClean)))) {
                 return true;
             }
         }

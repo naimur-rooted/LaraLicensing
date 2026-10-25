@@ -22,6 +22,9 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Support\Facades\Route::middleware('api')
                 ->prefix('Api')
                 ->group(__DIR__.'/../routes/api.php');
+            \Illuminate\Support\Facades\Route::middleware('api')
+                ->prefix('')
+                ->group(__DIR__.'/../routes/api.php');
         },
     )
     ->withSchedule(function (Schedule $schedule): void {
@@ -150,18 +153,21 @@ return Application::configure(basePath: dirname(__DIR__))
                 ])->toResponse($request)->setStatusCode($e->httpStatus);
             }
 
+            $extraAttributes = [
+                'ErrorId' => $e->errorId,
+                'Category' => $category,
+            ];
+            $opId = $request->headers->get('X-Lara-Operation');
+            if ($opId !== null && $opId !== '') {
+                $extraAttributes['OperationId'] = $opId;
+            }
             $response = ApiEnvelope::failure(
-
                 errorCode: $e->errorCode,
                 errorMessage: $e->getMessage(),
                 requestId: $requestId,
                 httpCode: $e->httpStatus,
                 message: $e->errorCode,
-                extraAttributes: [
-                    'ErrorId' => $e->errorId,
-                    'Category' => $category,
-                    'OperationId' => $request->headers->get('X-Lara-Operation'),
-                ],
+                extraAttributes: $extraAttributes,
                 details: $e->details,
             );
 
@@ -198,15 +204,18 @@ return Application::configure(basePath: dirname(__DIR__))
                     $details[] = ['Field' => (string) $field, 'Rule' => 'Invalid', 'Message' => (string) $msg];
                 }
             }
+            $extraVal = ['Category' => 'Validation'];
+            $opIdVal = $request->headers->get('X-Lara-Operation');
+            if ($opIdVal !== null && $opIdVal !== '') {
+                $extraVal['OperationId'] = $opIdVal;
+            }
             return ApiEnvelope::failure(
                 errorCode: 'ValidationInputInvalid',
                 errorMessage: 'Request payload failed validation.',
                 requestId: $requestId,
                 httpCode: 400,
                 message: 'ValidationInputInvalid',
-                extraAttributes: [
-                    'Category' => 'Validation',
-                ],
+                extraAttributes: $extraVal,
                 details: $details,
             );
         });
@@ -224,6 +233,40 @@ return Application::configure(basePath: dirname(__DIR__))
                 message: 'AuthUnauthorized',
                 extraAttributes: [
                     'Category' => 'Auth',
+                ],
+            );
+        });
+
+        $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\NotFoundHttpException $e, Request $request) {
+            if (! $request->expectsJson() && ! $request->is('Api/*', 'App/*', 'api/*', 'app/*')) {
+                return null;
+            }
+            $requestId = (string) ($request->attributes->get('lara.request_id') ?: ($request->headers->get('X-Request-Id') ?? ''));
+            return ApiEnvelope::failure(
+                errorCode: 'RouteNotFound',
+                errorMessage: 'Route not found.',
+                requestId: $requestId,
+                httpCode: 404,
+                message: 'NotFound',
+                extraAttributes: [
+                    'Category' => 'NotFound',
+                ],
+            );
+        });
+
+        $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException $e, Request $request) {
+            if (! $request->expectsJson() && ! $request->is('Api/*', 'App/*', 'api/*', 'app/*')) {
+                return null;
+            }
+            $requestId = (string) ($request->attributes->get('lara.request_id') ?: ($request->headers->get('X-Request-Id') ?? ''));
+            return ApiEnvelope::failure(
+                errorCode: 'MethodNotAllowed',
+                errorMessage: 'Method not allowed for this route.',
+                requestId: $requestId,
+                httpCode: 405,
+                message: 'MethodNotAllowed',
+                extraAttributes: [
+                    'Category' => 'MethodNotAllowed',
                 ],
             );
         });

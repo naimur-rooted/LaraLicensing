@@ -49,7 +49,7 @@ use Throwable;
  * 15-line function cap enforced by splitting into `execute`,
  * `preflight`, `snapshotPhase`, `handleFailure`.
  */
-final class BrRestoreWorker
+class BrRestoreWorker
 {
     private const KIND = BrJobKind::Restore;
     private const WORKER_PREFIX = 'br-restore-worker';

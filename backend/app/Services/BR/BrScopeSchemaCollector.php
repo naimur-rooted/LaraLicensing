@@ -47,7 +47,7 @@ use Illuminate\Support\Facades\Log;
  * 15-line function cap held by splitting into `loadRows`,
  * `renderJsonl`, and `hashFiles`.
  */
-final class BrScopeSchemaCollector
+class BrScopeSchemaCollector
 {
     private const CONN = 'root';
     private const TABLE = 'migrations';

@@ -7,10 +7,13 @@ namespace Tests\Feature\BR;
 use App\Domain\BR\BrJobKind;
 use App\Domain\BR\BrJobState;
 use App\Exceptions\LaraException;
+use App\Services\BR\BrDomainArchiveRecheck;
+use App\Services\BR\BrDomainDriftCheck;
 use App\Services\BR\BrDriftSnapshot;
 use App\Services\BR\BrFeatureFlagService;
 use App\Services\BR\BrImportPreflight;
 use App\Services\BR\BrJobDispatcher;
+use App\Services\BR\BrRestoreApplyPlanBuilder;
 use App\Services\BR\BrRestoreWorker;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -56,7 +59,7 @@ final class BrRestoreWorkerTest extends TestCase
         $this->assertSame(BrJobState::Succeeded->value, $row->State);
         $result = json_decode((string) $row->Result, true);
         $this->assertTrue($result['DriftAllMatch']);
-        $this->assertSame('DriftSnapshot', $result['Phase']);
+        $this->assertSame('ApplyPlan', $result['Phase']);
         $this->assertSame(self::ARCHIVE, $result['ArchiveId']);
     }
 
@@ -104,6 +107,33 @@ final class BrRestoreWorkerTest extends TestCase
             'Scopes' => ['schema' => ['Declared' => 'x', 'Live' => 'x', 'Match' => true, 'Skipped' => false]],
         ]);
         $this->app->instance(BrDriftSnapshot::class, $mock);
+
+        $driftCheck = Mockery::mock(BrDomainDriftCheck::class);
+        $driftCheck->shouldReceive('runForArchive')->andReturn([
+            'ArchiveId' => self::ARCHIVE,
+            'DeclaredCount' => 0,
+            'LiveCount' => 0,
+            'AggregateDeclared' => 'hash',
+            'AggregateLive' => 'hash',
+            'Tables' => [],
+        ]);
+        $this->app->instance(BrDomainDriftCheck::class, $driftCheck);
+
+        $archiveRecheck = Mockery::mock(BrDomainArchiveRecheck::class);
+        $archiveRecheck->shouldReceive('runForArchive')->andReturn([
+            'ArchiveId' => self::ARCHIVE,
+            'TableCount' => 0,
+            'Verified' => true,
+        ]);
+        $this->app->instance(BrDomainArchiveRecheck::class, $archiveRecheck);
+
+        $planBuilder = Mockery::mock(BrRestoreApplyPlanBuilder::class);
+        $planBuilder->shouldReceive('build')->andReturn([
+            'PlanId' => 'test-plan-id',
+            'Totals' => ['StepCount' => 0],
+            'Steps' => [],
+        ]);
+        $this->app->instance(BrRestoreApplyPlanBuilder::class, $planBuilder);
     }
 
     /** @param array<string, mixed> $payload */

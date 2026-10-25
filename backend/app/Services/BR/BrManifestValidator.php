@@ -29,7 +29,7 @@ use Illuminate\Support\Facades\Log;
  * literal is a `private const` here or a constant on
  * `BrManifestSchema`.
  */
-final class BrManifestValidator
+class BrManifestValidator
 {
     private const ERR_CORRUPT = 'BackupCorrupt';
     private const ERR_VERSION = 'BackupVersionMismatch';

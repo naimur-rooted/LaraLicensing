@@ -64,7 +64,7 @@ use Throwable;
  * `collectOne`, `readRows`, `canonicalize`, `serializeRow`, and
  * `aggregate`.
  */
-final class BrScopeDomainCollector
+class BrScopeDomainCollector
 {
     private const CONN_ROOT = 'root';
     private const REL_PATH_PREFIX = 'scope/domain/';

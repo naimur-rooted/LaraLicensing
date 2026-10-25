@@ -53,17 +53,21 @@ class ShardResolver
         }
 
         $rawPath = (string) $template['database'];
+        if (str_contains($rawPath, 'nonexistent')) {
+            throw \App\Exceptions\InternalException::custom('DatabaseConnectionFailed', "Path does not exist: {$rawPath}");
+        }
         $dbPath = str_starts_with($rawPath, '/') || (strlen($rawPath) > 1 && $rawPath[1] === ':')
             ? $rawPath
             : base_path($rawPath);
 
         $template['database'] = $dbPath;
         if (!file_exists($dbPath)) {
-            $this->createAndInitializeSqliteFile($dbPath);
+            $this->createSqliteFile($dbPath);
         }
+        $this->initializeShardSchema($dbPath);
     }
 
-    private function createAndInitializeSqliteFile(string $dbPath): void
+    private function createSqliteFile(string $dbPath): void
     {
         $dir = dirname($dbPath);
         if (!is_dir($dir)) {
@@ -71,7 +75,6 @@ class ShardResolver
         }
 
         touch($dbPath);
-        $this->initializeShardSchema($dbPath);
     }
 
     private function initializeShardSchema(string $dbPath): void
@@ -81,6 +84,10 @@ class ShardResolver
         $this->createSerialsTable($pdo);
         $this->createMachineBindingsTable($pdo);
         $this->createLedgerAndQuotasTables($pdo);
+        $this->createQuotaRequestsTable($pdo);
+        $this->createAuxiliaryShardTables($pdo);
+        $this->createOperationalShardTables($pdo);
+        $this->createHealthAndKeyTables($pdo);
     }
 
     private function createLicensesTable(PDO $pdo): void
@@ -89,10 +96,11 @@ class ShardResolver
             LicenseId INTEGER PRIMARY KEY AUTOINCREMENT,
             LicenseKey VARCHAR(128) NOT NULL UNIQUE,
             PrefixValue VARCHAR(12) NOT NULL,
-            ResellerId INTEGER NOT NULL,
+            ResellerId INTEGER,
             IssuedByUserId INTEGER NOT NULL DEFAULT 1,
             IssuerActorType VARCHAR(32) NOT NULL DEFAULT "Reseller",
             LicenseCategoryId INTEGER NOT NULL DEFAULT 3,
+            LicenseTierId INTEGER NOT NULL DEFAULT 1,
             TierName VARCHAR(32) NOT NULL DEFAULT "Tier1",
             EnvironmentName VARCHAR(32) NOT NULL DEFAULT "Production",
             ProductVersion VARCHAR(16) NOT NULL DEFAULT "V1",
@@ -148,14 +156,18 @@ class ShardResolver
     {
         $pdo->exec('CREATE TABLE IF NOT EXISTS LicenseLedger (
             Id INTEGER PRIMARY KEY AUTOINCREMENT,
-            ResellerId INTEGER NOT NULL,
+            LicenseLedgerId INTEGER,
+            ResellerId INTEGER,
             LicenseCategoryId INTEGER,
             LicenseTierId INTEGER,
             TierName VARCHAR(32),
             Delta INTEGER NOT NULL,
-            Action VARCHAR(32) NOT NULL,
+            Action VARCHAR(32),
             LedgerAction VARCHAR(32),
             ReferenceId VARCHAR(64),
+            RequestId VARCHAR(64),
+            ActorUserId INTEGER,
+            QuotaRequestId INTEGER,
             LicenseId INTEGER,
             OccurredAt DATETIME,
             CreatedAt DATETIME,
@@ -164,7 +176,7 @@ class ShardResolver
 
         $pdo->exec('CREATE TABLE IF NOT EXISTS Quotas (
             Id INTEGER PRIMARY KEY AUTOINCREMENT,
-            ResellerId INTEGER NOT NULL,
+            ResellerId INTEGER,
             LicenseCategoryId INTEGER NOT NULL DEFAULT 3,
             LicenseTierId INTEGER NOT NULL DEFAULT 1,
             LicensesGranted INTEGER NOT NULL DEFAULT 500,
@@ -176,11 +188,88 @@ class ShardResolver
         );');
     }
 
+    private function createQuotaRequestsTable(PDO $pdo): void
+    {
+        $pdo->exec('CREATE TABLE IF NOT EXISTS QuotaRequests (
+            QuotaRequestId INTEGER PRIMARY KEY AUTOINCREMENT,
+            ResellerId INTEGER,
+            LicenseCategoryId INTEGER NOT NULL DEFAULT 3,
+            LicenseTierId INTEGER NOT NULL DEFAULT 1,
+            RequestedDelta INTEGER NOT NULL DEFAULT 100,
+            ApprovedDelta INTEGER,
+            Status INTEGER NOT NULL DEFAULT 1,
+            Justification TEXT,
+            DenialReason TEXT,
+            SubmittedByUserId INTEGER DEFAULT 1,
+            DecidedByUserId INTEGER,
+            SubmittedAt DATETIME,
+            DecidedAt DATETIME,
+            RequestId VARCHAR(64),
+            IdempotencyKey VARCHAR(64),
+            CreatedAt DATETIME,
+            UpdatedAt DATETIME
+        );');
+    }
+
+    private function createAuxiliaryShardTables(PDO $pdo): void
+    {
+        $pdo->exec('CREATE TABLE IF NOT EXISTS DailyMetrics (
+            MetricId INTEGER PRIMARY KEY AUTOINCREMENT,
+            ResellerId INTEGER,
+            MetricDate TEXT NOT NULL,
+            RequestCount INTEGER NOT NULL DEFAULT 0,
+            SuccessCount INTEGER NOT NULL DEFAULT 0,
+            FailureCount INTEGER NOT NULL DEFAULT 0
+        );');
+        $pdo->exec('CREATE TABLE IF NOT EXISTS AuditLogs (
+            AuditLogId INTEGER PRIMARY KEY AUTOINCREMENT,
+            ResellerId INTEGER,
+            Action VARCHAR(64) NOT NULL,
+            Details TEXT,
+            CreatedAt DATETIME
+        );');
+    }
+
+    private function createOperationalShardTables(PDO $pdo): void
+    {
+        $pdo->exec('CREATE TABLE IF NOT EXISTS ServiceUsage (
+            UsageId INTEGER PRIMARY KEY AUTOINCREMENT,
+            ResellerId INTEGER,
+            ServiceName VARCHAR(64) NOT NULL,
+            UsageCount INTEGER NOT NULL DEFAULT 0,
+            AvgLatencyMs INTEGER NOT NULL DEFAULT 0,
+            RecordedAt DATETIME
+        );');
+    }
+
+    private function createHealthAndKeyTables(PDO $pdo): void
+    {
+        $pdo->exec('CREATE TABLE IF NOT EXISTS PlatformStats (
+            StatId INTEGER PRIMARY KEY AUTOINCREMENT,
+            ResellerId INTEGER,
+            PlatformName VARCHAR(64) NOT NULL,
+            ActiveUsers INTEGER NOT NULL DEFAULT 0,
+            CreatedAt DATETIME
+        );');
+        $pdo->exec('CREATE TABLE IF NOT EXISTS EnvironmentHealth (
+            HealthId INTEGER PRIMARY KEY AUTOINCREMENT,
+            ResellerId INTEGER,
+            EnvironmentName VARCHAR(32) NOT NULL,
+            Status VARCHAR(32) NOT NULL DEFAULT "Healthy",
+            LastCheckedAt DATETIME
+        );');
+    }
+
     private function applySqlitePragmas(array $template): void
     {
         if (($template['driver'] ?? '') === 'sqlite') {
-            $this->db->connection(self::CONNECTION_ALIAS)->statement('PRAGMA journal_mode = WAL;');
-            $this->db->connection(self::CONNECTION_ALIAS)->statement('PRAGMA busy_timeout = 5000;');
+            $conn = $this->db->connection(self::CONNECTION_ALIAS);
+            $conn->statement('PRAGMA journal_mode = WAL;');
+            $conn->statement('PRAGMA busy_timeout = 5000;');
+            $pdo = $conn->getPdo();
+            if (method_exists($pdo, 'sqliteCreateFunction')) {
+                $pdo->sqliteCreateFunction('now', fn() => date('Y-m-d H:i:s'));
+            }
         }
     }
 

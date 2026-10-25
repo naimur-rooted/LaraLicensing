@@ -268,12 +268,14 @@ return [
         'AuthSessionAlreadyClosed',
 
         'AuthzLastAdminProtected',
+        'SelfDestructionForbidden',
         // Plan 14 steps 4..8 (v0.609.0..v0.613.0). BR closed-set error codes
         // for feature-flag gate, day-one backfills, ops surface, manifest
         // validator, and encryption/KEK service. Registered together so
         // LaraException::make stays a total function for every BR call site.
         'BackupCorrupt',
         'BackupExportProductionPending',
+        'BackupRestoreProductionPending',
         'BackupKeyEpochRetired',
         'BackupStorageFailure',
         'BackupVersionMismatch',
@@ -344,6 +346,7 @@ return [
         'ResourceRoleAlreadyAssigned',
         'ResourceRoleNotAssigned',
         'RoleAssignmentNotFound',
+        'RouteNotFound',
         'SerialInvalid',
         'SerialNotFound',
         'SerialRevoked',
@@ -401,11 +404,13 @@ return [
         'AuthSessionNotFound' => ['status' => 404],
         'AuthSessionAlreadyClosed' => ['status' => 409],
         'AuthzLastAdminProtected' => ['status' => 409],
+        'SelfDestructionForbidden' => ['status' => 409],
         'AuthzPermissionDenied' => ['status' => 403],
         'AuthzRoleDenied' => ['status' => 403],
         'AuthzRowScopeDenied' => ['status' => 403],
         'BackupCorrupt' => ['status' => 422],
         'BackupExportProductionPending' => ['status' => 501],
+        'BackupRestoreProductionPending' => ['status' => 501],
         'BackupKeyEpochRetired' => ['status' => 409],
         'BackupStorageFailure' => ['status' => 500],
         'BackupVersionMismatch' => ['status' => 409],
@@ -468,6 +473,7 @@ return [
         'ResourceRoleAlreadyAssigned' => ['status' => 409],
         'ResourceRoleNotAssigned' => ['status' => 404],
         'RoleAssignmentNotFound' => ['status' => 404],
+        'RouteNotFound' => ['status' => 404],
         'SerialInvalid' => ['status' => 400],
         'SerialNotFound' => ['status' => 404],
         'SerialRevoked' => ['status' => 409],

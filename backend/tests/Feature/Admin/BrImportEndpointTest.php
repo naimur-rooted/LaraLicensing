@@ -246,7 +246,12 @@ final class BrImportEndpointTest extends TestCase
             ['FlagId' => BrFlagId::KillSwitch->value,     'Value' => 'off'],
             ['FlagId' => BrFlagId::ImportEnabled->value,  'Value' => $importValue],
         ];
-        DB::connection('root')->table('FeatureFlags')->insert($rows);
+        foreach ($rows as $row) {
+            DB::connection('root')->table('FeatureFlags')->updateOrInsert(
+                ['FlagId' => $row['FlagId']],
+                ['Value' => $row['Value']]
+            );
+        }
     }
 
     private function makeUser(string $email): User

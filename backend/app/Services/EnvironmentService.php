@@ -38,7 +38,7 @@ use Illuminate\Support\Facades\Config;
  *    the exception payload.
  *  - `ordinalMax()` -> int, for validator `max:` rules.
  */
-final class EnvironmentService
+class EnvironmentService
 {
     private const CONFIG_KEY = 'lara.environments';
     private const ERROR_MEMBERSHIP = 'ValidationFailed';

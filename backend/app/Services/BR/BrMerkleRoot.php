@@ -29,7 +29,7 @@ use App\Exceptions\LaraException;
  *
  * 15-line function cap held.
  */
-final class BrMerkleRoot
+class BrMerkleRoot
 {
     private const ERR_CORRUPT = 'BackupCorrupt';
     private const RULE_EMPTY = 'MerkleLeavesEmpty';

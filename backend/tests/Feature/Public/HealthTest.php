@@ -41,12 +41,12 @@ final class HealthTest extends TestCase
     {
         Log::spy();
 
-        $res = $this->getJson('/Api/Public/Health', ['X-Request-Id' => 'health-ok']);
+        $res = $this->getJson('/Api/Public/Health', ['X-Request-Id' => 'health-ok-0000000000']);
 
         $res->assertStatus(200);
         $json = $res->json();
         $this->assertTrue($json['Status']['IsSuccess'] ?? false, 'Health OK envelope must have Status.IsSuccess === true.');
-        $this->assertSame('health-ok', $json['Status']['RequestId'] ?? null);
+        $this->assertSame('health-ok-0000000000', $json['Attributes']['RequestId'] ?? null);
         $payload = $json['Results'][0] ?? null;
         $this->assertIsArray($payload, 'Results[0] must carry the readiness payload.');
         $this->assertSame('ok', $payload['RootDb'] ?? null);
@@ -54,7 +54,7 @@ final class HealthTest extends TestCase
             $this->assertArrayHasKey($key, $payload, "Health payload must expose '{$key}'.");
         }
         Log::shouldHaveReceived('info')->withArgs(function (string $event, array $ctx): bool {
-            return $event === 'public.health.ok' && ($ctx['RequestId'] ?? null) === 'health-ok';
+            return $event === 'public.health.ok' && ($ctx['RequestId'] ?? null) === 'health-ok-0000000000';
         })->atLeast()->once();
     }
 
@@ -70,7 +70,7 @@ final class HealthTest extends TestCase
         Config::set('database.connections.root.foreign_key_constraints', false);
         DB::purge('root');
 
-        $res = $this->getJson('/Api/Public/Health', ['X-Request-Id' => 'health-down']);
+        $res = $this->getJson('/Api/Public/Health', ['X-Request-Id' => 'health-down-00000000']);
 
         $this->assertLaraException($res, 'ServiceUnavailable', 503);
         $attributes = $res->json('Attributes');
@@ -81,7 +81,7 @@ final class HealthTest extends TestCase
             return $event === 'public.health.root_ping_failed';
         })->atLeast()->once();
         Log::shouldHaveReceived('error')->withArgs(function (string $event, array $ctx = []): bool {
-            return $event === 'public.health.root_down' && ($ctx['RequestId'] ?? null) === 'health-down';
+            return $event === 'public.health.root_down' && ($ctx['RequestId'] ?? null) === 'health-down-00000000';
         })->atLeast()->once();
     }
 }

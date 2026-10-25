@@ -308,7 +308,8 @@ final class ImpersonationTransactionTest extends TestCase
 
     private function seedIdentities(): void
     {
-        $roleId = DB::connection(self::ROOT)->table('Roles')->insertGetId([
+        $existing = DB::connection(self::ROOT)->table('Roles')->where('RoleName', 'Admin')->first();
+        $roleId = $existing ? $existing->RoleId : DB::connection(self::ROOT)->table('Roles')->insertGetId([
             'RoleName' => 'Admin',
         ]);
 

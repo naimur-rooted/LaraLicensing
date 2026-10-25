@@ -47,12 +47,8 @@ final class IdempotencyKeyMiddleware
     private const CONNECTION = 'root';
     private const DEFAULT_TTL_SECONDS = 86400;
     private const REQUIRED_PREFIXES = [
-        'api/admin/appupdates',
         'api/admin/licenses',
         'api/admin/serials',
-        'api/admin/resellers',
-        'api/admin/users',
-        'api/admin/impersonation',
         'api/admin/quotarequests',
         'api/reseller/licenses',
         'api/reseller/quotarequests',
@@ -237,6 +233,7 @@ final class IdempotencyKeyMiddleware
                 'ResponseHeadersJson' => $this->encodeHeaders($response->headers->all()),
                 'ResponseBody' => (string) $response->getContent(),
                 'CreatedAt' => $now,
+                'UpdatedAt' => $now,
                 'ExpiresAt' => $now->copy()->addSeconds($ttl),
             ]);
         } catch (Throwable $e) {

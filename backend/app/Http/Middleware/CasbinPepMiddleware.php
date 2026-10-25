@@ -26,29 +26,11 @@ class CasbinPepMiddleware
         $obj = '/' . ltrim($request->path(), '/');
         $act = strtoupper($request->method());
 
-        // In a real environment, Enforcer facade from laravel-authz is used.
-        // If it throws an exception because authz isn't installed yet, we'll
-        // let it surface so CI can catch it.
         $allowed = class_exists(\Lauthz\Facades\Enforcer::class) ? \Lauthz\Facades\Enforcer::enforce($sub, $obj, $act) : true;
-
         if ($allowed === false) {
-            // Log the denied decision at WARNING
-            \Illuminate\Support\Facades\Log::channel('lara-diag')?->warning('casbin.enforce', [
-                'RequestId' => $request->attributes->get('RequestId'),
-                'sub' => $sub,
-                'obj' => $obj,
-                'act' => $act,
-                'allowed' => false,
-            ]);
-
-            throw LaraException::forbidden('Rbac.Denied', [
-                'sub' => $sub,
-                'obj' => $obj,
-                'act' => $act,
-            ]);
+            $this->handleDenial($request, $sub, $obj, $act);
         }
 
-        // Log the allowed decision at DEBUG
         \Illuminate\Support\Facades\Log::channel('lara-diag')?->debug('casbin.enforce', [
             'RequestId' => $request->attributes->get('RequestId'),
             'sub' => $sub,
@@ -58,5 +40,22 @@ class CasbinPepMiddleware
         ]);
 
         return $next($request);
+    }
+
+    private function handleDenial(Request $request, string $sub, string $obj, string $act): void
+    {
+        \Illuminate\Support\Facades\Log::channel('lara-diag')?->warning('casbin.enforce', [
+            'RequestId' => $request->attributes->get('RequestId'),
+            'sub' => $sub,
+            'obj' => $obj,
+            'act' => $act,
+            'allowed' => false,
+        ]);
+
+        throw \App\Exceptions\AuthException::forbidden('Rbac.Denied', [
+            'sub' => $sub,
+            'obj' => $obj,
+            'act' => $act,
+        ]);
     }
 }

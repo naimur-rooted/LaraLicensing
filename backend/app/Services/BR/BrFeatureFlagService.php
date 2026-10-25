@@ -34,7 +34,7 @@ use Illuminate\Support\Facades\Log;
  * in `BrFlagId`, values in `BrFlagValue`, error code in the shared
  * catalogue.
  */
-final class BrFeatureFlagService
+class BrFeatureFlagService
 {
     private const CONN = 'root';
     private const TABLE = 'FeatureFlags';

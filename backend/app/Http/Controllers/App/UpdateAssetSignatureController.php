@@ -8,7 +8,6 @@ use App\Exceptions\ValidationException;
 use App\Exceptions\NotFoundException;
 
 
-use App\Exceptions\LaraException;
 use App\Models\AppUpdateAsset;
 use App\Support\AuditWriter;
 use Illuminate\Http\Request;

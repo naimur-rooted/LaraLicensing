@@ -30,7 +30,7 @@ use Ramsey\Uuid\Uuid;
  *  - Close() is idempotent: closing an already-closed row is a no-op that
  *    logs `auth.session.close_noop` at info level.
  */
-final class AuthSessionService
+class AuthSessionService
 {
     public const REVOKE_OPERATOR_LOGOUT = 'OperatorEnded';
     public const REVOKE_TIMEOUT = 'Timeout';

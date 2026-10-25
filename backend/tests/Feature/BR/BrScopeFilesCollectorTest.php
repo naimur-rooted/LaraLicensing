@@ -103,7 +103,7 @@ final class BrScopeFilesCollectorTest extends TestCase
         $this->seedAppUpdate();
         DB::connection('root')->table('AppUpdateAssets')->insert([
             ['AppUpdateId' => 1, 'Platform' => 'LinuxAmd64', 'SizeBytes' => 10, 'Sha256' => str_repeat('b', 64), 'StoragePath' => 'a', 'IsFinalized' => 1, 'FinalizedAt' => now()],
-            ['AppUpdateId' => 1, 'Platform' => 'WindowsAmd64', 'SizeBytes' => 20, 'Sha256' => str_repeat('c', 64), 'StoragePath' => 'b', 'IsFinalized' => 0],
+            ['AppUpdateId' => 1, 'Platform' => 'WindowsAmd64', 'SizeBytes' => 20, 'Sha256' => str_repeat('c', 64), 'StoragePath' => 'b', 'IsFinalized' => 0, 'FinalizedAt' => null],
         ]);
 
         $out = app(BrScopeFilesCollector::class)->collect(self::REQ);

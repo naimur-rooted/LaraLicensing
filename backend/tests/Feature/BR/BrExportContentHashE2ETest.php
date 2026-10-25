@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature\BR;
 
+use App\Http\Controllers\Admin\BrExportController;
+
 use App\Services\BR\BrArchiveStorage;
 use App\Services\BR\BrManifestBuilder;
 use App\Services\BR\BrScopeClosedSetsCollector;

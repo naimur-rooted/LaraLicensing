@@ -32,6 +32,13 @@ final class LicenseRevokeRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        if (!$this->has('Reason') && $this->has('RevokeReason')) {
+            $this->merge(['Reason' => $this->input('RevokeReason')]);
+        }
+    }
+
     /**
      * @return array<string, array<int, string>>
      */

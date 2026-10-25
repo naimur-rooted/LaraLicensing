@@ -96,9 +96,9 @@ final class BrScopeDomainCollectorContractTest extends TestCase
     {
         $this->reset(['Prefixes']);
         DB::connection('root')->table('Prefixes')->insert([
-            ['PrefixValue' => 'ZZZ'],
-            ['PrefixValue' => 'MMM'],
-            ['PrefixValue' => 'AAA'],
+            ['PrefixId' => 3, 'PrefixValue' => 'ZZZ'],
+            ['PrefixId' => 2, 'PrefixValue' => 'MMM'],
+            ['PrefixId' => 1, 'PrefixValue' => 'AAA'],
         ]);
         $out = app(BrScopeDomainCollector::class)->collect(self::REQ);
 

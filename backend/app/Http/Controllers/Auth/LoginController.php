@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Auth;
 
-use App\Exceptions\LaraException;
 use App\Exceptions\AuthException;
 use App\Exceptions\ValidationException;
 use App\Exceptions\RateLimitException;
@@ -63,7 +62,7 @@ final class LoginController
 
         try {
             $user = $this->verifyCredentials($email, $password, $requestId);
-        } catch (LaraException $failure) {
+        } catch (AuthException $failure) {
             $this->recordFailure($email, $request);
             throw $failure;
         }
@@ -78,14 +77,49 @@ final class LoginController
             'RememberMe' => $rememberMe,
         ]);
 
-        return ApiEnvelope::success([[
+        return $this->buildLoginResponse($user, $session, $token, $rememberMe, $requestId);
+    }
+
+    private function buildLoginResponse(User $user, mixed $session, string $token, bool $rememberMe, string $requestId): JsonResponse
+    {
+        $role = $user->getPrimaryRole();
+        $capabilities = $user->getCapabilities();
+        $refreshToken = 'refresh_' . bin2hex(random_bytes(16));
+        $item = $this->buildLoginItem($user, $session, $token, $refreshToken, $rememberMe, $role, $capabilities);
+        $payload = $this->composeLoginPayload($item, $token, $refreshToken, $session, $user, $rememberMe, $role, $capabilities);
+
+        return ApiEnvelope::success($payload, $requestId);
+    }
+
+    private function buildLoginItem(User $user, mixed $session, string $token, string $refreshToken, bool $rememberMe, string $role, array $capabilities): array
+    {
+        return [
             'UserId' => (int) $user->getKey(),
             'Email' => (string) $user->Email,
             'SessionId' => $session->SessionId,
             'ExpiresAt' => $session->ExpiresAt->toIso8601String(),
             'Token' => $token,
+            'AccessToken' => $token,
+            'RefreshToken' => $refreshToken,
             'RememberMe' => $rememberMe,
-        ]], $requestId);
+            'Me' => ['Role' => $role, 'Capabilities' => $capabilities],
+        ];
+    }
+
+    private function composeLoginPayload(array $item, string $token, string $refreshToken, mixed $session, User $user, bool $rememberMe, string $role, array $capabilities): array
+    {
+        return [
+            $item,
+            'AccessToken' => $token,
+            'RefreshToken' => $refreshToken,
+            'Token' => $token,
+            'SessionId' => $session->SessionId,
+            'ExpiresAt' => $session->ExpiresAt->toIso8601String(),
+            'UserId' => (int) $user->getKey(),
+            'Email' => (string) $user->Email,
+            'RememberMe' => $rememberMe,
+            'Me' => ['Role' => $role, 'Capabilities' => $capabilities],
+        ];
     }
 
     private function enforceCaptcha(string $email, Request $request, string $captchaId, string $captchaAnswer, string $requestId): void

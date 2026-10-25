@@ -34,7 +34,7 @@ use Illuminate\Support\Facades\Log;
  * Function bodies capped at 15 lines. No magic strings: every column,
  * pointer, and rule id comes from BrCryptoConstants or self::*.
  */
-final class BrKekService
+class BrKekService
 {
     private const CONN         = 'root';
     private const TABLE        = 'BrKekEpochs';

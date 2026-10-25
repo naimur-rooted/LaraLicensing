@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Portal;
 
 use App\Db\ShardResolver;
-use App\Exceptions\LaraException;
 use App\Exceptions\AuthException;
 use App\Exceptions\ValidationException;
 use App\Exceptions\RateLimitException;
@@ -407,7 +406,7 @@ public function hash(VerifyHashRequest $request): JsonResponse
             $this->environmentService->assertMatch((string) $license->EnvironmentName, $requestedOrdinal);
 
             return;
-        } catch (LaraException $e) {
+        } catch (ValidationException $e) {
             if ($e->errorCode !== 'EnvironmentMismatch') {
                 throw $e;
             }

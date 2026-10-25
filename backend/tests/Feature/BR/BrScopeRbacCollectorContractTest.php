@@ -106,7 +106,7 @@ final class BrScopeRbacCollectorContractTest extends TestCase
         [$admin] = $this->seedFreshGraph();
         $uid = DB::connection('root')->table('Users')->insertGetId(['Email' => 'x@e.com', 'PasswordHash' => 'x', 'IsActive' => true]);
         $urId = DB::connection('root')->table('UserRoles')->insertGetId(['UserId' => $uid, 'RoleId' => $admin]);
-        DB::connection('root')->statement('ALTER TABLE "UserRoles" DROP CONSTRAINT IF EXISTS "UserRoles_RoleId_fkey"');
+        if (DB::connection('root')->getDriverName() !== 'sqlite') { DB::connection('root')->statement('ALTER TABLE "UserRoles" DROP CONSTRAINT IF EXISTS "UserRoles_RoleId_fkey"'); }
         DB::connection('root')->table('UserRoles')->where('UserRoleId', $urId)->update(['RoleId' => 999999]);
 
         try {

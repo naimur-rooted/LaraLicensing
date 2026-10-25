@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Admin;
 
-use App\Exceptions\LaraException;
 use App\Exceptions\AuthException;
 use App\Exceptions\ValidationException;
 use App\Exceptions\RateLimitException;
@@ -140,6 +139,16 @@ public function update(UserUpdateRequest $request, int $userId): JsonResponse
         );
 
         return ApiEnvelope::success([$this->project($user)], $this->requestId($request));
+    }
+
+    public function destroy(Request $request, int $userId): JsonResponse
+    {
+        $this->assertNotSelfDestruction($request, $userId);
+        $user = $this->requireUser($userId);
+        $this->assertNotLastAdminForDeletion($userId);
+        $this->executeUserDelete($request, $user);
+
+        return ApiEnvelope::success([], $this->requestId($request));
     }
 
         /**
@@ -375,7 +384,8 @@ public function forceEndImpersonation(ImpersonateForceEndRequest $request): Json
 
             return $user;
         } catch (\Illuminate\Database\QueryException $e) {
-            if ($e->getCode() === self::UNIQUE_VIOLATION_SQLSTATE) {
+            $code = (string) $e->getCode();
+            if ($code === self::UNIQUE_VIOLATION_SQLSTATE || $code === '23000') {
                 throw DomainConflictException::custom('UserConflict', 'A user with this Email already exists.', [['Field' => 'Email', 'Rule' => 'Unique']], $e);
             }
             throw $e;
@@ -470,7 +480,8 @@ public function forceEndImpersonation(ImpersonateForceEndRequest $request): Json
                 'CreatedAt' => Carbon::now(),
             ]);
         } catch (\Illuminate\Database\QueryException $e) {
-            if ($e->getCode() === self::UNIQUE_VIOLATION_SQLSTATE) {
+            $code = (string) $e->getCode();
+            if ($code === self::UNIQUE_VIOLATION_SQLSTATE || $code === '23000') {
                 throw DomainConflictException::custom('ResourceRoleAlreadyAssigned', 'Role already assigned to this user.', [['Field' => 'RoleName', 'Rule' => 'AlreadyAssigned', 'Value' => $roleName]], $e);
             }
             throw $e;
@@ -506,6 +517,49 @@ public function forceEndImpersonation(ImpersonateForceEndRequest $request): Json
             'actorUserId' => $this->actorId($request),
             'requestId' => $this->requestId($request),
         ]);
+    }
+
+    private function assertNotSelfDestruction(Request $request, int $userId): void
+    {
+        $callerId = $this->actorId($request);
+        if ($callerId !== null && $callerId === $userId) {
+            throw DomainConflictException::custom(
+                'SelfDestructionForbidden',
+                'Cannot delete self.',
+                [['Field' => 'UserId', 'Rule' => 'SelfDestruction', 'Value' => (string) $userId]]
+            );
+        }
+    }
+
+    private function assertNotLastAdminForDeletion(int $userId): void
+    {
+        $hasAdminRole = DB::connection(self::ROOT_CONNECTION)
+            ->table(self::USER_ROLES_TABLE . ' as ur')
+            ->join(self::ROLES_TABLE . ' as r', 'ur.RoleId', '=', 'r.RoleId')
+            ->where('ur.UserId', $userId)
+            ->whereIn('r.RoleName', ['Admin', 'SuperAdmin'])
+            ->exists();
+
+        if ($hasAdminRole) {
+            $this->assertNotLastAdmin($userId, 'Admin');
+        }
+    }
+
+    private function executeUserDelete(Request $request, User $user): void
+    {
+        DB::connection(self::ROOT_CONNECTION)->transaction(function () use ($request, $user): void {
+            $userId = (int) $user->getKey();
+            DB::connection(self::ROOT_CONNECTION)->table('personal_access_tokens')
+                ->where('tokenable_type', $user::class)
+                ->where('tokenable_id', $userId)
+                ->delete();
+            DB::connection(self::ROOT_CONNECTION)->table(self::USER_ROLES_TABLE)
+                ->where('UserId', $userId)->delete();
+            DB::connection(self::ROOT_CONNECTION)->table('AuthSessions')
+                ->where('UserId', $userId)->delete();
+            $user->delete();
+            \App\Support\AuditWriter::write($request, 'UserDeleted', 'Users', $userId, ['UserId' => $userId]);
+        });
     }
 
     private function actorId(Request $request): ?int

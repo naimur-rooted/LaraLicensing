@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\Developer\ProductController;
+use App\Http\Controllers\Developer\DeveloperOverviewController;
+use App\Http\Controllers\Developer\AiArchitectController;
+
 use App\Models\Product;
 use Tests\TestCase;
 
@@ -15,8 +19,12 @@ class DeveloperPortalTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->artisan('migrate', ['--path' => 'database/migrations/root/2026_10_20_000001_create_root_products_table.php']);
-        $this->artisan('migrate', ['--path' => 'database/migrations/root/2026_10_21_000001_add_features_to_product_deals_table.php']);
+        if (!\Illuminate\Support\Facades\Schema::connection('root')->hasTable('Products')) {
+            $this->artisan('migrate', ['--path' => 'database/migrations/root/2026_10_20_000001_create_root_products_table.php']);
+        }
+        if (!\Illuminate\Support\Facades\Schema::connection('root')->hasTable('ProductDeals')) {
+            $this->artisan('migrate', ['--path' => 'database/migrations/root/2026_10_21_000001_add_features_to_product_deals_table.php']);
+        }
         $this->seed(\Database\Seeders\ProductSeeder::class);
     }
 

@@ -57,6 +57,7 @@ final class RequestIdPropagationE2ETest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->flushHeaders();
 
         // Success route: reads the middleware-bound attribute and echoes it
         // back via the canonical envelope. Mirrors what real controllers do.

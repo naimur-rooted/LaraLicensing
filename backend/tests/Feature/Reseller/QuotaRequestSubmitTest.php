@@ -129,7 +129,7 @@ final class QuotaRequestSubmitTest extends TestCase
                 'RequestedDelta' => 5,
                 'Justification' => 'Need more seats for Q3.',
             ]);
-        $this->assertSame('IdempotencyKeyRequired', (string) $res->json('Error.ErrorCode'));
+        $this->assertSame('IdempotencyKeyRequired', (string) $res->json('Attributes.Error.ErrorCode'));
     }
 
     public function test_store_unknown_closed_set_category_returns_400(): void

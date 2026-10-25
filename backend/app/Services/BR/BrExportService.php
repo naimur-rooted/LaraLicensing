@@ -39,7 +39,7 @@ use Throwable;
  *
  * Function bodies capped at 15 lines (project memory Core rule).
  */
-final class BrExportService
+class BrExportService
 {
     private const CONN = 'root';
     private const TABLE_JOBS = 'BackupJobs';

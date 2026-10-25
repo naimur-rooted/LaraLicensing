@@ -86,7 +86,7 @@ final class RegisterBootstrapTest extends TestCase
             'Email' => 'root@example.test',
             'Password' => 'short',
         ]);
-        $res->assertStatus(422);
+        $res->assertStatus(400);
         $this->assertSame(0, (int) DB::connection('root')->table('Users')->count());
     }
 

@@ -21,6 +21,9 @@ final class ResellersSeeder extends Seeder
             ['Name' => 'Acme Corp', 'Slug' => 'acme-corp', 'Email' => 'ops@acme.test', 'Prefix' => 'ACME'],
             ['Name' => 'Globex', 'Slug' => 'globex', 'Email' => 'admin@globex.test', 'Prefix' => 'GLBX'],
             ['Name' => 'Hooli', 'Slug' => 'hooli', 'Email' => 'ceo@hooli.test', 'Prefix' => 'HOLI'],
+            ['Name' => 'Initech', 'Slug' => 'initech', 'Email' => 'admin@initech.test', 'Prefix' => 'INIT'],
+            ['Name' => 'Umbrella Corp', 'Slug' => 'umbrella', 'Email' => 'contact@umbrella.test', 'Prefix' => 'UMBR'],
+            ['Name' => 'Wayne Enterprises', 'Slug' => 'wayne', 'Email' => 'bruce@wayne.test', 'Prefix' => 'WAYN'],
         ];
 
         foreach ($resellers as $r) {

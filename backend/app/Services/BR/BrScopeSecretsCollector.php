@@ -70,7 +70,7 @@ use Throwable;
  * `deriveMaterial`, `collectOne`, `assertColumns`, `readRows`,
  * `sealRow`, `deriveNonce`, `aggregate`.
  */
-final class BrScopeSecretsCollector
+class BrScopeSecretsCollector
 {
     private const CONN_ROOT = 'root';
     private const REL_PATH = 'scope/secrets-envelope.bin.zst';

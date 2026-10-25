@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Portal;
 
 use App\Db\ShardResolver;
-use App\Exceptions\LaraException;
 use App\Exceptions\AuthException;
 use App\Exceptions\ValidationException;
 use App\Exceptions\RateLimitException;

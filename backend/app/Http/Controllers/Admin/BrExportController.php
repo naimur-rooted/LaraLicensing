@@ -7,7 +7,6 @@ namespace App\Http\Controllers\Admin;
 use App\Exceptions\InternalException;
 
 
-use App\Exceptions\LaraException;
 use App\Http\Requests\Admin\BrExportRequest;
 use App\Services\BR\BrExportService;
 use App\Support\ApiEnvelope;

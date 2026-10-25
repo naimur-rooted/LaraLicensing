@@ -59,7 +59,7 @@ use Throwable;
  * `loadUserRoles`, `mapUserRoles`, `loadCasbinRules`, `mapCasbinRows`,
  * `bootstrapPresent`, `renderJsonl`, and `read`.
  */
-final class BrScopeRbacCollector
+class BrScopeRbacCollector
 {
     private const CONN = 'root';
     private const TABLE_ROLES = 'Roles';

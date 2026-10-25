@@ -183,7 +183,7 @@ final class LicenseRenewTest extends TestCase
             ->patchJson('/Api/Reseller/Licenses/' . self::REVOKED_KEY . '/Renew', [
                 'ExpiresAt' => Carbon::now()->addYear()->format('Y-m-d\TH:i:s\Z'),
             ]);
-        $this->assertSame('LicenseRevoked', (string) $res->json('Error.ErrorCode'));
+        $this->assertSame('LicenseRevoked', (string) $res->json('Attributes.Error.ErrorCode'));
     }
 
     public function test_renew_happy_path_bumps_version_and_writes_ledger(): void

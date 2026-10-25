@@ -79,7 +79,7 @@ use Throwable;
  * `readShardLicenses`, `readShardLicenseFeatures`, `readShardLedger`,
  * `renderJsonl`, and small helpers.
  */
-final class BrScopeLicensesCollector
+class BrScopeLicensesCollector
 {
     private const CONN_ROOT = 'root';
     private const TABLE_RESELLERS = 'Resellers';
@@ -231,29 +231,23 @@ final class BrScopeLicensesCollector
      */
     private function mapLicenseRows(array $rows, string $slug): array
     {
-        $out = [];
-        foreach ($rows as $r) {
-            $out[] = [
-                'ResellerSlug'    => $slug,
-                'LicenseKey'      => (string) $r->LicenseKey,
-                'PrefixValue'     => (string) $r->PrefixValue,
-                'TierName'        => (string) $r->TierName,
-                'EnvironmentName' => (string) $r->EnvironmentName,
-                'ProductVersion'  => (string) $r->ProductVersion,
-                'Status'          => (string) $r->Status,
-                'IssuerActorType' => $r->IssuerActorType === null ? null : (string) $r->IssuerActorType,
-                'IssuedByUserId'  => (int) $r->IssuedByUserId,
-                'IssuedAt'        => (string) $r->IssuedAt,
-                'ExpiresAt'       => $r->ExpiresAt === null ? null : (string) $r->ExpiresAt,
-                'RevokedAt'       => $r->RevokedAt === null ? null : (string) $r->RevokedAt,
-                'RevokedByUserId' => $r->RevokedByUserId === null ? null : (int) $r->RevokedByUserId,
-                'RevokeReason'    => $r->RevokeReason === null ? null : (string) $r->RevokeReason,
-                'Version'         => (int) $r->Version,
-                '_LicenseId'      => (int) $r->LicenseId, // stripped before render
-            ];
-        }
+        return array_map(fn ($r) => $this->mapSingleLicenseRow($r, $slug), $rows);
+    }
 
-        return $out;
+    private function mapSingleLicenseRow(object $r, string $slug): array
+    {
+        return [
+            'ResellerSlug' => $slug, 'LicenseKey' => (string) $r->LicenseKey,
+            'PrefixValue' => (string) $r->PrefixValue, 'TierName' => (string) $r->TierName,
+            'EnvironmentName' => (string) $r->EnvironmentName, 'ProductVersion' => (string) $r->ProductVersion,
+            'Status' => (string) $r->Status, 'IssuerActorType' => $r->IssuerActorType === null ? null : (string) $r->IssuerActorType,
+            'IssuedByUserId' => (int) $r->IssuedByUserId, 'IssuedAt' => (string) $r->IssuedAt,
+            'ExpiresAt' => $r->ExpiresAt === null ? null : (string) $r->ExpiresAt,
+            'RevokedAt' => $r->RevokedAt === null ? null : (string) $r->RevokedAt,
+            'RevokedByUserId' => $r->RevokedByUserId === null ? null : (int) $r->RevokedByUserId,
+            'RevokeReason' => $r->RevokeReason === null ? null : (string) $r->RevokeReason,
+            'Version' => (int) $r->Version, '_LicenseId' => (int) $r->LicenseId,
+        ];
     }
 
     /**

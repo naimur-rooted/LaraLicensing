@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Reseller;
 
+use App\Http\Controllers\Reseller\PrefixController as ResellerPrefixController;
+use App\Http\Controllers\Reseller\MachineBindingController;
+
 use Tests\TestCase;
 
 /**

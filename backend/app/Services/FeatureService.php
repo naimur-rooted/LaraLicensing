@@ -25,7 +25,7 @@ use Illuminate\Support\Facades\DB;
  * in PHP by FeatureId. FeatureIds referenced by shard rows that do not
  * resolve in Root are logged and dropped, never silently coerced.
  */
-final class FeatureService
+class FeatureService
 {
     private const ROOT_CONNECTION = 'root';
     private const SHARD_CONNECTION_DEFAULT = 'shard';

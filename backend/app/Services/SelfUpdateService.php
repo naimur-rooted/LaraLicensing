@@ -39,7 +39,7 @@ use App\Models\AppUpdateAsset;
  * more than a few dozen live rows in a v1.0 lifetime; if they do,
  * the retention job for yanked rows keeps the visible slice small.
  */
-final class SelfUpdateService
+class SelfUpdateService
 {
     private const CANDIDATE_WINDOW = 50;
 

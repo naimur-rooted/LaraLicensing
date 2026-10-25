@@ -40,7 +40,7 @@ use Illuminate\Support\Facades\Log;
  * `schemaStep`, `closedSetsStep`, `domainSteps`, `totals`,
  * `planId`, `canonicalize`.
  */
-final class BrRestoreApplyPlanBuilder
+class BrRestoreApplyPlanBuilder
 {
     public const PLAN_VERSION = 1;
     public const OP_VERIFY = 'VerifyContentHash';

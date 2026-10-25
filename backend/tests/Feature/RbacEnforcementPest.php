@@ -69,7 +69,7 @@ it('rejects anonymous callers with 401 and logs the unauthenticated path', funct
 });
 
 it('rejects authenticated callers missing the role and logs UserId + Path + RequiredRoles', function (): void {
-    $user = new AuthUser();
+    $user = new class extends AuthUser { protected $keyType = 'string'; };
     $user->id = 'user-42';
     PestFakeHasRolePolicy::$grants = ['user-42' => ['Reseller']];
     Log::spy();
@@ -85,12 +85,12 @@ it('rejects authenticated callers missing the role and logs UserId + Path + Requ
 });
 
 it('admits callers holding any required role and emits no rbac.forbidden warning', function (): void {
-    $user = new AuthUser();
+    $user = new class extends AuthUser { protected $keyType = 'string'; };
     $user->id = 'user-7';
     PestFakeHasRolePolicy::$grants = ['user-7' => ['SuperAdmin']];
     Log::spy();
     $res = $this->actingAs($user)->getJson('/api/pest-rbac-probe');
     $res->assertOk();
     expect($res->json('Ok'))->toBeTrue();
-    Log::shouldNotHaveReceived('warning', Mockery::on(fn ($event) => $event === 'rbac.forbidden'));
+    Log::shouldNotHaveReceived('warning', fn (string $event, array $ctx = []): bool => $event === 'rbac.forbidden');
 });

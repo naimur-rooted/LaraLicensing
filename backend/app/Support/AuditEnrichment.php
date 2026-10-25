@@ -47,7 +47,10 @@ final class AuditEnrichment
     private static function resolveSession(Request $request): ?AuthSession
     {
         $token = $request->user()?->currentAccessToken();
-        $sessionId = $token !== null ? (string) $token->name : '';
+        if ($token === null || $token instanceof \Laravel\Sanctum\TransientToken) {
+            return null;
+        }
+        $sessionId = (string) $token->name;
         if ($sessionId === '') {
             return null;
         }

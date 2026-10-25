@@ -83,7 +83,7 @@ final class RuntimeConfigTest extends TestCase
     public function test_show_bare_returns_401(): void
     {
         $res = $this->getJson('/Api/Admin/RuntimeConfig');
-        $this->assertLaraException($res, 'AuthInvalidCredentials', 401);
+        $this->assertLaraException($res, 'AuthUnauthorized', 401);
     }
 
     public function test_show_without_admin_role_returns_403(): void
@@ -111,7 +111,7 @@ final class RuntimeConfigTest extends TestCase
     public function test_update_bare_returns_401(): void
     {
         $res = $this->putJson('/Api/Admin/RuntimeConfig', ['Mode' => 'preview']);
-        $this->assertLaraException($res, 'AuthInvalidCredentials', 401);
+        $this->assertLaraException($res, 'AuthUnauthorized', 401);
     }
 
     public function test_update_as_admin_without_super_returns_403(): void

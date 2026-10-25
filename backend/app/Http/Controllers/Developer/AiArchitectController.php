@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Developer;
 
+use App\Exceptions\InternalException;
+use App\Exceptions\NotFoundException;
+use App\Exceptions\ValidationException;
 use App\Http\Controllers\Controller;
 use App\Models\ProductDeal;
 use App\Services\AiArchitectService;
@@ -27,28 +30,33 @@ class AiArchitectController extends Controller
     {
         $slug = trim((string) $request->input('productSlug', ''));
         $userPrompt = trim((string) $request->input('userPrompt', 'Design an optimal high-converting decoy pricing model for this software.'));
-
-        $product = $this->productService->getProductBySlug($slug);
-        if (!$product) {
-            $name = trim((string) $request->input('productName', ''));
-            if (!empty($name)) {
-                $product = new \App\Models\Product([
-                    'productName' => $name,
-                    'productSlug' => $slug ?: \Illuminate\Support\Str::slug($name),
-                    'category' => (string) $request->input('category', 'DesktopApp'),
-                    'description' => (string) $request->input('description', ''),
-                ]);
-            } else {
-                return response()->json(['IsSuccess' => false, 'ErrorCode' => 'ProductNotFound', 'Message' => 'Product not found.'], 404);
-            }
-        }
+        $product = $this->resolveProductForPricing($slug, $request);
 
         try {
             $proposal = $this->aiArchitectService->designPricingStrategy($product, $userPrompt);
             return response()->json(['IsSuccess' => true, 'Data' => $proposal]);
         } catch (Throwable $e) {
-            return response()->json(['IsSuccess' => false, 'ErrorCode' => 'AiGenerationFailed', 'Message' => $e->getMessage()], 500);
+            throw InternalException::fatal($e->getMessage());
         }
+    }
+
+    private function resolveProductForPricing(string $slug, Request $request): \App\Models\Product
+    {
+        $product = $this->productService->getProductBySlug($slug);
+        if ($product) {
+            return $product;
+        }
+        $name = trim((string) $request->input('productName', ''));
+        if ($name === '') {
+            throw NotFoundException::notFound('Product not found.');
+        }
+
+        return new \App\Models\Product([
+            'productName' => $name,
+            'productSlug' => $slug ?: \Illuminate\Support\Str::slug($name),
+            'category' => (string) $request->input('category', 'DesktopApp'),
+            'description' => (string) $request->input('description', ''),
+        ]);
     }
 
     /** Apply AI-generated deals to the product, updating database and live storefront. */
@@ -56,17 +64,15 @@ class AiArchitectController extends Controller
     {
         $product = $this->productService->getProductBySlug($slug);
         if (!$product) {
-            return response()->json(['IsSuccess' => false, 'ErrorCode' => 'ProductNotFound', 'Message' => 'Product not found.'], 404);
+            throw NotFoundException::notFound('Product not found.');
         }
 
         $deals = $request->input('deals', []);
         if (!is_array($deals) || empty($deals)) {
-            return response()->json(['IsSuccess' => false, 'ErrorCode' => 'InvalidDeals', 'Message' => 'Deals array is required.'], 422);
+            throw ValidationException::invalidInput('Deals array is required.');
         }
 
-        // Atomically replace existing deals for this product
         ProductDeal::where('productId', $product->ProductId)->delete();
-
         foreach ($deals as $deal) {
             $this->productService->createDeal($product, (array) $deal);
         }
@@ -84,7 +90,7 @@ class AiArchitectController extends Controller
     {
         $product = $this->productService->getProductBySlug($slug);
         if (!$product) {
-            return response()->json(['IsSuccess' => false, 'ErrorCode' => 'ProductNotFound', 'Message' => 'Product not found.'], 404);
+            throw NotFoundException::notFound('Product not found.');
         }
 
         $framework = trim((string) $request->input('framework', 'universal-agent'));
@@ -94,7 +100,7 @@ class AiArchitectController extends Controller
             $blueprint = $this->aiArchitectService->generateClientBlueprintCode($product, $framework, $notes);
             return response()->json(['IsSuccess' => true, 'Data' => $blueprint]);
         } catch (Throwable $e) {
-            return response()->json(['IsSuccess' => false, 'ErrorCode' => 'BlueprintGenerationFailed', 'Message' => $e->getMessage()], 500);
+            throw InternalException::fatal($e->getMessage());
         }
     }
 }

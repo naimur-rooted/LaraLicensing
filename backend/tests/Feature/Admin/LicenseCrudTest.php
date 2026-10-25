@@ -18,25 +18,22 @@ use Tests\TestCase;
 /**
  * Plan 10 step 15 (Admin/* row: Admin/LicenseCrudTest).
  *
- * Root cause guarded (one sentence): `Admin\LicenseController` is the
- * only path that mints licenses on a reseller shard, restores or skips
- * quota on revoke, and bumps `Version` under If-Match, but no HTTP-level
- * lock existed for `POST|GET|PATCH|DELETE /Api/Admin/Licenses[/{Key}]`,
- * so regressions in the `require.role` gate, `assertCatalogSeeded`
- * preflight ordering (masks `FeatureCatalogUnseeded` behind
- * `ResellerNotFound`), `LicenseIssueRequest` validation, prefix
- * ownership check (`PrefixForbidden`), `LicenseIssued` audit,
- * If-Match enforcement on PATCH, or the `RestoreSkippedReason =
- * AdminIssued` decision on revoke of an admin-issued license could
- * all ship green.
+ * Root cause guarded (one sentence): `Admin\LicenseController::issue`
+ * is the admin issuance path for licenses (distinct from Reseller
+ * self-issuance, which draws from quota); it mints directly on the
+ * tenant shard with `IssuerActorType='Admin'` and MUST NOT write to
+ * `ResellerQuotaLedger` or decrement quota balances, while still
+ * enforcing the root feature catalog preflight, the prefix ownership
+ * check, and writing an audit row on Root DB. This test locks the
+ * issuance, detail, update, and revoke branches end-to-end.
  *
  * Branches guarded (10):
  *   1.  POST   bare                          -> 401 AuthUnauthorized
  *   2.  POST   non-Admin caller              -> 403 AuthForbidden
- *   3.  POST   missing TierName              -> 400 ValidationFailed
- *   4.  POST   unknown reseller              -> 404 ResellerNotFound
+ *   3.  POST   missing required field (Tier) -> 400 ValidationFailed
+ *   4.  POST   unknown ResellerSlug          -> 404 ResellerNotFound
  *   5.  POST   prefix not owned by reseller  -> 403 PrefixForbidden
- *   6.  POST   unseeded Features catalog     -> 500 FeatureCatalogUnseeded
+ *   6.  POST   unseeded features catalog     -> 500 FeatureCatalogUnseeded
  *                                               (preflight runs BEFORE
  *                                               tenant lookup)
  *   7.  POST   happy                         -> 201 + `LicenseIssued`
@@ -59,6 +56,7 @@ final class LicenseCrudTest extends TestCase
     private const OTHER_NAME = 'Beta Corp';
     private const PREFIX = 'ACME01';
     private const OTHER_PREFIX = 'BETA01';
+    private const IDEM_KEY = 'idem-license-crud-00000000000001';
 
     private User $admin;
     private int $resellerId;
@@ -92,16 +90,24 @@ final class LicenseCrudTest extends TestCase
         parent::tearDown();
     }
 
+    private function authHeaders(array $extra = []): array
+    {
+        return array_merge([
+            'Authorization' => 'Bearer ' . $this->adminBearer,
+            'Idempotency-Key' => self::IDEM_KEY,
+        ], $extra);
+    }
+
     public function test_issue_bare_returns_401(): void
     {
-        $res = $this->postJson('/Api/Admin/Licenses', $this->validIssueBody());
+        $res = $this->withHeader('Idempotency-Key', self::IDEM_KEY)->postJson('/Api/Admin/Licenses', $this->validIssueBody());
         $this->assertLaraException($res, 'AuthUnauthorized', 401);
     }
 
     public function test_issue_non_admin_returns_403(): void
     {
         \Tests\Feature\FakeHasRolePolicy::$grants = [(string) $this->admin->getKey() => ['Reseller']];
-        $res = $this->withHeader('Authorization', 'Bearer ' . $this->adminBearer)
+        $res = $this->withHeaders($this->authHeaders())
             ->postJson('/Api/Admin/Licenses', $this->validIssueBody());
         $this->assertLaraException($res, 'AuthForbidden', 403);
     }
@@ -111,7 +117,7 @@ final class LicenseCrudTest extends TestCase
         \Tests\Feature\FakeHasRolePolicy::$grants = [(string) $this->admin->getKey() => ['Admin']];
         $body = $this->validIssueBody();
         unset($body['TierName']);
-        $res = $this->withHeader('Authorization', 'Bearer ' . $this->adminBearer)
+        $res = $this->withHeaders($this->authHeaders())
             ->postJson('/Api/Admin/Licenses', $body);
         $this->assertLaraException($res, 'ValidationFailed', 400);
     }
@@ -121,7 +127,7 @@ final class LicenseCrudTest extends TestCase
         \Tests\Feature\FakeHasRolePolicy::$grants = [(string) $this->admin->getKey() => ['Admin']];
         $body = $this->validIssueBody();
         $body['ResellerSlug'] = 'no-such-tenant';
-        $res = $this->withHeader('Authorization', 'Bearer ' . $this->adminBearer)
+        $res = $this->withHeaders($this->authHeaders())
             ->postJson('/Api/Admin/Licenses', $body);
         $this->assertLaraException($res, 'ResellerNotFound', 404);
     }
@@ -132,7 +138,7 @@ final class LicenseCrudTest extends TestCase
         $body = $this->validIssueBody();
         // Prefix belongs to the OTHER reseller, mismatch with ResellerSlug.
         $body['PrefixValue'] = self::OTHER_PREFIX;
-        $res = $this->withHeader('Authorization', 'Bearer ' . $this->adminBearer)
+        $res = $this->withHeaders($this->authHeaders())
             ->postJson('/Api/Admin/Licenses', $body);
         $this->assertLaraException($res, 'PrefixForbidden', 403);
     }
@@ -144,7 +150,7 @@ final class LicenseCrudTest extends TestCase
         DB::connection('root')->table('Features')->truncate();
 
         \Tests\Feature\FakeHasRolePolicy::$grants = [(string) $this->admin->getKey() => ['Admin']];
-        $res = $this->withHeader('Authorization', 'Bearer ' . $this->adminBearer)
+        $res = $this->withHeaders($this->authHeaders())
             ->postJson('/Api/Admin/Licenses', $this->validIssueBody());
         $this->assertLaraException($res, 'FeatureCatalogUnseeded', 500);
     }
@@ -153,7 +159,7 @@ final class LicenseCrudTest extends TestCase
     {
         Log::spy();
         \Tests\Feature\FakeHasRolePolicy::$grants = [(string) $this->admin->getKey() => ['Admin']];
-        $res = $this->withHeader('Authorization', 'Bearer ' . $this->adminBearer)
+        $res = $this->withHeaders($this->authHeaders())
             ->postJson('/Api/Admin/Licenses', $this->validIssueBody());
         $res->assertStatus(201);
         $licenseKey = (string) $res->json('Results.0.LicenseKey');
@@ -190,7 +196,7 @@ final class LicenseCrudTest extends TestCase
         \Tests\Feature\FakeHasRolePolicy::$grants = [(string) $this->admin->getKey() => ['Admin']];
         // Route + shard scope trigger EtagMiddleware; If-Match required
         // regardless of whether the LicenseKey exists.
-        $res = $this->withHeader('Authorization', 'Bearer ' . $this->adminBearer)
+        $res = $this->withHeaders($this->authHeaders())
             ->patchJson('/Api/Admin/Licenses/ACME01-DEADBEEFCAFEBABE?ResellerSlug=' . self::RESELLER_SLUG, [
                 'TierName' => 'Tier2',
             ]);
@@ -202,7 +208,7 @@ final class LicenseCrudTest extends TestCase
         Log::spy();
         \Tests\Feature\FakeHasRolePolicy::$grants = [(string) $this->admin->getKey() => ['Admin']];
         // Issue an admin license first so we have a real key to revoke.
-        $issueRes = $this->withHeader('Authorization', 'Bearer ' . $this->adminBearer)
+        $issueRes = $this->withHeaders($this->authHeaders())
             ->postJson('/Api/Admin/Licenses', $this->validIssueBody());
         $issueRes->assertStatus(201);
         $licenseKey = (string) $issueRes->json('Results.0.LicenseKey');
@@ -219,6 +225,7 @@ final class LicenseCrudTest extends TestCase
         $revokeRes = $this->withHeaders([
             'Authorization' => 'Bearer ' . $this->adminBearer,
             'If-Match' => $etag,
+            'Idempotency-Key' => 'idem-revoke-00000000000002',
         ])->deleteJson('/Api/Admin/Licenses/' . $licenseKey . '?ResellerSlug=' . self::RESELLER_SLUG, [
             'RevokeReason' => 'AdminForced',
         ]);
@@ -346,6 +353,20 @@ final class LicenseCrudTest extends TestCase
             "expires_at" TEXT NULL,
             "created_at" TEXT NULL,
             "updated_at" TEXT NULL
+        )');
+        $root->statement('CREATE TABLE IF NOT EXISTS "IdempotencyRecords" (
+            "IdempotencyRecordId" INTEGER PRIMARY KEY AUTOINCREMENT,
+            "Endpoint" TEXT NOT NULL,
+            "ActorId" TEXT NOT NULL,
+            "IdempotencyKey" TEXT NOT NULL,
+            "BodyHash" TEXT NOT NULL,
+            "ResponseStatus" INTEGER NOT NULL,
+            "ResponseHeadersJson" TEXT NOT NULL,
+            "ResponseBody" TEXT NOT NULL,
+            "CreatedAt" TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            "UpdatedAt" TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            "ExpiresAt" TEXT NOT NULL,
+            CONSTRAINT "UX_IdempotencyRecords_Scope" UNIQUE ("Endpoint", "ActorId", "IdempotencyKey")
         )');
         $root->statement('CREATE TABLE IF NOT EXISTS "AuditLogs" (
             "AuditLogId" INTEGER PRIMARY KEY AUTOINCREMENT,

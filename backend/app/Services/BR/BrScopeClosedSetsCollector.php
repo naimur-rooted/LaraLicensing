@@ -43,7 +43,7 @@ use Throwable;
  * 15-line function cap held by splitting into `renderJsonl` and
  * `countValues`.
  */
-final class BrScopeClosedSetsCollector
+class BrScopeClosedSetsCollector
 {
     private const REL_PATH = 'scope/closed-sets.jsonl.zst';
     private const ERR_UNREADABLE = 'BackupStorageFailure';

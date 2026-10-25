@@ -41,7 +41,7 @@ use Illuminate\Support\Facades\Log;
  * 15-line function cap held by splitting into `writeOne` and
  * `chunkDescriptor`.
  */
-final class BrChunkWriter
+class BrChunkWriter
 {
     private const TRAILER_BYTES = 32;
     private const LOG_WROTE  = 'br.export.chunk.written';

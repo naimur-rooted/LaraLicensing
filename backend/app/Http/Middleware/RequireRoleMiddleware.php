@@ -42,9 +42,10 @@ final class RequireRoleMiddleware
 
     public function handle(Request $request, Closure $next, string ...$roleParams): Response
     {
+        $policy = app(HasRolePolicy::class);
         $userId = $this->resolveUserId($request);
         $required = $this->parseRoles($roleParams);
-        if (!$this->policy->hasAnyRole($userId, $required)) {
+        if (!$policy->hasAnyRole($userId, $required)) {
             Log::warning('rbac.forbidden', [
                 'UserId' => $userId,
                 'Path' => $request->path(),

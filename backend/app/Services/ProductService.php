@@ -38,27 +38,36 @@ class ProductService
     {
         $slug = Str::slug((string) ($attributes['productSlug'] ?? $attributes['productName']));
         $keyPair = $this->generateKeyPair();
-        $product = Product::create([
+        $product = Product::create($this->buildProductPayload($userId, $slug, $attributes, $keyPair));
+        $this->provisionProductShard($slug);
+        $this->provisionProductDeals($product, $attributes['deals'] ?? []);
+
+        return $product->load('deals');
+    }
+
+    private function buildProductPayload(int $userId, string $slug, array $attrs, array $keyPair): array
+    {
+        return [
             'userId' => $userId,
             'productSlug' => $slug,
-            'productName' => (string) $attributes['productName'],
-            'category' => (string) ($attributes['category'] ?? 'DesktopApp'),
-            'description' => $attributes['description'] ?? null,
+            'productName' => (string) $attrs['productName'],
+            'category' => (string) ($attrs['category'] ?? 'DesktopApp'),
+            'description' => $attrs['description'] ?? null,
             'ed25519PublicKey' => $keyPair['public'],
             'ed25519PrivateKey' => $keyPair['private'],
             'webhookSecret' => 'whsec_' . Str::random(32),
-            'checkIntervalDays' => (int) ($attributes['checkIntervalDays'] ?? 7),
+            'checkIntervalDays' => (int) ($attrs['checkIntervalDays'] ?? 7),
             'isActive' => true,
-        ]);
-        $this->provisionProductShard($slug);
+        ];
+    }
 
-        if (!empty($attributes['deals']) && is_array($attributes['deals'])) {
-            foreach ($attributes['deals'] as $deal) {
+    private function provisionProductDeals(Product $product, mixed $deals): void
+    {
+        if (is_array($deals) && !empty($deals)) {
+            foreach ($deals as $deal) {
                 $this->createDeal($product, (array) $deal);
             }
         }
-
-        return $product->load('deals');
     }
 
     /** Provision an isolated SQLite shard for the product in repodb/. */
@@ -163,24 +172,29 @@ class ProductService
             return null;
         }
 
-        $features = $attributes['features'] ?? $deal->features;
+        $deal->update($this->buildUpdateDealAttributes($deal, $attributes));
+
+        return $deal;
+    }
+
+    private function buildUpdateDealAttributes(ProductDeal $deal, array $attrs): array
+    {
+        $features = $attrs['features'] ?? $deal->features;
         if (is_string($features)) {
             $features = array_values(array_filter(array_map('trim', explode("\n", $features))));
         }
 
-        $deal->update([
-            'dealName' => (string) ($attributes['dealName'] ?? $deal->dealName),
-            'dealCode' => isset($attributes['dealCode']) ? strtoupper(trim((string) $attributes['dealCode'])) : $deal->dealCode,
-            'billingInterval' => (string) ($attributes['billingInterval'] ?? $deal->billingInterval),
-            'priceCents' => isset($attributes['priceCents']) ? (int) $attributes['priceCents'] : $deal->priceCents,
-            'allowedMachineSeats' => isset($attributes['allowedMachineSeats']) ? (int) $attributes['allowedMachineSeats'] : $deal->allowedMachineSeats,
-            'allowedDomains' => isset($attributes['allowedDomains']) ? (int) $attributes['allowedDomains'] : $deal->allowedDomains,
-            'isDecoyTarget' => isset($attributes['isDecoyTarget']) ? (bool) $attributes['isDecoyTarget'] : $deal->isDecoyTarget,
+        return [
+            'dealName' => (string) ($attrs['dealName'] ?? $deal->dealName),
+            'dealCode' => isset($attrs['dealCode']) ? strtoupper(trim((string) $attrs['dealCode'])) : $deal->dealCode,
+            'billingInterval' => (string) ($attrs['billingInterval'] ?? $deal->billingInterval),
+            'priceCents' => isset($attrs['priceCents']) ? (int) $attrs['priceCents'] : $deal->priceCents,
+            'allowedMachineSeats' => isset($attrs['allowedMachineSeats']) ? (int) $attrs['allowedMachineSeats'] : $deal->allowedMachineSeats,
+            'allowedDomains' => isset($attrs['allowedDomains']) ? (int) $attrs['allowedDomains'] : $deal->allowedDomains,
+            'isDecoyTarget' => isset($attrs['isDecoyTarget']) ? (bool) $attrs['isDecoyTarget'] : $deal->isDecoyTarget,
             'features' => is_array($features) ? $features : [],
-            'isActive' => isset($attributes['isActive']) ? (bool) $attributes['isActive'] : $deal->isActive,
-        ]);
-
-        return $deal;
+            'isActive' => isset($attrs['isActive']) ? (bool) $attrs['isActive'] : $deal->isActive,
+        ];
     }
 
     /** Delete a deal for a product. */

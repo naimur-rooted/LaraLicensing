@@ -29,6 +29,11 @@ final class DemoLoginSeeder extends Seeder
                 'password' => 'demo123',
                 'role' => 'Reseller'
             ],
+            [
+                'email' => 'user@licensingportal.local',
+                'password' => 'demo123',
+                'role' => 'EndUser'
+            ],
         ];
 
         foreach ($users as $u) {

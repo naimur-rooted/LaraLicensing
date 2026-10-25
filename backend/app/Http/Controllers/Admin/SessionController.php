@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Admin;
 
-use App\Exceptions\LaraException;
 use App\Exceptions\AuthException;
 use App\Exceptions\ValidationException;
 use App\Exceptions\RateLimitException;
@@ -83,10 +82,10 @@ public function destroy(Request $request, string $sessionId): JsonResponse
     {
         $session = AuthSession::query()->where('SessionId', $sessionId)->first();
         if ($session === null) {
-            throw AuthException::sessionNotFound( 'Session not found.', 404);
+            throw AuthException::sessionNotFound('Session not found.', [['Field' => 'SessionId', 'Rule' => 'NotFound', 'Value' => $sessionId]]);
         }
         if ($session->EndedAt !== null) {
-            throw AuthException::custom('AuthSessionAlreadyClosed', 'Session already ended.', 409);
+            throw AuthException::custom('AuthSessionAlreadyClosed', 'Session already ended.', [['Field' => 'SessionId', 'Rule' => 'AlreadyEnded', 'Value' => $sessionId]]);
         }
         $this->sessions->close($sessionId, AuthSessionService::REVOKE_ADMIN_FORCED);
         AuditWriter::write($request, 'AuthSessionRevoked', 'AuthSessions', $sessionId, [
@@ -114,7 +113,7 @@ public function destroy(Request $request, string $sessionId): JsonResponse
     private function requireUser(int $userId): void
     {
         if (! User::query()->whereKey($userId)->exists()) {
-            throw NotFoundException::notFound('UserNotFound', 'User not found.', 404);
+            throw NotFoundException::notFound('UserNotFound', 'User not found.', [['Field' => 'UserId', 'Rule' => 'NotFound', 'Value' => (string) $userId]]);
         }
     }
 

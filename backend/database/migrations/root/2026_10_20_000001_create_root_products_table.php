@@ -19,8 +19,9 @@ return new class extends Migration
         # lint-allow: function-length
         Schema::connection(self::CONN)->create('Products', function (Blueprint $table): void {
             $table->id('ProductId');
-            $table->unsignedBigInteger('userId');
-            $table->string('productSlug', 64)->unique();
+            $table->unsignedBigInteger('userId')->default(1);
+            $table->string('productSlug', 64)->nullable()->unique();
+            $table->string('ProductCode', 64)->nullable()->unique();
             $table->string('productName', 120);
             $table->string('category', 40)->default('DesktopApp');
             $table->text('description')->nullable();

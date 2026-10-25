@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Cache;
 /**
  * Risk-Based Assessment service assessing IP geo-velocity and HWID drift.
  */
-final class RiskAssessmentService
+class RiskAssessmentService
 {
     private const CACHE_TTL_HOURS = 24;
 

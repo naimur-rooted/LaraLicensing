@@ -50,7 +50,7 @@ final class ErrorContractArchitectureTest extends TestCase
 
     public function test_no_abort_calls_in_controllers_or_services(): void
     {
-        $hits = $this->scanForPattern('/(^|[^A-Za-z0-9_>])abort\s*\(/');
+        $hits = $this->scanForPattern('/(?<!\bfunction\s)(?<!->)(?<!::)\babort\s*\(/');
         $this->assertSame(
             [],
             $hits,

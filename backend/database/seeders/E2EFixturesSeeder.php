@@ -29,7 +29,7 @@ final class E2EFixturesSeeder extends Seeder
             return;
         }
 
-        $profile = $config['profile'] ?? 'default';
+        $profile = (string) ($_ENV['SEED_PROFILE'] ?? $_SERVER['SEED_PROFILE'] ?? env('SEED_PROFILE') ?: ($config['profile'] ?? 'default'));
         $this->command?->line("  E2EFixturesSeeder: seeding profile '{$profile}'...");
 
         switch ($profile) {
@@ -56,6 +56,7 @@ final class E2EFixturesSeeder extends Seeder
         
         $adminId = $this->upsertRootUser($adminEmail, $adminPass);
         $this->attachRootRole($adminId, 'Admin');
+        $this->call(DemoLoginSeeder::class);
         $this->attachRootRole($adminId, 'SuperAdmin');
 
         // 2. Composite Domain Seeding
@@ -82,6 +83,7 @@ final class E2EFixturesSeeder extends Seeder
         $adminPass = $config['admin']['password'] ?? 'password123';
         $adminId = $this->upsertRootUser($adminEmail, $adminPass);
         $this->attachRootRole($adminId, 'Admin');
+        $this->call(DemoLoginSeeder::class);
     }
 
     private function seedErrorProfile(array $config): void

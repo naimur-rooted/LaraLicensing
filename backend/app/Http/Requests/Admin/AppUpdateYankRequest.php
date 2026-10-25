@@ -44,7 +44,7 @@ final class AppUpdateYankRequest extends FormRequest
     {
         // Version arrives as a route parameter; merge it into the input
         // bag so FormRequest rules can validate it uniformly.
-        $version = (string) $this->route('version');
+        $version = (string) ($this->route('Version') ?? $this->route('version'));
         $product = trim((string) $this->query('Product', 'lara-cli'));
         $this->merge([
             'Product' => $product === '' ? 'lara-cli' : $product,

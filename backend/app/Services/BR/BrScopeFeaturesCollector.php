@@ -53,7 +53,7 @@ use Throwable;
  * 15-line function cap held by splitting into `loadFeatures`,
  * `loadDefaults`, `renderJsonl`, and `resolveKey`.
  */
-final class BrScopeFeaturesCollector
+class BrScopeFeaturesCollector
 {
     private const CONN = 'root';
     private const TABLE_FEATURES = 'Features';

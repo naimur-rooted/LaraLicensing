@@ -7,7 +7,6 @@ namespace App\Http\Controllers\Auth;
 use App\Exceptions\ValidationException;
 
 
-use App\Exceptions\LaraException;
 use App\Http\Requests\Auth\ResetPasswordRequest;
 use App\Models\PasswordResetToken;
 use App\Models\User;

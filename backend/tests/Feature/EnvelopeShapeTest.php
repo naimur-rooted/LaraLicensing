@@ -22,6 +22,11 @@ use Tests\TestCase;
  */
 final class EnvelopeShapeTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->flushHeaders();
+    }
     public function test_validation_failure_returns_envelope(): void
     {
         $res = $this->postJson('/Api/Auth/Login', [], ['X-Request-Id' => 'test-req-1']);

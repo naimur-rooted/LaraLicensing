@@ -13,4 +13,9 @@ final class ValidationException extends LaraException
     {
         return static::make('ValidationFailed', $message, $details, $previous);
     }
+
+    public static function invalidInput(string $message = 'Invalid input', array $details = [], ?Throwable $previous = null): static
+    {
+        return static::make('ValidationInputInvalid', $message, $details, $previous);
+    }
 }

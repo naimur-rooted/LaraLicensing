@@ -52,6 +52,7 @@ Route::middleware('rate.auth:forgot')->post('/Auth/ForgotPassword', ForgotPasswo
 Route::middleware('rate.auth:reset')->post('/Auth/ResetPassword', ResetPasswordController::class)->name('api.auth.reset_password');
 
 Route::middleware(['auth:sanctum', 'session.active'])->post('/Auth/Logout', LogoutController::class)->name('api.auth.logout');
+Route::middleware(['auth:sanctum', 'session.active'])->get('/Auth/Me', [MeController::class, 'show'])->name('api.auth.me');
 Route::middleware(['auth:sanctum', 'session.active'])->get('/Me/Capabilities', [MeController::class, 'capabilities'])->name('api.me.capabilities');
 
 // v0.300.0. Public readiness probe for cPanel deploys and load balancers.
@@ -115,6 +116,9 @@ Route::middleware(['auth:sanctum', 'session.active', 'require.role:Admin|SuperAd
             ->where(['LicenseKey' => '[A-Z0-9-]{4,80}', 'MachineBindingId' => '[0-9]+'])
             ->name('licenses.bindings.clear_cooldown');
 
+        Route::get('/Serials/{SerialId}', [\App\Http\Controllers\Admin\SerialController::class, 'show'])
+            ->where('SerialId', '[0-9]+')->name('serials.show');
+
         // Plan 06 step 34. User directory + role assignment on Root DB.
         Route::get('/Users', [UserController::class, 'index'])->name('users.index');
         Route::post('/Users', [UserController::class, 'store'])->name('users.store');
@@ -122,6 +126,8 @@ Route::middleware(['auth:sanctum', 'session.active', 'require.role:Admin|SuperAd
             ->where('UserId', '[0-9]+')->name('users.show');
         Route::patch('/Users/{UserId}', [UserController::class, 'update'])
             ->where('UserId', '[0-9]+')->name('users.update');
+        Route::delete('/Users/{UserId}', [UserController::class, 'destroy'])
+            ->where('UserId', '[0-9]+')->name('users.destroy');
         Route::get('/Users/{UserId}/Roles', [UserController::class, 'listRoles'])
             ->where('UserId', '[0-9]+')->name('users.roles.index');
         Route::post('/Users/{UserId}/Roles', [UserController::class, 'assignRole'])
@@ -163,7 +169,6 @@ Route::middleware(['auth:sanctum', 'session.active', 'require.role:Admin|SuperAd
         Route::post('/AppUpdates', [\App\Http\Controllers\Admin\AppUpdateController::class, 'publish'])
             ->name('app_updates.publish');
         Route::post('/AppUpdates/{Version}/Yank', [\App\Http\Controllers\Admin\AppUpdateController::class, 'yank'])
-            ->where('Version', '[0-9]+\.[0-9]+\.[0-9]+([-+][0-9A-Za-z.\-]+)?')
             ->name('app_updates.yank');
 
         // Plan 09 step 29. Dashboard KPI aggregator (root counts + shard fanout).

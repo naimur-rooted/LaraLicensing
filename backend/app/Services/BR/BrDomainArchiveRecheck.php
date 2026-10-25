@@ -41,7 +41,7 @@ use Illuminate\Support\Facades\Log;
  * 15-line function cap held via helper splits (`run`, `readDeclared`,
  * `indexChunks`, `assertOne`, `reject`).
  */
-final class BrDomainArchiveRecheck
+class BrDomainArchiveRecheck
 {
     private const ERR_CORRUPT = C::ERR_BACKUP_CORRUPT;
     private const FIELD_ROOT = '/scope/domain';

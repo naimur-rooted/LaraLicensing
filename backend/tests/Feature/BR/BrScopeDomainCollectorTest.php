@@ -69,8 +69,8 @@ final class BrScopeDomainCollectorTest extends TestCase
         Config::set('lara.br.domain_root_tables', ['Prefixes']);
         DB::connection('root')->table('Prefixes')->delete();
         DB::connection('root')->table('Prefixes')->insert([
-            ['PrefixValue' => 'ZZZ'],
-            ['PrefixValue' => 'AAA'],
+            ['PrefixId' => 2, 'PrefixValue' => 'ZZZ'],
+            ['PrefixId' => 1, 'PrefixValue' => 'AAA'],
         ]);
 
         $out = app(BrScopeDomainCollector::class)->collect(self::REQUEST_ID);

@@ -63,23 +63,7 @@ final class AssertEnvelopeMiddleware
      */
     private function assertShape(Request $request, $body, int $status): void
     {
-        $missing = [];
-        if (is_array($body) === false) {
-            $missing[] = 'body-not-array';
-        } else {
-            foreach (['Status', 'Attributes', 'Results'] as $key) {
-                if (array_key_exists($key, $body) === false) {
-                    $missing[] = $key;
-                }
-            }
-            if (isset($body['Attributes']) && ! array_key_exists('RequestId', (array) $body['Attributes'])) {
-                $missing[] = 'Attributes.RequestId';
-            }
-            if (isset($body['Results']) && ! is_array($body['Results'])) {
-                $missing[] = 'Results-not-array';
-            }
-        }
-
+        $missing = $this->collectMissingShapeKeys($body);
         if ($missing === []) {
             return;
         }
@@ -95,5 +79,26 @@ final class AssertEnvelopeMiddleware
             'AssertEnvelopeMiddleware: response envelope violation ('
             .implode(',', $missing).') on '.$request->method().' /'.$request->path()
         );
+    }
+
+    private function collectMissingShapeKeys(mixed $body): array
+    {
+        if (!is_array($body)) {
+            return ['body-not-array'];
+        }
+        $missing = [];
+        foreach (['Status', 'Attributes', 'Results'] as $key) {
+            if (!array_key_exists($key, $body)) {
+                $missing[] = $key;
+            }
+        }
+        if (isset($body['Attributes']) && !array_key_exists('RequestId', (array) $body['Attributes'])) {
+            $missing[] = 'Attributes.RequestId';
+        }
+        if (isset($body['Results']) && !is_array($body['Results'])) {
+            $missing[] = 'Results-not-array';
+        }
+
+        return $missing;
     }
 }

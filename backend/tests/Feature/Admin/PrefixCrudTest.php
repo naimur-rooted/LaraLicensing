@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Admin;
 
+use App\Http\Controllers\Admin\PrefixController;
+
 use App\Db\ShardResolver;
 use App\Models\User;
 use App\Policies\HasRolePolicy;
@@ -178,6 +180,7 @@ final class PrefixCrudTest extends TestCase
         // Simulate an active license on the shard consuming SEED_PREFIX.
         DB::connection('shard')->table('Licenses')->insert([
             'LicenseId' => 1,
+            'LicenseKey' => 'ACME01-KEY-0001',
             'PrefixValue' => self::SEED_PREFIX,
         ]);
 

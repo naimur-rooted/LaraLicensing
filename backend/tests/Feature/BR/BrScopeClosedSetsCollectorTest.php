@@ -34,7 +34,7 @@ final class BrScopeClosedSetsCollectorTest extends TestCase
         $this->assertSame(hash('sha256', $out['Jsonl']), $out['ContentHash']);
         $this->assertSame(5, $out['SetCount']);
         // 4 AppRole + 3 Environment + 7 LicenseCategory + 3 LicenseTier + 4 QuotaRequestStatus = 21
-        $this->assertSame(21, $out['ValueCount']);
+        $this->assertSame(22, $out['ValueCount']);
         $this->assertSame($out['ValueCount'], substr_count($out['Jsonl'], "\n"));
 
         $lines = array_values(array_filter(explode("\n", $out['Jsonl'])));

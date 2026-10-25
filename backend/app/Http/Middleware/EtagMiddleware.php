@@ -63,12 +63,10 @@ final class EtagMiddleware
 
     private function enforceIfMatchOnMutation(Request $request): void
     {
-        if (!$this->isInScope($request)) {
+        if (!$this->isInScope($request) || $this->isUnauthAdminOrReseller($request)) {
             return;
         }
-        if (!$request->headers->has('Authorization') && !$request->user()) {
-            return;
-        }
+
         $header = trim((string) $request->headers->get('If-Match', ''));
         if ($header === '') {
             throw ValidationException::custom('PreconditionRequired',
@@ -78,6 +76,15 @@ final class EtagMiddleware
         }
         $this->rejectWildcardOrWeak($header);
         $request->attributes->set('lara.if_match', $header);
+    }
+
+    private function isUnauthAdminOrReseller(Request $request): bool
+    {
+        $path = strtolower(ltrim($request->path(), '/'));
+        $isProtected = str_starts_with($path, 'api/reseller/') || str_starts_with($path, 'api/admin/');
+        $hasAuth = $request->hasHeader('Authorization') || $request->user() !== null || $request->hasCookie('lara_session');
+
+        return $isProtected && !$hasAuth;
     }
 
     private function rejectWildcardOrWeak(string $header): void
@@ -110,6 +117,9 @@ final class EtagMiddleware
 
     private function attachEtag(JsonResponse $response): void
     {
+        if ($response->headers->has('ETag')) {
+            return;
+        }
         $canonical = IdempotencyCanonicalizer::canonicalize((string) $response->getContent());
         $hex = hash('sha256', $canonical);
         $response->headers->set('ETag', '"' . $hex . '"');

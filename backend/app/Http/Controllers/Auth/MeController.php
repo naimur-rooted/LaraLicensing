@@ -5,12 +5,51 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\ImpersonationIndex;
+use App\Models\User;
+use App\Support\ApiEnvelope;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Lauthz\Facades\Enforcer;
 
 class MeController extends Controller
 {
+    public function show(Request $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+        $requestId = (string) $request->attributes->get('X-Request-Id', '');
+
+        $me = [
+            'UserId' => (int) $user->getKey(),
+            'Id' => (int) $user->getKey(),
+            'Email' => (string) $user->Email,
+            'Role' => $user->getPrimaryRole(),
+            'Capabilities' => $user->getCapabilities(),
+        ];
+        $me = $this->attachImpersonation($user, $me);
+
+        return ApiEnvelope::success(['Me' => $me], $requestId);
+    }
+
+    private function attachImpersonation(User $user, array $me): array
+    {
+        $active = ImpersonationIndex::query()
+            ->where('ImpersonatorUserId', (int) $user->getKey())
+            ->whereNull('EndedAt')
+            ->latest('StartedAt')
+            ->first();
+
+        if ($active !== null) {
+            $me['Impersonation'] = [
+                'TargetUserId' => (int) $active->TargetUserId,
+                'SessionId' => (string) $active->SessionId,
+            ];
+        }
+
+        return $me;
+    }
+
     /**
      * Return the Casbin capabilities for the authenticated user.
      *

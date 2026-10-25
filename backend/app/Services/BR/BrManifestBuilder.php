@@ -27,7 +27,7 @@ use Illuminate\Support\Facades\Log;
  *
  * 15-line function cap enforced by splitting.
  */
-final class BrManifestBuilder
+class BrManifestBuilder
 {
     private const EMPTY_SHA256 = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
     private const NULL_UUID  = '00000000-0000-0000-0000-000000000000';

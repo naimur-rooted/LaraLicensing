@@ -34,7 +34,7 @@ use Ramsey\Uuid\Uuid;
  *    with the offending verb captured, never silently swallowed.
  *  - No mutation. No advisory locks. Read-committed.
  */
-final class BrOpsService
+class BrOpsService
 {
     private const CONN = 'root';
     private const STMT_TIMEOUT_MS = 5000;
@@ -70,14 +70,12 @@ final class BrOpsService
     public function auditVerify(string $shardId, ?string $fromRowId, string $requestId): array
     {
         $rows = $this->readMany('audit:verify', $requestId, function () use ($shardId, $fromRowId) {
-            $sql = 'SELECT COUNT(*)::int AS "RowCount",'
-                . ' MAX("Code") FILTER (WHERE TRUE) AS "HeadCode",'
-                . ' ENCODE(MAX("RowHash"), \'hex\') AS "HeadRowHashHex"'
-                . ' FROM "BackupAuditEvents" WHERE "ShardId" = ?'
-                . ($fromRowId !== null ? ' AND "RowId" >= ?' : '');
-            $bindings = $fromRowId !== null ? [$shardId, $fromRowId] : [$shardId];
+            $isSqlite = DB::connection(self::CONN)->getDriverName() === 'sqlite';
+            $sql = $isSqlite
+                ? 'SELECT COUNT(*) AS "RowCount", MAX("Code") AS "HeadCode", hex(MAX("RowHash")) AS "HeadRowHashHex" FROM "BackupAuditEvents" WHERE "ShardId" = ?' . ($fromRowId !== null ? ' AND "RowId" >= ?' : '')
+                : 'SELECT COUNT(*)::int AS "RowCount", MAX("Code") FILTER (WHERE TRUE) AS "HeadCode", ENCODE(MAX("RowHash"), \'hex\') AS "HeadRowHashHex" FROM "BackupAuditEvents" WHERE "ShardId" = ?' . ($fromRowId !== null ? ' AND "RowId" >= ?' : '');
 
-            return DB::connection(self::CONN)->select($sql, $bindings);
+            return DB::connection(self::CONN)->select($sql, $fromRowId !== null ? [$shardId, $fromRowId] : [$shardId]);
         });
 
         return ['ShardId' => $shardId] + (array) $rows[0];
@@ -120,7 +118,9 @@ final class BrOpsService
     {
         Log::info(self::LOG_PREFIX . $verb, ['RequestId' => $requestId]);
         try {
-            DB::connection(self::CONN)->statement('SET LOCAL statement_timeout = ' . self::STMT_TIMEOUT_MS);
+            if (DB::connection(self::CONN)->getDriverName() !== 'sqlite') {
+                DB::connection(self::CONN)->statement('SET LOCAL statement_timeout = ' . self::STMT_TIMEOUT_MS);
+            }
             $rows = $query();
         } catch (\Throwable $e) {
             Log::error(self::LOG_PREFIX . 'query_failed', ['Verb' => $verb, 'RequestId' => $requestId, 'Reason' => $e->getMessage()]);
@@ -137,10 +137,10 @@ final class BrOpsService
             $job = DB::connection(self::CONN)->table('BackupJobs')->where('Id', $jobId)->first();
             $isFailed = !$job;
             if ($isFailed) {
-                throw new \InvalidArgumentException("Job not found: {$jobId}");
+                throw NotFoundException::notFound("Job not found: {$jobId}");
             }
             if ($job->State !== 'Running') {
-                throw new \InvalidArgumentException("Cannot fence job in state: {$job->State}");
+                throw ValidationException::invalidInput("Cannot fence job in state: {$job->State}");
             }
 
             DB::connection(self::CONN)->table('BackupJobs')->where('Id', $jobId)->update([
@@ -163,14 +163,14 @@ final class BrOpsService
         $quarantineRoot = rtrim(config('lara.br.quarantine_root', storage_path('app/br/quarantine')), DIRECTORY_SEPARATOR);
 
         if ($archiveRoot === '' || $quarantineRoot === '') {
-            throw new \RuntimeException("Archive or quarantine root not configured.");
+            throw InternalException::fatal("Archive or quarantine root not configured.");
         }
 
         $source = $archiveRoot . DIRECTORY_SEPARATOR . $jobId;
         $dest = $quarantineRoot . DIRECTORY_SEPARATOR . $jobId;
 
         if (is_dir($source) === false) {
-            throw new \InvalidArgumentException("Archive not found: {$source}");
+            throw NotFoundException::notFound("Archive not found: {$source}");
         }
         if (is_dir($quarantineRoot) === false) {
             @mkdir($quarantineRoot, 0700, true);
@@ -185,38 +185,46 @@ final class BrOpsService
     public function locksRelease(string $key, string $reason, string $requestId): array
     {
         if ($reason !== 'zombie') {
-            throw new \InvalidArgumentException("Only 'zombie' reason is supported for locks:release.");
+            throw ValidationException::invalidInput("Only 'zombie' reason is supported for locks:release.");
         }
 
-        return DB::connection(self::CONN)->transaction(function () use ($key, $requestId) {
-            DB::connection(self::CONN)->select('SELECT pg_advisory_xact_lock(hashtext(?))', ['br.global']);
+        return DB::connection(self::CONN)->transaction(fn () => $this->releaseZombieLocks($key, $requestId));
+    }
 
-            $pids = DB::connection(self::CONN)->select(
-                "SELECT pid FROM pg_locks WHERE locktype = 'advisory' AND objid = hashtext(?) AND granted = true",
-                [$key]
-            );
+    private function releaseZombieLocks(string $key, string $requestId): array
+    {
+        DB::connection(self::CONN)->select('SELECT pg_advisory_xact_lock(hashtext(?))', ['br.global']);
+        $pids = DB::connection(self::CONN)->select(
+            "SELECT pid FROM pg_locks WHERE locktype = 'advisory' AND objid = hashtext(?) AND granted = true",
+            [$key]
+        );
 
-            $terminated = [];
-            foreach ($pids as $row) {
-                DB::connection(self::CONN)->select("SELECT pg_terminate_backend(?)", [$row->pid]);
-                $terminated[] = $row->pid;
-            }
+        $terminated = $this->terminateLockBackends($pids);
+        if (empty($terminated)) {
+            throw NotFoundException::notFound("No locks found for key: {$key}");
+        }
 
-            if (empty($terminated)) {
-                throw new \InvalidArgumentException("No locks found for key: {$key}");
-            }
+        $this->emitAudit('backup.lock.zombie_released', 'br.global', $requestId, ['LockKey' => $key, 'Pids' => $terminated]);
+        Log::info(self::LOG_PREFIX . 'locks:release', ['LockKey' => $key, 'TerminatedPids' => $terminated, 'RequestId' => $requestId]);
 
-            $this->emitAudit('backup.lock.zombie_released', 'br.global', $requestId, ['LockKey' => $key, 'Pids' => $terminated]);
-            Log::info(self::LOG_PREFIX . 'locks:release', ['LockKey' => $key, 'TerminatedPids' => $terminated, 'RequestId' => $requestId]);
+        return ['LockKey' => $key, 'TerminatedPids' => $terminated, 'Status' => 'released'];
+    }
 
-            return ['LockKey' => $key, 'TerminatedPids' => $terminated, 'Status' => 'released'];
-        });
+    private function terminateLockBackends(array $pids): array
+    {
+        $terminated = [];
+        foreach ($pids as $row) {
+            DB::connection(self::CONN)->select("SELECT pg_terminate_backend(?)", [$row->pid]);
+            $terminated[] = $row->pid;
+        }
+
+        return $terminated;
     }
 
     public function auditPseudonymise(string $userUuid, string $basis, string $requestId): array
     {
         if (config('lara.br.audit_pseudonymise_enabled', false) === false) {
-            throw new \RuntimeException("Pseudonymisation is disabled (br.audit-pseudonymise.enabled=false).");
+            throw InternalException::fatal("Pseudonymisation is disabled (br.audit-pseudonymise.enabled=false).");
         }
 
         return DB::connection(self::CONN)->transaction(function () use ($userUuid, $basis, $requestId) {
@@ -240,6 +248,8 @@ final class BrOpsService
 
     private function emitAudit(string $code, string $shardId, string $requestId, array $payload): void
     {
+        $isSqlite = DB::connection(self::CONN)->getDriverName() === 'sqlite';
+        $zero = $isSqlite ? '\x0000000000000000000000000000000000000000000000000000000000000000' : DB::raw("'\\x0000000000000000000000000000000000000000000000000000000000000000'::bytea");
         DB::connection(self::CONN)->table('BackupAuditEvents')->insert([
             'BackupAuditEventId' => Uuid::uuid7()->toString(),
             'OccurredAt'         => now(),
@@ -247,8 +257,8 @@ final class BrOpsService
             'ActorKind'          => 'operator',
             'RequestId'          => $requestId,
             'Payload'            => json_encode($payload),
-            'PrevHash'           => DB::raw("'\\x0000000000000000000000000000000000000000000000000000000000000000'::bytea"),
-            'RowHash'            => DB::raw("'\\x0000000000000000000000000000000000000000000000000000000000000000'::bytea"),
+            'PrevHash'           => $zero,
+            'RowHash'            => $zero,
             'ShardId'            => $shardId,
             'SchemaVersion'      => 1,
         ]);

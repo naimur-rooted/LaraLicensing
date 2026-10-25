@@ -48,6 +48,9 @@ final class AssertActiveSessionMiddleware
         }
         /** @var SanctumToken|null $token */
         $token = $user->currentAccessToken();
+        if ($token instanceof \Laravel\Sanctum\TransientToken) {
+            return $next($request);
+        }
         $sessionId = $token !== null ? (string) $token->name : '';
         if ($sessionId === '') {
             Log::warning('auth.session.gate.token_without_session', ['UserId' => (int) $user->getKey()]);

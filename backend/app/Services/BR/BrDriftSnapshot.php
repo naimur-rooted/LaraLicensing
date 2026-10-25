@@ -35,7 +35,7 @@ use Throwable;
  *
  * 15-line function cap held via helper splits.
  */
-final class BrDriftSnapshot
+class BrDriftSnapshot
 {
     private const LOG_OK = 'br.drift.snapshot.recorded';
     private const LOG_FAIL = 'br.drift.snapshot.rejected';

@@ -25,19 +25,39 @@ class LaraException extends RuntimeException
     /** @var array<string, array{status:int}> resolved once, cached statically */
     private static array $codeIndex = [];
 
+    public readonly string $errorCode;
+    public readonly int $httpStatus;
+    public readonly string $errorId;
+    public readonly array $details;
+    public readonly array $violations;
+    public readonly array $headers;
+
     /**
      * @param array<int, array{Field:string, Rule:string, Value?:string}> $details
      * @param array<string,string> $headers extra response headers (e.g. Retry-After)
      */
     public function __construct(
-        public readonly string $errorCode,
-        public readonly int $httpStatus,
-        string $message,
-        public readonly string $errorId,
-        public readonly array $details = [],
+        string $arg1 = '',
+        int|string $arg2 = 500,
+        string|int $arg3 = '',
+        ?string $errorId = null,
+        array $details = [],
         ?Throwable $previous = null,
-        public readonly array $headers = [],
+        array $headers = [],
     ) {
+        if (is_int($arg2)) {
+            $this->errorCode = (string) $arg1;
+            $this->httpStatus = $arg2;
+            $message = (string) $arg3;
+        } else {
+            $message = (string) $arg1;
+            $this->errorCode = (string) $arg2;
+            $this->httpStatus = is_numeric($arg3) ? (int) $arg3 : 500;
+        }
+        $this->errorId = $errorId ?: self::newErrorId();
+        $this->details = $details;
+        $this->violations = $details;
+        $this->headers = $headers;
         parent::__construct($message, 0, $previous);
     }
 
@@ -61,7 +81,6 @@ class LaraException extends RuntimeException
         return static::make($errorCode, $message, $details, $previous, $headers);
     }
 
-
     private static function resolveStatus(string $errorCode): int
     {
         if (self::$codeIndex === []) {
@@ -75,7 +94,7 @@ class LaraException extends RuntimeException
         return (int) $entry['status'];
     }
 
-    private static function newErrorId(): string
+    protected static function newErrorId(): string
     {
         // uuid v4 without extra dependency
         $bytes = random_bytes(16);

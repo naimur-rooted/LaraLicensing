@@ -7,7 +7,7 @@ namespace Tests\Feature\BR;
 use App\Exceptions\LaraException;
 use App\Services\BR\BrDomainArchiveRecheck;
 use App\Services\BR\BrArchiveStorage;
-use PHPUnit\Framework\TestCase;
+use Tests\TestCase;
 
 /**
  * Plan 14 contract tests for {@see BrDomainArchiveRecheck}.

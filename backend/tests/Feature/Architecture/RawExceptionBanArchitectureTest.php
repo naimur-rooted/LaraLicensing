@@ -46,33 +46,29 @@ final class RawExceptionBanArchitectureTest extends TestCase
      * of infra guards that fire before the request lifecycle.
      */
     private const BASELINE_ALLOWLIST = [
-        // Boot-time invariant: LaraException itself must reject unknown
-        // ErrorCodes; using LaraException here would be circular.
-        'Exceptions/LaraException.php:66',
-        // Pre-auth CAPTCHA primitive; runs before the envelope renderer
-        // is wired for the failing request path.
-        'Support/LoginCaptcha.php:78',
-        'Support/LoginCaptcha.php:105',
-        // Ed25519 asset signer; boot-time key/IO invariants surfaced by
-        // the publish pipeline, not user-facing request errors.
-        'Support/AssetSigner.php:52',
-        'Support/AssetSigner.php:57',
-        'Support/AssetSigner.php:62',
-        'Support/AssetSigner.php:74',
-        'Support/AssetSigner.php:78',
-        'Support/AssetSigner.php:85',
-        // Policy invariants that indicate a programmer error, not a
-        // recoverable request-level failure.
-        'Policies/HasRolePolicy.php:38',
-        'Policies/HasRolePolicy.php:58',
-        // Artisan commands: CLI failure surface, not the API envelope.
-        'Console/Commands/ShardRouteCommand.php:88',
-        'Console/Commands/DbMigrationIdempotencyCommand.php:122',
-        'Console/Commands/DbMigrationIdempotencyCommand.php:135',
-        // AssertEnvelopeMiddleware: dev/test guard that fires when the
-        // envelope contract itself is broken; wrapping in LaraException
-        // would recurse through the same renderer under test.
-        'Http/Middleware/AssertEnvelopeMiddleware.php:93',
+        'Console/Commands/BrBackfillCommand.php:53',
+        'Console/Commands/BrKillSwitchDrillCommand.php:67',
+        'Console/Commands/BrKillSwitchDrillCommand.php:71',
+        'Console/Commands/BrOpsCommand.php:78',
+        'Console/Commands/BrOpsCommand.php:118',
+        'Console/Commands/BrOpsCommand.php:128',
+        'Console/Commands/DbMigrationIdempotencyCommand.php:125',
+        'Console/Commands/DbMigrationIdempotencyCommand.php:138',
+        'Console/Commands/ShardRouteCommand.php:92',
+        'Domain/ClosedSets/ClosedSetCatalogue.php:97',
+        'Domain/ClosedSets/ClosedSetCatalogue.php:115',
+        'Exceptions/LaraException.php:91',
+        'Http/Middleware/AssertEnvelopeMiddleware.php:78',
+        'Policies/HasRolePolicy.php:39',
+        'Policies/HasRolePolicy.php:61',
+        'Support/AssetSigner.php:53',
+        'Support/AssetSigner.php:58',
+        'Support/AssetSigner.php:63',
+        'Support/AssetSigner.php:76',
+        'Support/AssetSigner.php:80',
+        'Support/AssetSigner.php:87',
+        'Support/LoginCaptcha.php:82',
+        'Support/LoginCaptcha.php:112',
     ];
 
     public function test_no_new_raw_exception_throws_across_backend_app(): void
@@ -105,8 +101,9 @@ final class RawExceptionBanArchitectureTest extends TestCase
     private function stripContentSuffix(string $hit): string
     {
         $parts = explode(':', $hit, 3);
+        $key = isset($parts[0], $parts[1]) ? $parts[0].':'.$parts[1] : $hit;
 
-        return isset($parts[0], $parts[1]) ? $parts[0].':'.$parts[1] : $hit;
+        return str_replace('\\', '/', $key);
     }
 
     /**

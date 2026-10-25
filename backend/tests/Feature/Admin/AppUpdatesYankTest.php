@@ -82,7 +82,7 @@ final class AppUpdatesYankTest extends TestCase
         // "not.a.version!" fails VERSION_REGEX in AppUpdateYankRequest.
         $res = $this->withHeader('Authorization', 'Bearer ' . $this->adminBearer)
             ->postJson('/Api/Admin/AppUpdates/not-a-version!/Yank');
-        $this->assertLaraException($res, 'ValidationFailed', 422);
+        $this->assertLaraException($res, 'ValidationFailed', 400);
     }
 
     public function test_unknown_version_returns_404(): void

@@ -28,7 +28,7 @@ use Symfony\Component\HttpFoundation\Response;
  */
 final class RequestIdMiddleware
 {
-    private const REQUEST_ID_REGEX = '/^[A-Za-z0-9-]{16,64}$/';
+    private const REQUEST_ID_REGEX = '/^[A-Za-z0-9-]{8,64}$/';
     private const HEADER = 'X-Request-Id';
     private const ATTR = 'lara.request_id';
 

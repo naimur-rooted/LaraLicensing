@@ -49,7 +49,7 @@ use Throwable;
  * `ArchiveRootMissing` before any FS syscall so an operator sees a clear
  * error instead of a stray write into `storage_path()`.
  */
-final class BrArchiveStorage
+class BrArchiveStorage
 {
     public function reserve(string $archiveId, string $requestId): string
     {

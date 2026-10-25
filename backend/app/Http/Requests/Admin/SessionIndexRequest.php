@@ -39,7 +39,7 @@ final class SessionIndexRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'Limit' => ['sometimes', 'integer', 'min:' . self::LIMIT_MIN, 'max:' . self::LIMIT_MAX],
+            'Limit' => ['sometimes'],
             'IncludeEnded' => ['sometimes'],
         ];
     }
@@ -60,14 +60,14 @@ final class SessionIndexRequest extends FormRequest
 
     public function limit(): int
     {
-        $raw = (int) ($this->validated()['Limit'] ?? self::LIMIT_DEFAULT);
+        $raw = (int) ($this->input('Limit') ?? self::LIMIT_DEFAULT);
 
         return max(self::LIMIT_MIN, min(self::LIMIT_MAX, $raw));
     }
 
     public function includeEnded(): bool
     {
-        $raw = $this->validated()['IncludeEnded'] ?? false;
+        $raw = $this->input('IncludeEnded', false);
 
         return filter_var((string) $raw, FILTER_VALIDATE_BOOLEAN);
     }

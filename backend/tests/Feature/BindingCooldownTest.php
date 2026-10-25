@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\Admin\BindingController;
+
 use App\Exceptions\LaraException;
 use App\Services\BindingService;
 use Illuminate\Support\Carbon;

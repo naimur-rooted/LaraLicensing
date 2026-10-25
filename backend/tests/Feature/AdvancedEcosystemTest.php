@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\Developer\AdvancedLicensingController;
+
 use App\Models\Product;
 use App\Models\Reseller;
 use Tests\TestCase;
@@ -17,19 +19,23 @@ class AdvancedEcosystemTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->artisan('migrate', ['--path' => 'database/migrations/root/2026_10_20_000001_create_root_products_table.php']);
+        if (!\Illuminate\Support\Facades\Schema::connection('root')->hasTable('Products')) {
+            $this->artisan('migrate', ['--path' => 'database/migrations/root/2026_10_20_000001_create_root_products_table.php']);
+        }
         $this->seed(\Database\Seeders\ProductSeeder::class);
 
         @unlink(database_path('shard_reseller_sohel-reseller.sqlite'));
 
-        \Illuminate\Support\Facades\Schema::connection('root')->create('Resellers', function ($table) {
-            $table->id('ResellerId');
-            $table->string('ResellerName');
-            $table->string('ResellerSlug')->unique();
-            $table->string('ContactEmail');
-            $table->boolean('IsActive')->default(true);
-            $table->timestamps();
-        });
+        if (!\Illuminate\Support\Facades\Schema::connection('root')->hasTable('Resellers')) {
+            \Illuminate\Support\Facades\Schema::connection('root')->create('Resellers', function ($table) {
+                $table->id('ResellerId');
+                $table->string('ResellerName');
+                $table->string('ResellerSlug')->unique();
+                $table->string('ContactEmail');
+                $table->boolean('IsActive')->default(true);
+                $table->timestamps();
+            });
+        }
 
         Reseller::updateOrCreate(
             ['ResellerSlug' => 'sohel-reseller'],

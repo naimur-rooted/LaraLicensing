@@ -19,6 +19,7 @@ enum BrExportScopeKey: string
     case Features        = 'features';        // SC-C
     case Licenses        = 'licenses';        // SC-D
     case Rbac            = 'rbac';            // SC-E
+    case Domain          = 'domain';          // SC-F
     case SecretsEnvelope = 'secretsEnvelope'; // SC-G
     case Files           = 'files';           // SC-H
 

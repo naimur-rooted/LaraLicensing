@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Admin;
 
 use App\Db\ShardResolver;
-use App\Exceptions\LaraException;
 use App\Exceptions\AuthException;
 use App\Exceptions\ValidationException;
 use App\Exceptions\RateLimitException;
@@ -173,10 +172,7 @@ public function destroy(Request $request, string $PrefixValue): JsonResponse
             $count = DB::connection(self::SHARD_CONNECTION)
                 ->table(self::LICENSES_TABLE)
                 ->where('PrefixValue', $prefixValue)
-                ->count();
-        } catch (LaraException $e) {
-            throw $e;
-        } catch (Throwable $e) {
+                ->count(); } catch (Throwable $e) {
             Log::error('prefix.destroy.shard_check_failed', [
                 'ResellerSlug' => $resellerSlug,
                 'PrefixValue' => $prefixValue,

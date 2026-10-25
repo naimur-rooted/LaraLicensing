@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Developer;
 
+use App\Exceptions\NotFoundException;
+use App\Exceptions\ValidationException;
 use App\Http\Controllers\Controller;
 use App\Services\ProductService;
+use App\Support\AuditWriter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use App\Support\AuditWriter;
 
 /**
  * Controller handling Developer Portal Product actions, Deals sync, and AI Blueprints.
@@ -29,7 +31,7 @@ class ProductController extends Controller
     {
         $product = $this->productService->getProductBySlug($slug);
         if (!$product) {
-            return response()->json(['IsSuccess' => false, 'ErrorCode' => 'ProductNotFound'], 404);
+            throw NotFoundException::notFound('Product not found.');
         }
         return response()->json(['IsSuccess' => true, 'Data' => $product]);
     }
@@ -38,7 +40,7 @@ class ProductController extends Controller
     {
         $name = trim((string) $request->input('productName', ''));
         if (empty($name)) {
-            return response()->json(['IsSuccess' => false, 'ErrorCode' => 'InvalidInput', 'Message' => 'productName is required.'], 422);
+            throw ValidationException::invalidInput('productName is required.');
         }
         $product = $this->productService->createProduct(1, $request->all());
         AuditWriter::write($request, 'ProductCreated', 'Products', (int) $product->ProductId, [
@@ -52,7 +54,7 @@ class ProductController extends Controller
     {
         $product = $this->productService->getProductBySlug($slug);
         if (!$product) {
-            return response()->json(['IsSuccess' => false, 'ErrorCode' => 'ProductNotFound'], 404);
+            throw NotFoundException::notFound('Product not found.');
         }
         $deal = $this->productService->createDeal($product, $request->all());
         return response()->json(['IsSuccess' => true, 'Data' => $deal], 201);
@@ -62,11 +64,11 @@ class ProductController extends Controller
     {
         $product = $this->productService->getProductBySlug($slug);
         if (!$product) {
-            return response()->json(['IsSuccess' => false, 'ErrorCode' => 'ProductNotFound'], 404);
+            throw NotFoundException::notFound('Product not found.');
         }
         $deal = $this->productService->updateDeal($product, $dealId, $request->all());
         if (!$deal) {
-            return response()->json(['IsSuccess' => false, 'ErrorCode' => 'DealNotFound', 'Message' => 'Deal not found.'], 404);
+            throw NotFoundException::notFound('Deal not found.');
         }
         return response()->json(['IsSuccess' => true, 'Data' => $deal]);
     }
@@ -75,7 +77,7 @@ class ProductController extends Controller
     {
         $product = $this->productService->getProductBySlug($slug);
         if (!$product) {
-            return response()->json(['IsSuccess' => false, 'ErrorCode' => 'ProductNotFound'], 404);
+            throw NotFoundException::notFound('Product not found.');
         }
         $deleted = $this->productService->deleteDeal($product, $dealId);
         return response()->json(['IsSuccess' => $deleted]);
@@ -85,7 +87,7 @@ class ProductController extends Controller
     {
         $product = $this->productService->getProductBySlug($slug);
         if (!$product) {
-            return response()->json(['IsSuccess' => false, 'ErrorCode' => 'ProductNotFound'], 404);
+            throw NotFoundException::notFound('Product not found.');
         }
         $blueprint = $this->productService->generateAiBlueprint($product);
         return response()->json(['IsSuccess' => true, 'Data' => ['BlueprintMarkdown' => $blueprint, 'ProductSlug' => $slug]]);
@@ -95,33 +97,40 @@ class ProductController extends Controller
     {
         $product = $this->productService->getProductBySlug($slug);
         if (!$product) {
-            return response()->json(['IsSuccess' => false, 'ErrorCode' => 'ProductNotFound'], 404);
+            throw NotFoundException::notFound('Product not found.');
         }
         $txId = trim((string) $request->input('transactionId', ''));
         $email = trim((string) $request->input('customerEmail', ''));
-        $dealCode = trim((string) $request->input('dealCode', ''));
         if (empty($txId) || empty($email)) {
-            return response()->json(['IsSuccess' => false, 'ErrorCode' => 'InvalidPayload', 'Message' => 'transactionId and customerEmail are required.'], 422);
+            throw ValidationException::invalidInput('transactionId and customerEmail are required.');
         }
-        $serialValue = strtoupper($product->productSlug . '-' . substr(md5($txId . $email), 0, 16));
+
+        $dealCode = trim((string) $request->input('dealCode', ''));
+        $payload = $this->buildWebhookPayload($product, $txId, $email, $dealCode);
         return response()->json([
             'IsSuccess' => true,
             'Message' => 'License issued successfully via decoupled webhook.',
-            'Data' => [
-                'SerialValue' => $serialValue,
-                'CustomerEmail' => $email,
-                'ProductSlug' => $product->productSlug,
-                'DealCode' => $dealCode ?: 'DEFAULT',
-                'IssuedAt' => now()->toISOString(),
-            ],
+            'Data' => $payload,
         ]);
+    }
+
+    private function buildWebhookPayload($product, string $txId, string $email, string $dealCode): array
+    {
+        $serialValue = strtoupper($product->productSlug . '-' . substr(md5($txId . $email), 0, 16));
+        return [
+            'SerialValue' => $serialValue,
+            'CustomerEmail' => $email,
+            'ProductSlug' => $product->productSlug,
+            'DealCode' => $dealCode ?: 'DEFAULT',
+            'IssuedAt' => now()->toISOString(),
+        ];
     }
 
     public function publicDeals(string $slug): JsonResponse
     {
         $product = $this->productService->getProductBySlug($slug);
         if (!$product) {
-            return response()->json(['IsSuccess' => false, 'ErrorCode' => 'ProductNotFound', 'Message' => 'Product not found.'], 404);
+            throw NotFoundException::notFound('Product not found.');
         }
         return response()->json([
             'IsSuccess' => true,

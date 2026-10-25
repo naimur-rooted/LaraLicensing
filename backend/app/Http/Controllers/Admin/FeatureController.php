@@ -4,109 +4,110 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Controller;
 use App\Support\ApiEnvelope;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Plan 06 step 70. Read-only Feature catalog + TierFeatures matrix.
- *
- * Normative sources: 02-spec/21-app/45-license-features.md v1.0.0 §2 (closed
- * FeatureKey registry, typed value domains) and §4 (precedence
- * `LicenseFeatures > TierFeatures`; absence of a key means NOT licensed, so
- * a missing matrix cell MUST render as "not set" and never as a synthesized
- * default), plus 02-spec/21-app/43-license-tiers.md §2 (tier ordinals 1..4).
- *
- * The tier axis is read from Root `LicenseTiers`, NOT from
- * config('lara.license_tiers'): the config array stops at Tier3 while the
- * table's `CkLicenseTiersMemberSet` admits `Unlimited` (ordinal 4). Rendering
- * from config would silently hide every TierFeatures row curated for
- * Unlimited. Server truth is the table.
- *
- * Cross-DB FKs are forbidden (02-spec/23-app-db/10 §App-tier) but all three
- * tables here (`Features`, `LicenseTiers`, `TierFeatures`) live in Root, so
- * this is a single-connection join, no fanout, no shard binding.
- *
- * Read-only by design: 02-spec/24-app-ui-design-system/38 §"Anti-patterns" bans
- * optimistic Switch toggles, and no PATCH endpoint for TierFeatures exists
- * yet, so this controller exposes no mutation. Do not add one here without
- * the `If-Match: <FeatureEtag>` + `Idempotency-Key` contract from §"Mutations".
+ * Controller exposing the feature catalog matrix endpoints (spec 45 v1.0.0).
  */
-final class FeatureController
+final class FeatureController extends Controller
 {
     private const ROOT_CONNECTION = 'root';
     private const FEATURES_TABLE = 'Features';
     private const TIERS_TABLE = 'LicenseTiers';
     private const TIER_FEATURES_TABLE = 'TierFeatures';
 
-        /**
-     * @OA\Get(
-     *     path="/api/placeholder",
-     *     summary="FeatureController index",
-     *     tags={"FeatureController"},
-     *     @OA\Response(response=200, description="Successful operation")
-     * )
-     */
-public function index(Request $request): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $tiers = DB::connection(self::ROOT_CONNECTION)
-            ->table(self::TIERS_TABLE)
-            ->orderBy('TierOrdinal')
-            ->get(['LicenseTierId', 'TierName', 'TierOrdinal']);
+        $tiers = $this->fetchTiers();
+        $features = $this->fetchFeatures();
+        $cells = $this->buildCellsMap();
+        $tierAxis = $this->buildTierAxis($tiers);
+        $items = $this->buildFeatureItems($features);
+        $matrix = $this->buildMatrixResults($features, $tierAxis, $cells);
 
-        $features = DB::connection(self::ROOT_CONNECTION)
-            ->table(self::FEATURES_TABLE)
-            ->orderBy('FeatureKey')
-            ->get(['FeatureId', 'FeatureKey', 'ValueType']);
+        return ApiEnvelope::success(
+            results: ['Items' => $items, 'Matrix' => $matrix],
+            requestId: (string) ($request->headers->get('X-Request-Id') ?? ''),
+            extraAttributes: ['Tiers' => $tierAxis],
+        );
+    }
 
-        $assignments = DB::connection(self::ROOT_CONNECTION)
-            ->table(self::TIER_FEATURES_TABLE)
-            ->orderBy('FeatureId')
-            ->orderBy('LicenseTierId')
-            ->get(['FeatureId', 'LicenseTierId', 'Value', 'UpdatedAt']);
+    private function fetchTiers(): \Illuminate\Support\Collection
+    {
+        if (!DB::connection(self::ROOT_CONNECTION)->getSchemaBuilder()->hasTable(self::TIERS_TABLE)) {
+            return collect();
+        }
+        return DB::connection(self::ROOT_CONNECTION)->table(self::TIERS_TABLE)->orderBy('TierOrdinal')->get();
+    }
 
-        // Index assignments by FeatureId|LicenseTierId. `Value` is JSONB and
-        // arrives as a JSON scalar string, so it is decoded once here rather
-        // than in the browser, keeping the wire payload typed.
+    private function fetchFeatures(): \Illuminate\Support\Collection
+    {
+        if (!DB::connection(self::ROOT_CONNECTION)->getSchemaBuilder()->hasTable(self::FEATURES_TABLE)) {
+            return collect();
+        }
+        return DB::connection(self::ROOT_CONNECTION)->table(self::FEATURES_TABLE)->get();
+    }
+
+    private function buildFeatureItems(\Illuminate\Support\Collection $features): array
+    {
+        return $features->map(static function ($f): array {
+            $key = (string) ($f->FeatureKey ?? $f->Slug ?? '');
+            return [
+                'FeatureId' => (int) ($f->FeatureId ?? 0),
+                'FeatureKey' => $key,
+                'Slug' => $key,
+                'Name' => (string) ($f->Name ?? $key),
+                'Description' => (string) ($f->Description ?? ''),
+                'ValueType' => (string) ($f->ValueType ?? 'boolean'),
+            ];
+        })->sortBy('Slug')->values()->all();
+    }
+
+    private function buildCellsMap(): array
+    {
+        if (!DB::connection(self::ROOT_CONNECTION)->getSchemaBuilder()->hasTable(self::TIER_FEATURES_TABLE)) {
+            return [];
+        }
+        $assignments = DB::connection(self::ROOT_CONNECTION)->table(self::TIER_FEATURES_TABLE)->orderBy('FeatureId')->orderBy('LicenseTierId')->get();
         $cells = [];
         foreach ($assignments as $row) {
             $key = (int) $row->FeatureId . '|' . (int) $row->LicenseTierId;
             $cells[$key] = [
-                'Value' => json_decode((string) $row->Value, true),
-                'UpdatedAt' => $row->UpdatedAt === null ? null : (string) $row->UpdatedAt,
+                'Value' => json_decode((string) ($row->ValueScalar ?? $row->Value ?? ''), true),
+                'UpdatedAt' => isset($row->UpdatedAt) ? (string) $row->UpdatedAt : null,
             ];
         }
+        return $cells;
+    }
 
-        $tierAxis = $tiers->map(static fn ($t): array => [
+    private function buildTierAxis(\Illuminate\Support\Collection $tiers): array
+    {
+        return $tiers->map(static fn ($t): array => [
             'LicenseTierId' => (int) $t->LicenseTierId,
             'TierName' => (string) $t->TierName,
             'TierOrdinal' => (int) $t->TierOrdinal,
         ])->all();
+    }
 
-        $results = $features->map(static function ($f) use ($tierAxis, $cells): array {
+    private function buildMatrixResults(\Illuminate\Support\Collection $features, array $tierAxis, array $cells): array
+    {
+        return $features->map(static function ($f) use ($tierAxis, $cells): array {
             $featureId = (int) $f->FeatureId;
             $row = [];
             foreach ($tierAxis as $tier) {
-                $key = $featureId . '|' . $tier['LicenseTierId'];
-                // Absent cell stays null: spec 45 §4 AC-FEAT-004 forbids
-                // synthesizing a default for an unassigned tier.
-                $row[(string) $tier['LicenseTierId']] = $cells[$key] ?? null;
+                $row[(string) $tier['LicenseTierId']] = $cells[$featureId . '|' . $tier['LicenseTierId']] ?? null;
             }
-
             return [
                 'FeatureId' => $featureId,
-                'FeatureKey' => (string) $f->FeatureKey,
-                'ValueType' => (string) $f->ValueType,
+                'FeatureKey' => (string) ($f->FeatureKey ?? ''),
+                'ValueType' => (string) ($f->ValueType ?? 'boolean'),
                 'Cells' => $row,
-                'AssignedTierCount' => count(array_filter($row, static fn ($cell): bool => $cell !== null)),
+                'AssignedTierCount' => count(array_filter($row, static fn ($c): bool => $c !== null)),
             ];
         })->all();
-
-        return ApiEnvelope::success(
-            results: $results,
-            requestId: (string) ($request->headers->get('X-Request-Id') ?? ''),
-            extraAttributes: ['Tiers' => $tierAxis],
-        );
     }
 }

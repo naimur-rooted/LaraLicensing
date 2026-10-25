@@ -29,6 +29,9 @@ final class MetricsResource extends JsonResource
             'LicensesTotal' => (int) ($row['LicensesTotal'] ?? 0),
             'QuotaRequestsPending' => (int) ($row['QuotaRequestsPending'] ?? 0),
             'GeneratedAt' => (string) ($row['GeneratedAt'] ?? ''),
+            'Resellers' => ['TotalCount' => (int) ($row['ResellersActive'] ?? 0)],
+            'Licenses' => ['TotalCount' => (int) ($row['LicensesTotal'] ?? 0)],
+            'QuotaRequests' => ['TotalCount' => (int) ($row['QuotaRequestsPending'] ?? 0)],
         ];
     }
 }

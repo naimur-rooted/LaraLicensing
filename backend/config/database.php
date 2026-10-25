@@ -38,6 +38,13 @@ return [
             'sslmode' => env('DB_ROOT_SSLMODE', 'prefer'),
         ],
 
+        'shard' => [
+            'driver' => env('DB_SHARD_CONNECTION', 'sqlite'),
+            'database' => env('DB_SHARD_DATABASE', ':memory:'),
+            'prefix' => '',
+            'foreign_key_constraints' => false,
+        ],
+
         // Runtime template consumed by ShardResolver. Do not select in code.
         'shard_template' => [
             'driver' => env('DB_SHARD_TEMPLATE_CONNECTION', 'pgsql'),

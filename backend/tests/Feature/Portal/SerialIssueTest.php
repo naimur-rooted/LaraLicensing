@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Portal;
 
+use App\Http\Controllers\Admin\SerialController as AdminSerialController;
+use App\Http\Controllers\Portal\SerialController;
+
 use App\Db\ShardResolver;
 use App\Models\License;
 use App\Models\Prefix;

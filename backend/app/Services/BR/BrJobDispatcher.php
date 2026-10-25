@@ -43,7 +43,7 @@ use Throwable;
  * 15-line function cap enforced by splitting `dequeue` into `lockRow` +
  * `promoteRow`, and `fail` into `retryable` + `terminal`.
  */
-final class BrJobDispatcher
+class BrJobDispatcher
 {
     public const CONN = 'root';
     private const TABLE = 'BackupJobs';
@@ -74,11 +74,14 @@ final class BrJobDispatcher
     /** @return object|null */
     private function lockRow(BrJobKind $kind): ?object
     {
+        $isSqlite = DB::connection(self::CONN)->getDriverName() === 'sqlite';
+        $forUpdate = $isSqlite ? '' : ' FOR UPDATE SKIP LOCKED';
+        $now = $isSqlite ? "datetime('now')" : 'NOW()';
         $sql = 'SELECT * FROM "' . self::TABLE . '"'
             . ' WHERE "State" = ? AND "Kind" = ?'
-            . ' AND ("WorkerLeaseUntil" IS NULL OR "WorkerLeaseUntil" < NOW())'
+            . ' AND ("WorkerLeaseUntil" IS NULL OR "WorkerLeaseUntil" < ' . $now . ')'
             . ' ORDER BY "CreatedAt" ASC'
-            . ' FOR UPDATE SKIP LOCKED'
+            . $forUpdate
             . ' LIMIT 1';
         $rows = DB::connection(self::CONN)->select($sql, [BrJobState::Queued->value, $kind->value]);
 
@@ -98,8 +101,11 @@ final class BrJobDispatcher
             Log::error('br.job.attempt_overflow', ['JobId' => $jobId, 'AttemptCount' => $newAttempt, 'MaxAttempts' => $maxAttempts, 'WorkerId' => $workerId]);
             throw InternalException::custom(self::ERR_TRANSITION, 'AttemptCount would exceed MaxAttempts on dequeue.', [['Field' => 'BackupJobs.AttemptCount', 'Rule' => 'ExceedsMax']]);
         }
+        $isSqlite = DB::connection(self::CONN)->getDriverName() === 'sqlite';
+        $lease = $isSqlite ? "datetime('now', '+" . self::LEASE_SECONDS . " seconds')" : "NOW() + INTERVAL '" . self::LEASE_SECONDS . " seconds'";
+        $now = $isSqlite ? "datetime('now')" : 'NOW()';
         DB::connection(self::CONN)->update(
-            'UPDATE "' . self::TABLE . '" SET "State"=?, "AttemptCount"=?, "StartedAt"=COALESCE("StartedAt", NOW()), "WorkerLeaseUntil"=NOW() + INTERVAL \'' . self::LEASE_SECONDS . ' seconds\' WHERE "BackupJobId"=? AND "State"=?',
+            'UPDATE "' . self::TABLE . '" SET "State"=?, "AttemptCount"=?, "StartedAt"=COALESCE("StartedAt", ' . $now . '), "WorkerLeaseUntil"=' . $lease . ' WHERE "BackupJobId"=? AND "State"=?',
             [BrJobState::Running->value, $newAttempt, $jobId, BrJobState::Queued->value],
         );
         $row['State'] = BrJobState::Running->value;
@@ -113,8 +119,11 @@ final class BrJobDispatcher
      */
     public function succeed(string $jobId, array $result, string $requestId): void
     {
+        $isSqlite = DB::connection(self::CONN)->getDriverName() === 'sqlite';
+        $cast = $isSqlite ? '?' : '?::jsonb';
+        $now = $isSqlite ? "datetime('now')" : 'NOW()';
         $affected = DB::connection(self::CONN)->update(
-            'UPDATE "' . self::TABLE . '" SET "State"=?, "Result"=?::jsonb, "FinishedAt"=NOW(), "WorkerLeaseUntil"=NULL WHERE "BackupJobId"=? AND "State"=?',
+            'UPDATE "' . self::TABLE . '" SET "State"=?, "Result"=' . $cast . ', "FinishedAt"=' . $now . ', "WorkerLeaseUntil"=NULL WHERE "BackupJobId"=? AND "State"=?',
             [BrJobState::Succeeded->value, (string) json_encode($result), $jobId, BrJobState::Running->value],
         );
         if ($affected === 0) {
@@ -138,8 +147,10 @@ final class BrJobDispatcher
 
     private function retryable(string $jobId, string $errorCode, string $errorReason, string $errorId, int $backoffSeconds, int $attemptCount, string $requestId): void
     {
+        $isSqlite = DB::connection(self::CONN)->getDriverName() === 'sqlite';
+        $lease = $isSqlite ? "datetime('now', '+" . $backoffSeconds . " seconds')" : "NOW() + INTERVAL '" . $backoffSeconds . " seconds'";
         DB::connection(self::CONN)->update(
-            'UPDATE "' . self::TABLE . '" SET "State"=?, "WorkerLeaseUntil"=NOW() + INTERVAL \'' . $backoffSeconds . ' seconds\', "ErrorId"=?, "ErrorCode"=?, "ErrorReason"=? WHERE "BackupJobId"=? AND "State"=?',
+            'UPDATE "' . self::TABLE . '" SET "State"=?, "WorkerLeaseUntil"=' . $lease . ', "ErrorId"=?, "ErrorCode"=?, "ErrorReason"=? WHERE "BackupJobId"=? AND "State"=?',
             [BrJobState::Queued->value, $errorId, $errorCode, $errorReason, $jobId, BrJobState::Running->value],
         );
         Log::warning(self::LOG_RETRY, ['JobId' => $jobId, 'AttemptCount' => $attemptCount, 'BackoffSeconds' => $backoffSeconds, 'ErrorId' => $errorId, 'ErrorCode' => $errorCode, 'RequestId' => $requestId]);
@@ -147,8 +158,10 @@ final class BrJobDispatcher
 
     private function terminal(string $jobId, string $errorCode, string $errorReason, string $errorId, int $attemptCount, int $maxAttempts, string $requestId): void
     {
+        $isSqlite = DB::connection(self::CONN)->getDriverName() === 'sqlite';
+        $now = $isSqlite ? "datetime('now')" : 'NOW()';
         DB::connection(self::CONN)->update(
-            'UPDATE "' . self::TABLE . '" SET "State"=?, "FinishedAt"=NOW(), "WorkerLeaseUntil"=NULL, "ErrorId"=?, "ErrorCode"=?, "ErrorReason"=? WHERE "BackupJobId"=? AND "State"=?',
+            'UPDATE "' . self::TABLE . '" SET "State"=?, "FinishedAt"=' . $now . ', "WorkerLeaseUntil"=NULL, "ErrorId"=?, "ErrorCode"=?, "ErrorReason"=? WHERE "BackupJobId"=? AND "State"=?',
             [BrJobState::Failed->value, $errorId, $errorCode, $errorReason, $jobId, BrJobState::Running->value],
         );
         Log::error(self::LOG_FAILED, ['JobId' => $jobId, 'AttemptCount' => $attemptCount, 'MaxAttempts' => $maxAttempts, 'ErrorId' => $errorId, 'ErrorCode' => $errorCode, 'ErrorReason' => $errorReason, 'RequestId' => $requestId]);

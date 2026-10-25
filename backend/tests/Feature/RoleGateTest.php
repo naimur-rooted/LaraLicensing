@@ -63,7 +63,9 @@ final class RoleGateTest extends TestCase
 
     private function makeUser(string $id): Authenticatable
     {
-        $user = new AuthUser();
+        $user = new class extends AuthUser {
+            protected $keyType = 'string';
+        };
         $user->id = $id;
 
         return $user;

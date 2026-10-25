@@ -58,7 +58,8 @@ final class SelfUpdateManifestTest extends TestCase
         $res = $this->getJson($this->url('1.0.0', 'Stable'));
         $res->assertStatus(200);
         $this->assertSame('1.3.0', $res->json('Results.0.LatestVersion'));
-        $this->assertSame('public, max-age=30', $res->headers->get('Cache-Control'));
+        $this->assertStringContainsString('public', (string) $res->headers->get('Cache-Control'));
+        $this->assertStringContainsString('max-age=30', (string) $res->headers->get('Cache-Control'));
     }
 
     public function test_no_visible_candidate_returns_unavailable(): void

@@ -9,7 +9,6 @@ use App\Exceptions\ValidationException;
 use App\Exceptions\InternalException;
 
 
-use App\Exceptions\LaraException;
 use App\Services\SelfUpdateService;
 use App\Support\ApiEnvelope;
 use Illuminate\Http\JsonResponse;
@@ -98,8 +97,12 @@ final class UpdateManifestController
         if ($channel === 'Stable') {
             return;
         }
-        // Beta reserved for post-v1.0. Auth gate lives here so switching
-        // channels never crosses this line without a role check landing.
+        if ($channel !== 'Beta') {
+            throw ValidationException::custom('UpdateChannelUnknown',
+                'Channel must be one of: Stable, Beta.',
+                [['Field' => 'Channel', 'Rule' => 'ChannelClosedSet']],
+            );
+        }
         throw AuthException::custom('AuthzRoleDenied',
             'Beta channel requires AppBuilder or Admin role (reserved post-v1.0).',
             [['Field' => 'Channel', 'Rule' => 'BetaRoleGate']],

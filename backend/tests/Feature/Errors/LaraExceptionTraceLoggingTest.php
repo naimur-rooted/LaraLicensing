@@ -24,7 +24,7 @@ it('logs LaraException trace to lara-diag and keeps Trace out of the envelope', 
         throw LaraException::make('ServerError', 'boom for trace test');
     });
 
-    $response = $this->getJson('/Api/_test/lara-throw', ['X-Request-Id' => 'req-trace-1']);
+    $response = $this->getJson('/Api/_test/lara-throw', ['X-Request-Id' => 'req-trace-1-0000000000']);
 
     $response->assertStatus(500);
     $body = $response->json();
@@ -35,7 +35,7 @@ it('logs LaraException trace to lara-diag and keeps Trace out of the envelope', 
     expect(File::exists($path))->toBeTrue();
     $contents = File::get($path);
     expect($contents)->toContain('lara.exception.trace');
-    expect($contents)->toContain('req-trace-1');
+    expect($contents)->toContain('req-trace-1-0000000000');
     expect($contents)->toContain('LaraExceptionTraceLoggingTest');
 });
 

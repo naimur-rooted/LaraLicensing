@@ -62,6 +62,10 @@ final class AuditEndpoints extends Command
             }
 
             [$controllerClass, $method] = explode('@', $action, 2);
+            $controllerClass = ltrim($controllerClass, '\\');
+            if (! str_starts_with($controllerClass, 'App\\')) {
+                continue;
+            }
             $row = $this->auditOne($route, $controllerClass, $method, $testFiles, $policyMap, $allowlist);
             $rows[] = $row;
         }

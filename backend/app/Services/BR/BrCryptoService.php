@@ -35,7 +35,7 @@ use Illuminate\Support\Facades\Log;
  * All function bodies capped at 15 lines. Zero magic literals: every
  * label, length, and pointer lives in BrCryptoConstants.
  */
-final class BrCryptoService
+class BrCryptoService
 {
     public function newDek(): string
     {

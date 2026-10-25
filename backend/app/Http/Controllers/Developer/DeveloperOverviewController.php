@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Developer;
 
+use App\Exceptions\InternalException;
+use App\Exceptions\ValidationException;
 use App\Http\Controllers\Controller;
 use App\Services\AiArchitectService;
 use App\Services\DeveloperAnalyticsService;
@@ -42,36 +44,22 @@ class DeveloperOverviewController extends Controller
     public function chat(Request $request): JsonResponse
     {
         $message = trim((string) $request->input('message', ''));
-        $history = (array) $request->input('history', []);
-        $context = $request->input('context');
-
-        if (empty($message)) {
-            return response()->json([
-                'IsSuccess' => false,
-                'ErrorCode' => 'EmptyMessage',
-                'Message' => 'Message is required.',
-            ], 422);
+        if ($message === '') {
+            throw ValidationException::invalidInput('Message is required.');
         }
 
-        try {
-            $reply = $this->aiArchitectService->chatWithSupport(
-                $message,
-                $history,
-                is_string($context) ? $context : null
-            );
+        $history = (array) $request->input('history', []);
+        $context = $request->input('context');
+        $contextStr = is_string($context) ? $context : null;
 
+        try {
+            $reply = $this->aiArchitectService->chatWithSupport($message, $history, $contextStr);
             return response()->json([
                 'IsSuccess' => true,
-                'Data' => [
-                    'reply' => $reply,
-                ],
+                'Data' => ['reply' => $reply],
             ]);
         } catch (Throwable $e) {
-            return response()->json([
-                'IsSuccess' => false,
-                'ErrorCode' => 'ChatError',
-                'Message' => $e->getMessage(),
-            ], 500);
+            throw InternalException::fatal($e->getMessage());
         }
     }
 }

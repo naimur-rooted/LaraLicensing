@@ -10,7 +10,14 @@ use Tests\TestCase;
  * Step 149: Plan18SubclassRulesTest
  */
 test('all exception subclasses are final')
-    ->expect('App\Exceptions')
+    ->expect([
+        \App\Exceptions\AuthException::class,
+        \App\Exceptions\DomainConflictException::class,
+        \App\Exceptions\InternalException::class,
+        \App\Exceptions\NotFoundException::class,
+        \App\Exceptions\RateLimitException::class,
+        \App\Exceptions\ValidationException::class,
+    ])
     ->classes()
     ->toExtend('App\Exceptions\LaraException')
     ->toBeFinal();

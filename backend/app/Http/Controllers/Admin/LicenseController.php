@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Admin;
 
 use App\Db\ShardResolver;
-use App\Exceptions\LaraException;
 use App\Exceptions\AuthException;
 use App\Exceptions\ValidationException;
 use App\Exceptions\RateLimitException;
@@ -118,7 +117,7 @@ public function issue(LicenseIssueRequest $request): JsonResponse
     // validation into typed FormRequests under App\Http\Requests\Admin
     // (LicenseIssueRequest, LicenseUpdateRequest, LicenseRevokeRequest).
     // Their failedValidation() hooks throw the same
-    // LaraException('ValidationFailed', ...) envelope so wire behaviour
+    // ValidationException('ValidationFailed', ...) envelope so wire behaviour
     // is unchanged.
 
 

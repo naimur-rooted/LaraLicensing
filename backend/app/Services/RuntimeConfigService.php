@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Exceptions\DomainConflictException;
+use App\Exceptions\InternalException;
 
 
 use App\Exceptions\LaraException;
@@ -25,7 +26,7 @@ use Throwable;
  *    partial-observable to the SPA fetching `/version.json`.
  *  - 15-line function bodies enforced by `.ai-memory/coding-guidelines.md`.
  */
-final class RuntimeConfigService
+class RuntimeConfigService
 {
     public const CURRENT_VERSION_UNAVAILABLE = '0.0.0';
     private const MODE_PREVIEW = 'preview';
@@ -44,11 +45,11 @@ final class RuntimeConfigService
     {
         $raw = @file_get_contents($this->path);
         if ($raw === false) {
-            throw new RuntimeException("Runtime config file missing at '{$this->path}'.");
+            throw InternalException::fatal("Runtime config file missing at '{$this->path}'.");
         }
         $decoded = json_decode($raw, true);
         if (is_array($decoded) === false) {
-            throw new RuntimeException('Runtime config JSON is not an object.');
+            throw InternalException::fatal('Runtime config JSON is not an object.');
         }
 
         return $this->normalize($decoded);
@@ -229,11 +230,11 @@ final class RuntimeConfigService
         try {
             $bytes = @file_put_contents($tmp, $json, LOCK_EX);
             if ($bytes === false) {
-                throw new RuntimeException("Failed to write tmp file '{$tmp}'.");
+                throw InternalException::fatal("Failed to write tmp file '{$tmp}'.");
             }
             $this->fsyncPath($tmp);
             if (!@rename($tmp, $this->path)) {
-                throw new RuntimeException("Failed to rename '{$tmp}' to '{$this->path}'.");
+                throw InternalException::fatal("Failed to rename '{$tmp}' to '{$this->path}'.");
             }
         } catch (Throwable $e) {
             @unlink($tmp);
@@ -266,11 +267,11 @@ final class RuntimeConfigService
         $lockPath = $this->path . '.lock';
         $fh = @fopen($lockPath, 'c');
         if ($fh === false) {
-            throw new RuntimeException("Failed to open lock file '{$lockPath}'.");
+            throw InternalException::fatal("Failed to open lock file '{$lockPath}'.");
         }
         try {
             if (flock($fh, LOCK_EX) === false) {
-                throw new RuntimeException('Failed to acquire runtime-config exclusive lock.');
+                throw InternalException::fatal('Failed to acquire runtime-config exclusive lock.');
             }
 
             return $fn();

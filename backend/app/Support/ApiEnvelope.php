@@ -59,23 +59,7 @@ final class ApiEnvelope
         array $extraAttributes = [],
         array $details = []
     ): JsonResponse {
-        $errorBlock = [
-            'ErrorCode' => $errorCode,
-            'ErrorMessage' => $errorMessage,
-        ];
-        if (isset($extraAttributes['Category'])) {
-            $errorBlock['Category'] = $extraAttributes['Category'];
-        }
-        if (isset($extraAttributes['ErrorId'])) {
-            $errorBlock['ErrorId'] = $extraAttributes['ErrorId'];
-        }
-        if ($details !== []) {
-            // Plan 11 step 33 (02-spec/03-error-manage §4.2, AC-ERR-005). Redact
-            // sensitive `Value`/`Message` entries (password, token, otp, ...)
-            // before they cross the API surface. Single choke point so every
-            // failure envelope, whatever the throw site, is guaranteed safe.
-            $errorBlock['Details'] = DetailsRedactor::redact($details);
-        }
+        $errorBlock = self::buildErrorBlock($errorCode, $errorMessage, $extraAttributes, $details);
 
         return self::respond(
             isSuccess: false,
@@ -85,6 +69,22 @@ final class ApiEnvelope
             results: [],
             extraAttributes: array_merge($extraAttributes, ['Error' => $errorBlock]),
         );
+    }
+
+    private static function buildErrorBlock(string $code, string $msg, array $extra, array $details): array
+    {
+        $block = ['ErrorCode' => $code, 'ErrorMessage' => $msg];
+        if (isset($extra['Category'])) {
+            $block['Category'] = $extra['Category'];
+        }
+        if (isset($extra['ErrorId'])) {
+            $block['ErrorId'] = $extra['ErrorId'];
+        }
+        if ($details !== []) {
+            $block['Details'] = DetailsRedactor::redact($details);
+        }
+
+        return $block;
     }
 
     private static function respond(
@@ -111,10 +111,6 @@ final class ApiEnvelope
             ),
             'Results' => $results,
         ];
-
-        if (! $isSuccess && isset($extraAttributes['Error'])) {
-            $payload['Error'] = $extraAttributes['Error'];
-        }
 
         return new JsonResponse(
             data: $payload,
