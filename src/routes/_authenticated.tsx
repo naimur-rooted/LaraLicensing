@@ -9,7 +9,10 @@ export const Route = createFileRoute("/_authenticated")({
   beforeLoad: ({ location }) => {
     if (typeof window === "undefined") return;
     if (typeof getLaraAccessToken() === "string") return;
-    throw redirect({ to: "/admin/login", search: { redirect: location.href } });
+    if (location.pathname.startsWith("/admin")) {
+      throw redirect({ to: "/admin/login", search: { redirect: location.href } });
+    }
+    throw redirect({ to: "/register", search: { redirect: location.href } });
   },
   component: AuthenticatedLayout,
 });

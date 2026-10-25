@@ -5,6 +5,8 @@ import { SerialLookupPanel } from "@/components/portal/serial-lookup-panel";
 import { CustomerRequestsHistory } from "@/components/portal/CustomerRequestsHistory";
 import { DeveloperProductsDashboard } from "@/components/developer/DeveloperProductsDashboard";
 import { DeveloperOverviewDashboard } from "@/components/developer/DeveloperOverviewDashboard";
+import { DeveloperBillingTab } from "@/components/developer/DeveloperBillingTab";
+import { PlatformSubscriptionModal } from "@/components/developer/PlatformSubscriptionModal";
 import { DeveloperSupportChatbot } from "@/components/developer/DeveloperSupportChatbot";
 import { ResellerWholesaleStudio } from "@/components/reseller/ResellerWholesaleStudio";
 import { FraudAlertCenter } from "@/components/security/FraudAlertCenter";
@@ -18,8 +20,8 @@ import {
   ShieldAlert,
   BarChart3,
   Shield,
-  Menu,
-  ChevronRight,
+  CreditCard,
+  Sparkles,
   User,
   PanelLeftClose,
   PanelLeft,
@@ -33,7 +35,7 @@ export const Route = createFileRoute("/_authenticated/portal/home")({
       { title: "Portal | Licensing Portal" },
       {
         name: "description",
-        content: "Developer Studio, Overview Analytics, Reseller Wholesale Hub, Fraud Guard, and Client Verification.",
+        content: "Developer Studio, Overview Analytics, Global Billing, Reseller Wholesale Hub, Fraud Guard, and Client Verification.",
       },
       { name: "robots", content: "noindex,nofollow" },
     ],
@@ -41,14 +43,18 @@ export const Route = createFileRoute("/_authenticated/portal/home")({
   component: PortalHome,
 });
 
+type TabId = "overview" | "developer" | "billing" | "reseller" | "security" | "client";
+
 function PortalHome() {
   const meQuery = useQuery(meQueryOptions());
   const me = meQuery.data?.[0];
   const displayName = me?.DisplayName ?? me?.Email ?? "Portal User";
   const customerEmail = me?.Email ?? "user@licensingportal.local";
   const [selectedSerial, setSelectedSerial] = useState("");
-  const [activeTab, setActiveTab] = useState<"overview" | "developer" | "reseller" | "security" | "client">("overview");
+  const [activeTab, setActiveTab] = useState<TabId>("overview");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [currentPlanTier, setCurrentPlanTier] = useState("Pro Developer");
+  const [isGlobalPlanModalOpen, setIsGlobalPlanModalOpen] = useState(false);
 
   const handleSignOut = () => {
     clearLaraSession();
@@ -58,6 +64,7 @@ function PortalHome() {
   const navItems = [
     { id: "overview", label: "Overview", icon: BarChart3, badge: null },
     { id: "developer", label: "Products & Deals", icon: LayoutGrid, badge: "Tier 2" },
+    { id: "billing", label: "Billing & Subscription", icon: CreditCard, badge: "Active" },
     { id: "reseller", label: "Reseller Wholesale Hub", icon: Store, badge: null },
     { id: "security", label: "Fraud Guard", icon: ShieldAlert, badge: null },
     { id: "client", label: "Issued Licenses & Serials", icon: KeyRound, badge: null },
@@ -72,7 +79,7 @@ function PortalHome() {
             variant="ghost"
             size="icon"
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="size-8 text-muted-foreground hover:text-foreground"
+            className="size-8 text-muted-foreground hover:text-foreground cursor-pointer"
             title={isSidebarOpen ? "Collapse Sidebar" : "Expand Sidebar"}
           >
             {isSidebarOpen ? <PanelLeftClose className="size-4" /> : <PanelLeft className="size-4" />}
@@ -89,6 +96,18 @@ function PortalHome() {
         </div>
 
         <div className="flex items-center gap-3">
+          {/* Universal Header Plan Badge & Switcher */}
+          <button
+            type="button"
+            onClick={() => setIsGlobalPlanModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1 rounded-full border border-primary/30 bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors shadow-2xs cursor-pointer"
+            title="Manage Platform Subscription"
+          >
+            <Sparkles className="size-3.5 text-primary" />
+            <span>{currentPlanTier}</span>
+            <span className="text-[10px] text-muted-foreground uppercase ml-0.5">Upgrade</span>
+          </button>
+
           <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground">
             <User className="size-3.5" />
             <span>Hello, <strong className="text-foreground">{displayName}</strong></span>
@@ -98,7 +117,7 @@ function PortalHome() {
             variant="outline"
             size="sm"
             onClick={handleSignOut}
-            className="h-8 text-xs text-muted-foreground hover:text-foreground gap-1.5 shadow-2xs"
+            className="h-8 text-xs text-muted-foreground hover:text-foreground gap-1.5 shadow-2xs cursor-pointer"
           >
             <LogOut className="size-3.5" />
             <span className="hidden sm:inline">Sign out</span>
@@ -128,7 +147,7 @@ function PortalHome() {
                     key={item.id}
                     type="button"
                     onClick={() => setActiveTab(item.id)}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                       isActive
                         ? "bg-primary text-primary-foreground shadow-2xs font-semibold"
                         : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
@@ -180,6 +199,12 @@ function PortalHome() {
               />
             )}
             {activeTab === "developer" && <DeveloperProductsDashboard />}
+            {activeTab === "billing" && (
+              <DeveloperBillingTab
+                currentTier={currentPlanTier}
+                onTierChange={(tier) => setCurrentPlanTier(tier)}
+              />
+            )}
             {activeTab === "reseller" && <ResellerWholesaleStudio />}
             {activeTab === "security" && <FraudAlertCenter />}
             {activeTab === "client" && (
@@ -202,6 +227,24 @@ function PortalHome() {
 
       {/* Floating Global AI Chatbot matching Cryptlex / Intercom */}
       <DeveloperSupportChatbot userName={displayName} />
+
+      {/* Global Plan Switcher / Upgrade Modal accessible from Header */}
+      <PlatformSubscriptionModal
+        isOpen={isGlobalPlanModalOpen}
+        onOpenChange={setIsGlobalPlanModalOpen}
+        currentTier={currentPlanTier}
+        onTierSelect={(tierCode) => {
+          const tierName =
+            tierCode === "MAX"
+              ? "Max Enterprise"
+              : tierCode === "PRO"
+              ? "Pro Developer"
+              : tierCode === "ESSENTIAL"
+              ? "Essential"
+              : "Starter / Free";
+          setCurrentPlanTier(tierName);
+        }}
+      />
     </div>
   );
 }

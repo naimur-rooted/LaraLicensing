@@ -134,13 +134,19 @@ function AdminLoginPage() {
   return (
     <AuthCard
       title={heading}
-      description="Access the Licensing Portal console. Multi-tenant, audit-logged."
+      description="Internal Operator Console. Strictly reserved for platform administrators and operators."
       asideHeadline="Licensing, quotas, and self-updates. One console, every reseller."
       asideBody="Session-scoped tokens, rate-limited endpoints, and every destructive action lineage-tagged in the Admin AuditLogs viewer."
       asideTrustPoints={TRUST_POINTS}
       asideFooterNote={`© ${new Date().getFullYear()} Licensing Portal. All systems normal.`}
       footerSlot={
         <>
+          <span className="block mb-1 text-primary">
+            Developer or software creator?{" "}
+            <Link to="/register" className="font-semibold underline">
+              Create Developer Account &rarr;
+            </Link>
+          </span>
           Trouble signing in?{" "}
           <a
             href="mailto:admin@licensingportal.local"

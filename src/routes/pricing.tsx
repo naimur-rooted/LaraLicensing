@@ -39,7 +39,7 @@ function PricingPage() {
         "REST API Access",
       ],
       ctaText: "Start Free",
-      ctaLink: "/portal/home",
+      ctaLink: "/register?plan=STARTER",
       isPopular: false,
     },
     {
@@ -58,7 +58,7 @@ function PricingPage() {
         "Standard Email Support (24h SLA)",
       ],
       ctaText: "Get Pro Access",
-      ctaLink: "/portal/home",
+      ctaLink: "/register?plan=PRO",
       isPopular: true,
     },
     {

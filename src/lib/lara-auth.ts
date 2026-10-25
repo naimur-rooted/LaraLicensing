@@ -91,3 +91,49 @@ export async function registerViaLara(input: LaraRegisterRequest): Promise<LaraR
 
   return result;
 }
+
+export interface LaraDeveloperRegisterRequest {
+  Email: string;
+  Password: string;
+  DisplayName?: string;
+  CompanyName?: string;
+  SelectedPlan: string;
+  BillingInterval?: string;
+}
+
+const developerRegisterResultSchema = z.object({
+  UserId: z.number().int().positive(),
+  Email: z.string().email(),
+  Role: z.string(),
+  SessionId: z.string(),
+  ExpiresAt: z.string(),
+  Token: z.string().min(1),
+  Subscription: z.object({
+    PlanCode: z.string(),
+    PlanName: z.string(),
+    BillingInterval: z.string(),
+    MaxProducts: z.number(),
+    DailyQuota: z.number(),
+    HourlyQuota: z.number(),
+    MaxMachineSeats: z.number(),
+    Status: z.string(),
+  }).optional(),
+});
+
+export type LaraDeveloperRegisterResult = z.infer<typeof developerRegisterResultSchema>;
+
+export async function registerDeveloperViaLara(
+  input: LaraDeveloperRegisterRequest,
+): Promise<LaraDeveloperRegisterResult> {
+  const [result] = await requestLaraApi(
+    "/v1/auth/developer-register",
+    developerRegisterResultSchema,
+    {
+      method: HttpMethodType.Post,
+      body: input,
+    },
+  );
+  setLaraAccessToken(result.Token);
+
+  return result;
+}

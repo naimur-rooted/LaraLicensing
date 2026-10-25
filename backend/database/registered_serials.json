@@ -182,5 +182,23 @@
         "MaxActivations": 5,
         "IsRevoked": false,
         "RegisteredAt": "2026-10-21T09:37:15.967000Z"
+    },
+    "LARA-B41G-0001": {
+        "SerialId": 703266704,
+        "SerialValue": "LARA-B41G-0001",
+        "Category": "Yearly",
+        "TierName": "Scale",
+        "CustomerName": "Jane Doe",
+        "CustomerEmail": "approve-test@domain.com",
+        "Status": "active",
+        "ExpiresAt": "2027-10-25T11:39:11.824Z",
+        "Features": [
+            "core.reports",
+            "core.dashboards",
+            "addon.exports"
+        ],
+        "MaxActivations": 5,
+        "IsRevoked": false,
+        "RegisteredAt": "2026-10-25T11:39:12.704689Z"
     }
 }

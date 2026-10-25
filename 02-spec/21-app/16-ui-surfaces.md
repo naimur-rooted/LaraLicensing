@@ -17,19 +17,21 @@ Contract references point at `02-spec/21-app/11-api-contracts/`. Error rendering
 | `Reseller` | `/reseller` | Scoped to `AuthActor.ResellerId`. |
 | `AppBuilder` | `/builder` | Scoped to own `ClientId`s. |
 | `EndUser` | `/app` | Scoped to own `UserId`. |
-| Public | `/`, `/auth/*`, `/verify` | No auth required. |
-
-Role resolution runs on the server; unauthenticated users hit `/auth/sign-in`; authenticated users without the required role hit `/forbidden` and receive the `Forbidden` error envelope.
-
+| Public | `/`, `/auth/*`, `/register`, `/pricing`, `/verify` | No auth required. |
+ 
+Role resolution runs on the server; unauthenticated users accessing protected developer or customer workspaces hit `/auth/sign-in` or `/register`; unauthenticated users accessing `/admin/*` hit `/admin/login`. Authenticated users without the required role hit `/forbidden` and receive the `Forbidden` error envelope. Under no circumstances should `/admin/login` serve as a catch-all redirect for public visitors arriving from marketing or pricing.
+ 
 ---
-
+ 
 ## 2. Public Surfaces
-
+ 
 | Path | Purpose | Contract | Status |
 |------|---------|----------|:------:|
-| `/` | Marketing home, product summary, CTA to sign-in. | none | - |
-| `/auth/sign-in` | Email/password sign-in, OAuth entry points. | `POST /Auth/Login`, `POST /Auth/OAuth/{Provider}/Start` | A |
-| `/auth/sign-up` | Registration for `AppBuilder` and `EndUser` self-serve; `Admin` and `Reseller` seeded server-side. | `POST /Auth/Register` | A |
+| `/` | Marketing home, product summary, CTA to sign-up / pricing. | none | - |
+| `/pricing` | Tier matrix (Starter, Essential, Pro, Max) with CTA to `/register?plan={tier}`. | none | - |
+| `/auth/sign-in` | Email/password sign-in for developers and portal customers. | `POST /Auth/Login`, `POST /Auth/OAuth/{Provider}/Start` | A |
+| `/auth/sign-up` (alias `/register`) | Public self-serve developer and customer sign-up with plan selection. | `POST /api/v1/auth/developer-register` | C |
+| `/admin/login` | Platform Operator Console ONLY; strictly reserved for SuperAdmin/Admin. | `POST /Auth/Login` | A |
 | `/auth/forgot` | Password reset request. | `POST /Auth/Password/Reset` | A |
 | `/auth/callback/{provider}` | OAuth redirect target, exchanges code for session. | `POST /Auth/OAuth/{Provider}/Callback` | A |
 | `/verify` | End-user-facing verification preview (read-only, no OAuth credential). | `POST /Verify/Hash` (public preview mode) | D |

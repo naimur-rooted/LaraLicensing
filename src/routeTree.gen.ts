@@ -24,6 +24,7 @@ import { Route as StatusRouteImport } from './routes/status'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedPortalRouteImport } from './routes/_authenticated/portal'
 import { Route as AdminLoginRouteImport } from './routes/admin.login'
+import { Route as AuthSignUpRouteImport } from './routes/auth.sign-up'
 import { Route as E2eErrorHarnessRouteImport } from './routes/e2e.error-harness'
 import { Route as SolutionsChromeExtensionsRouteImport } from './routes/solutions.chrome-extensions'
 import { Route as SolutionsDesktopRouteImport } from './routes/solutions.desktop'
@@ -138,6 +139,11 @@ const AuthenticatedPortalRoute = AuthenticatedPortalRouteImport.update({
 const AdminLoginRoute = AdminLoginRouteImport.update({
   id: '/admin/login',
   path: '/admin/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthSignUpRoute = AuthSignUpRouteImport.update({
+  id: '/auth/sign-up',
+  path: '/auth/sign-up',
   getParentRoute: () => rootRouteImport,
 } as any)
 const E2eErrorHarnessRoute = E2eErrorHarnessRouteImport.update({
@@ -393,6 +399,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/portal': typeof AuthenticatedPortalRouteWithChildren
   '/admin/login': typeof AdminLoginRoute
+  '/auth/sign-up': typeof AuthSignUpRoute
   '/e2e/error-harness': typeof E2eErrorHarnessRoute
   '/solutions/chrome-extensions': typeof SolutionsChromeExtensionsRoute
   '/solutions/desktop': typeof SolutionsDesktopRoute
@@ -449,6 +456,7 @@ export interface FileRoutesByTo {
   '/status': typeof StatusRoute
   '/portal': typeof AuthenticatedPortalRouteWithChildren
   '/admin/login': typeof AdminLoginRoute
+  '/auth/sign-up': typeof AuthSignUpRoute
   '/e2e/error-harness': typeof E2eErrorHarnessRoute
   '/solutions/chrome-extensions': typeof SolutionsChromeExtensionsRoute
   '/solutions/desktop': typeof SolutionsDesktopRoute
@@ -506,6 +514,7 @@ export interface FileRoutesById {
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/portal': typeof AuthenticatedPortalRouteWithChildren
   '/admin/login': typeof AdminLoginRoute
+  '/auth/sign-up': typeof AuthSignUpRoute
   '/e2e/error-harness': typeof E2eErrorHarnessRoute
   '/solutions/chrome-extensions': typeof SolutionsChromeExtensionsRoute
   '/solutions/desktop': typeof SolutionsDesktopRoute
@@ -565,6 +574,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/portal'
     | '/admin/login'
+    | '/auth/sign-up'
     | '/e2e/error-harness'
     | '/solutions/chrome-extensions'
     | '/solutions/desktop'
@@ -621,6 +631,7 @@ export interface FileRouteTypes {
     | '/status'
     | '/portal'
     | '/admin/login'
+    | '/auth/sign-up'
     | '/e2e/error-harness'
     | '/solutions/chrome-extensions'
     | '/solutions/desktop'
@@ -677,6 +688,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin'
     | '/_authenticated/portal'
     | '/admin/login'
+    | '/auth/sign-up'
     | '/e2e/error-harness'
     | '/solutions/chrome-extensions'
     | '/solutions/desktop'
@@ -734,6 +746,7 @@ export interface RootRouteChildren {
   SecurityRoute: typeof SecurityRoute
   StatusRoute: typeof StatusRoute
   AdminLoginRoute: typeof AdminLoginRoute
+  AuthSignUpRoute: typeof AuthSignUpRoute
   E2eErrorHarnessRoute: typeof E2eErrorHarnessRoute
   SolutionsChromeExtensionsRoute: typeof SolutionsChromeExtensionsRoute
   SolutionsDesktopRoute: typeof SolutionsDesktopRoute
@@ -846,6 +859,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/login'
       fullPath: '/admin/login'
       preLoaderRoute: typeof AdminLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/sign-up': {
+      id: '/auth/sign-up'
+      path: '/auth/sign-up'
+      fullPath: '/auth/sign-up'
+      preLoaderRoute: typeof AuthSignUpRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/e2e/error-harness': {
@@ -1328,6 +1348,7 @@ const rootRouteChildren: RootRouteChildren = {
   SecurityRoute: SecurityRoute,
   StatusRoute: StatusRoute,
   AdminLoginRoute: AdminLoginRoute,
+  AuthSignUpRoute: AuthSignUpRoute,
   E2eErrorHarnessRoute: E2eErrorHarnessRoute,
   SolutionsChromeExtensionsRoute: SolutionsChromeExtensionsRoute,
   SolutionsDesktopRoute: SolutionsDesktopRoute,

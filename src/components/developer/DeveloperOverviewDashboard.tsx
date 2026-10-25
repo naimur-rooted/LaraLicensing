@@ -62,6 +62,25 @@ interface DeveloperOverviewDashboardProps {
   onNavigateToLicenses?: () => void;
 }
 
+function mapOverviewData(raw: any): OverviewData {
+  if (raw?.kpis) return raw as OverviewData;
+  const s = raw?.summary;
+
+  return {
+    kpis: {
+      activations: { current: s?.totalActivations ?? 0, max: s?.quotas?.activations?.total ?? 50, label: "Activations" },
+      trialActivations: { current: s?.totalTrialActivations ?? 0, max: s?.quotas?.trialActivations?.total ?? 20000, label: "Trial Activations" },
+      licenses: { current: s?.totalLicenses ?? 0, label: "Licenses" },
+      users: { current: s?.totalUsers ?? 0, max: s?.quotas?.users?.total ?? 50, label: "Users" },
+      releases: { current: s?.totalReleases ?? 0, max: s?.quotas?.releases?.total ?? 50, label: "Releases" },
+    },
+    timeline: raw?.chartData ?? [],
+    activationsByCountry: raw?.topCountries ?? [],
+    productsCount: raw?.productsCount ?? 1,
+    trialExpiresOn: raw?.trialExpiresOn ?? "Nov 20, 2026",
+  };
+}
+
 export function DeveloperOverviewDashboard({
   onNavigateToProducts,
   onNavigateToLicenses,
@@ -81,8 +100,8 @@ export function DeveloperOverviewDashboard({
           : "http://127.0.0.1:8000/api/v1/developer/overview";
       const res = await fetch(url);
       const json = await res.json();
-      if (json.IsSuccess) {
-        setData(json.Data);
+      if (json.IsSuccess && json.Data) {
+        setData(mapOverviewData(json.Data));
       }
     } catch (e) {
       console.error("Failed to load developer overview metrics", e);
@@ -395,7 +414,7 @@ export function DeveloperOverviewDashboard({
                 <span className="text-muted-foreground font-medium">Active Key Volume</span>
               </div>
               <span className="font-mono text-muted-foreground">
-                Total Sharded: <strong className="text-foreground">{data?.kpis.licenses.current ?? 0}</strong>
+                Total Sharded: <strong className="text-foreground">{data?.kpis?.licenses?.current ?? 0}</strong>
               </span>
             </div>
 

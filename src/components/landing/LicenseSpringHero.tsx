@@ -46,7 +46,7 @@ export function LicenseSpringHero() {
         {/* Primary CTA Buttons matching LicenseSpring */}
         <div className="flex flex-wrap items-center justify-center gap-4 pt-3">
           <Link
-            to="/portal/home"
+            to="/register?plan=STARTER"
             className="inline-flex h-13 items-center gap-2.5 rounded-full bg-primary px-8 text-base font-semibold text-primary-foreground shadow-lg hover:bg-primary/90 transition-all hover:scale-[1.02] active:scale-[0.98]"
           >
             <span>Get Started Free</span>
