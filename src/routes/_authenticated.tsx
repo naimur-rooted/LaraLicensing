@@ -8,8 +8,12 @@ import { PlatformType } from "../lib/lara-self-update";
 export const Route = createFileRoute("/_authenticated")({
   beforeLoad: ({ location }) => {
     if (typeof window === "undefined") return;
-    if (typeof getLaraAccessToken() === "string") return;
-    if (location.pathname.startsWith("/admin")) {
+    const token = getLaraAccessToken();
+    const hasValidToken = typeof token === "string" && token.length > 0;
+    if (hasValidToken) return;
+
+    const isAdminPath = location.pathname.startsWith("/admin");
+    if (isAdminPath) {
       throw redirect({ to: "/admin/login", search: { redirect: location.href } });
     }
     throw redirect({ to: "/login", search: { redirect: location.href } });

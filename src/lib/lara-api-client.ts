@@ -64,7 +64,7 @@ const REFRESH_FATAL_CODES: ReadonlySet<ApiErrorCodeType> = new Set([
   ApiErrorCodeType.AuthTokenExpired,
 ]);
 
-function getApiBaseUrl(): string {
+export function getApiBaseUrl(): string {
   const runtimeUrl = getRuntimeMode().ApiBaseUrl;
   const baseUrl = runtimeUrl ?? import.meta.env.VITE_LARA_API_BASE_URL;
   if (typeof baseUrl === "string" && baseUrl.length > 0) return baseUrl.replace(/\/$/, "");

@@ -203,3 +203,21 @@ In addition to the dedicated Billing tab, a persistent "Plan Badge" (e.g. `[Pro 
 - **AC-DEV-005:** `/portal/home` contains a first-class "Billing & Subscription" sidebar item and header plan badge.
 - **AC-DEV-006:** Upgrading or selecting a plan in the modal updates the developer's capability quotas across all tabs.
 - **AC-DEV-007:** Unauthenticated attempts to access `/portal/home` redirect to `/register` or `/auth/sign-in`, preserving the redirect query parameter.
+
+---
+
+## 8. Developer Auth Scoping Invariant & Zero-State Lifecycle
+
+### 8.1 Auth Scoping Invariant
+All Developer Portal endpoints (`GET /api/v1/developer/products`, `POST /api/v1/developer/products`, `GET /api/v1/developer/overview`) MUST dynamically resolve the authenticated caller via `$userId = (int) ($request->user()?->UserId ?? auth()->id() ?? auth('sanctum')->id())`. Hardcoded identifiers (such as `userId = 1`) are strictly prohibited.
+
+### 8.2 Zero-State Metric Guarantees
+When a freshly registered user logs in with zero created products:
+- `ProductController::index` returns an empty array `[]`.
+- `DeveloperAnalyticsService::getOverviewMetrics` filters products exclusively by `where('userId', $userId)->where('isActive', true)`. If products count is 0, it must return `0` across all KPI cards (0 activations, 0 licenses, 0 trial activations, 0 releases, 0 products).
+- `DeveloperOverviewDashboard.tsx` surfaces a dedicated zero-state card with an actionable prompt to create the first product, rather than showing global or seed products.
+
+---
+
+## 9. Domain Separation: Wholesale Reseller Hub Exclusion
+The Developer Portal (`/portal/home`) is strictly dedicated to software creators managing their own products, licenses, and platform subscriptions. The wholesale Reseller Hub (`ResellerWholesaleStudio`) is reserved exclusively for wholesale distribution partners and is accessible only through dedicated `/reseller/$resellerId/*` routes under the `Reseller` role. It MUST NOT appear in the `/portal/home` navigation or views.

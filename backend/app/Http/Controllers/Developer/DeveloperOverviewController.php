@@ -29,8 +29,10 @@ class DeveloperOverviewController extends Controller
      */
     public function overview(Request $request): JsonResponse
     {
+        $rawUserId = (int) ($request->user()?->UserId ?? auth()->id() ?? auth('sanctum')->id());
+        $userId = $rawUserId > 0 ? $rawUserId : null;
         $slug = $request->query('productSlug');
-        $data = $this->analyticsService->getOverviewMetrics($slug ? (string) $slug : null);
+        $data = $this->analyticsService->getOverviewMetrics($userId, $slug ? (string) $slug : null);
 
         return response()->json([
             'IsSuccess' => true,
@@ -47,17 +49,16 @@ class DeveloperOverviewController extends Controller
         if ($message === '') {
             throw ValidationException::invalidInput('Message is required.');
         }
+        $reply = $this->executeSupportChat($request, $message);
+        return response()->json(['IsSuccess' => true, 'Data' => ['reply' => $reply]]);
+    }
 
+    private function executeSupportChat(Request $request, string $message): string
+    {
         $history = (array) $request->input('history', []);
         $context = $request->input('context');
-        $contextStr = is_string($context) ? $context : null;
-
         try {
-            $reply = $this->aiArchitectService->chatWithSupport($message, $history, $contextStr);
-            return response()->json([
-                'IsSuccess' => true,
-                'Data' => ['reply' => $reply],
-            ]);
+            return $this->aiArchitectService->chatWithSupport($message, $history, is_string($context) ? $context : null);
         } catch (Throwable $e) {
             throw InternalException::fatal($e->getMessage());
         }

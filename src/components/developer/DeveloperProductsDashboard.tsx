@@ -38,7 +38,6 @@ import {
   Trash2,
 } from "lucide-react";
 import { CreateProductDialog } from "./CreateProductDialog";
-import { PlatformSubscriptionModal } from "./PlatformSubscriptionModal";
 import { AiPricingArchitectDialog } from "./AiPricingArchitectDialog";
 
 export interface ProductDealItem {
@@ -67,7 +66,11 @@ export interface DeveloperProductItem {
 
 const INITIAL_PRODUCTS: DeveloperProductItem[] = [];
 
-export function DeveloperProductsDashboard() {
+export interface DeveloperProductsDashboardProps {
+  readonly onOpenPlanModal?: () => void;
+}
+
+export function DeveloperProductsDashboard({ onOpenPlanModal }: DeveloperProductsDashboardProps = {}) {
   const [products, setProducts] = useState<DeveloperProductItem[]>(INITIAL_PRODUCTS);
   const [selectedProduct, setSelectedProduct] = useState<DeveloperProductItem | null>(null);
   const [isBlueprintOpen, setIsBlueprintOpen] = useState(false);
@@ -112,7 +115,6 @@ export function DeveloperProductsDashboard() {
 
   // Platform Subscription State (Default to Free / Unsubscribed)
   const [currentTier, setCurrentTier] = useState("Free Starter");
-  const [isPlatformModalOpen, setIsPlatformModalOpen] = useState(false);
 
   React.useEffect(() => {
     fetch("http://127.0.0.1:8000/api/v1/developer/products")
@@ -342,7 +344,7 @@ ${dealsList}
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setIsPlatformModalOpen(true)}
+                onClick={onOpenPlanModal}
                 className="h-6 px-2 text-xs text-primary hover:text-primary/80 gap-1 font-semibold"
               >
                 <span>{isFreePlan ? "Choose a Plan" : "Upgrade / Change Plan"}</span>
@@ -374,7 +376,7 @@ ${dealsList}
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setIsPlatformModalOpen(true)}
+              onClick={onOpenPlanModal}
               className="text-xs gap-1.5 font-medium"
             >
               <Sparkles className="size-3.5 text-amber-500" />
@@ -706,17 +708,6 @@ ${dealsList}
         isOpen={isNewProductOpen}
         onOpenChange={setIsNewProductOpen}
         onProductCreated={handleProductCreated}
-      />
-
-      {/* Developer Platform Tier Subscription Modal */}
-      <PlatformSubscriptionModal
-        isOpen={isPlatformModalOpen}
-        onOpenChange={setIsPlatformModalOpen}
-        currentTier={currentTier}
-        onTierSelect={(tierCode) => {
-          const formatted = tierCode.charAt(0).toUpperCase() + tierCode.slice(1).toLowerCase();
-          setCurrentTier(formatted);
-        }}
       />
 
       {/* Add Deal Modal */}

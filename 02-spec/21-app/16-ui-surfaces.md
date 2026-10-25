@@ -99,6 +99,22 @@ Scoped to own `ClientId`s registered against the verification API.
 
 ---
 
+## 5a. Developer Portal Workspace (`Developer` / `AppBuilder` role)
+
+The developer workspace at `/_authenticated/portal/home` provides a unified SaaS developer dashboard strictly scoped to the authenticated caller's own account (`UserId = auth()->id()`):
+
+| Tab | Purpose | Scoping Invariant |
+|-----|---------|-------------------|
+| **Overview** | High-density KPI cards (Activations, Trial Activations, Licenses, Releases, Users), 30-day timeline chart, geographic distribution. | Scoped strictly to `Product.UserId = auth()->id()`. Returns 0 across all metrics for new accounts with 0 products. |
+| **Products & Deals** | Multi-tenant SQLite sharded product catalog, deal packaging, API token management, AI code synthesizer. | Scoped strictly to `Product.UserId = auth()->id()`. |
+| **Billing & Subscription** | Global plan overview card, resource usage meters (SQLite shards, daily requests, seat limits), invoice history, and `PlatformSubscriptionModal` upgrade launcher. | Scoped to current tenant platform tier (`STARTER`, `ESSENTIAL`, `PRO`, `MAX`). |
+| **Security & Fraud Guard** | Hardware node-locking anomaly alerts, heartbeat telemetry, device drift detection. | Scoped to caller's product shards. |
+| **Issued Licenses & Serials** | Serial lookup panel and downstream activation ledger. | Scoped to caller's licenses. |
+
+*Note on Domain Boundaries:* The wholesale Reseller Studio is strictly isolated to `/reseller/$resellerId/*` and does not appear in the developer workspace.
+
+---
+
 ## 6. EndUser Surfaces (`EndUser` role)
 
 Scoped to `AuthActor.UserId`. Sees only own bindings and own serials.

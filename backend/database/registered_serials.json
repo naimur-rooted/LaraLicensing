@@ -254,5 +254,59 @@
         "MaxActivations": 5,
         "IsRevoked": false,
         "RegisteredAt": "2026-10-25T13:49:43.067407Z"
+    },
+    "LARA-EO9I-0001": {
+        "SerialId": 3042193544,
+        "SerialValue": "LARA-EO9I-0001",
+        "Category": "Yearly",
+        "TierName": "Scale",
+        "CustomerName": "Jane Doe",
+        "CustomerEmail": "approve-test@domain.com",
+        "Status": "active",
+        "ExpiresAt": "2027-10-25T17:50:12.584Z",
+        "Features": [
+            "core.reports",
+            "core.dashboards",
+            "addon.exports"
+        ],
+        "MaxActivations": 5,
+        "IsRevoked": false,
+        "RegisteredAt": "2026-10-25T17:50:13.173954Z"
+    },
+    "LARA-APCU-0001": {
+        "SerialId": 1898909574,
+        "SerialValue": "LARA-APCU-0001",
+        "Category": "Yearly",
+        "TierName": "Scale",
+        "CustomerName": "Jane Doe",
+        "CustomerEmail": "approve-test@domain.com",
+        "Status": "active",
+        "ExpiresAt": "2027-10-25T17:56:29.778Z",
+        "Features": [
+            "core.reports",
+            "core.dashboards",
+            "addon.exports"
+        ],
+        "MaxActivations": 5,
+        "IsRevoked": false,
+        "RegisteredAt": "2026-10-25T17:56:30.227808Z"
+    },
+    "LARA-WA7Z-0001": {
+        "SerialId": 4153754405,
+        "SerialValue": "LARA-WA7Z-0001",
+        "Category": "Yearly",
+        "TierName": "Scale",
+        "CustomerName": "Jane Doe",
+        "CustomerEmail": "approve-test@domain.com",
+        "Status": "active",
+        "ExpiresAt": "2027-10-25T17:59:26.160Z",
+        "Features": [
+            "core.reports",
+            "core.dashboards",
+            "addon.exports"
+        ],
+        "MaxActivations": 5,
+        "IsRevoked": false,
+        "RegisteredAt": "2026-10-25T17:59:26.653235Z"
     }
 }

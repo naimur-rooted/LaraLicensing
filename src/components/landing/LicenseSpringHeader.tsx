@@ -296,13 +296,16 @@ export function LicenseSpringHeader() {
         <div className="flex items-center gap-3">
           <Link
             to="/login"
+            onClick={closeMenu}
             className="text-sm font-semibold text-muted-foreground hover:text-foreground px-3.5 py-2 rounded-lg transition-colors cursor-pointer"
           >
             Login
           </Link>
 
           <Link
-            to="/pricing"
+            to="/register"
+            search={{ plan: "STARTER" }}
+            onClick={closeMenu}
             className="inline-flex h-10 items-center gap-2 rounded-full bg-zinc-950 px-5 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800 transition-colors dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-200 cursor-pointer"
           >
             <span>Get Started</span>

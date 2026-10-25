@@ -21,9 +21,10 @@ class ProductController extends Controller
         private readonly ProductService $productService
     ) {}
 
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $products = $this->productService->listProducts(1);
+        $userId = $this->resolveUserId($request);
+        $products = $this->productService->listProducts($userId);
         return response()->json(['IsSuccess' => true, 'Data' => $products]);
     }
 
@@ -42,12 +43,19 @@ class ProductController extends Controller
         if (empty($name)) {
             throw ValidationException::invalidInput('productName is required.');
         }
-        $product = $this->productService->createProduct(1, $request->all());
+        $userId = $this->resolveUserId($request);
+        $product = $this->productService->createProduct($userId, $request->all());
         AuditWriter::write($request, 'ProductCreated', 'Products', (int) $product->ProductId, [
             'ProductSlug' => (string) $product->productSlug,
             'ProductName' => (string) $product->productName,
         ]);
         return response()->json(['IsSuccess' => true, 'Data' => $product], 201);
+    }
+
+    private function resolveUserId(Request $request): int
+    {
+        $userId = (int) ($request->user()?->UserId ?? auth()->id() ?? auth('sanctum')->id());
+        return $userId > 0 ? $userId : 1;
     }
 
     public function addDeal(string $slug, Request $request): JsonResponse
@@ -134,14 +142,19 @@ class ProductController extends Controller
         }
         return response()->json([
             'IsSuccess' => true,
-            'Data' => [
-                'productSlug' => $product->productSlug,
-                'productName' => $product->productName,
-                'category' => $product->category,
-                'description' => $product->description,
-                'checkIntervalDays' => $product->checkIntervalDays,
-                'deals' => $product->deals->where('isActive', true)->values(),
-            ],
+            'Data' => $this->formatPublicDeals($product),
         ]);
+    }
+
+    private function formatPublicDeals($product): array
+    {
+        return [
+            'productSlug' => $product->productSlug,
+            'productName' => $product->productName,
+            'category' => $product->category,
+            'description' => $product->description,
+            'checkIntervalDays' => $product->checkIntervalDays,
+            'deals' => $product->deals->where('isActive', true)->values(),
+        ];
     }
 }
