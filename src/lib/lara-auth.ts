@@ -3,14 +3,20 @@ import { z } from "zod";
 import { HttpMethodType, requestLaraApi } from "./lara-api-client";
 import { setLaraAccessToken, setLaraRefreshToken } from "./lara-api-session";
 import { getRuntimeMode } from "./runtime-mode";
-import { write } from "./preview-store";
+import { read, write } from "./preview-store";
+import { ApiErrorCodeType, LaraApiError } from "./lara-api-error";
 import type { MeUser } from "@/generated/api/schema";
 
 const tokenResultSchema = z.object({
   AccessToken: z.string().min(1),
-  RefreshToken: z.string().min(1),
-  TokenType: z.literal("Bearer"),
-  ExpiresIn: z.number().int().positive(),
+  RefreshToken: z.string().optional(),
+  Token: z.string().optional(),
+  TokenType: z.string().optional().default("Bearer"),
+  ExpiresIn: z.number().int().positive().optional().default(3600),
+  ExpiresAt: z.string().optional(),
+  SessionId: z.string().optional(),
+  UserId: z.number().optional(),
+  Email: z.string().optional(),
 });
 
 export type LaraTokenResult = z.infer<typeof tokenResultSchema>;
@@ -31,8 +37,21 @@ const captchaChallengeSchema = z.object({
 
 export type LaraCaptchaChallenge = z.infer<typeof captchaChallengeSchema>;
 
-async function createPreviewLoginSession(email: string): Promise<LaraTokenResult> {
-  const clean = email.replace(/[^a-zA-Z0-9]/g, "_");
+async function verifyPreviewLoginCredentials(
+  email: string,
+  password: string,
+): Promise<LaraTokenResult> {
+  const normalized = email.trim().toLowerCase();
+  const creds = (await read<Record<string, string>>("auth", "credentials")) || {};
+  const expectedPassword = creds[normalized];
+  if (!expectedPassword || expectedPassword !== password) {
+    throw new LaraApiError(
+      "Invalid email or password.",
+      ApiErrorCodeType.AuthInvalidCredentials,
+      401,
+    );
+  }
+  const clean = normalized.replace(/[^a-zA-Z0-9]/g, "_");
   const access = `seed_access_${clean}_${Date.now()}`;
   const refresh = `seed_refresh_${clean}_${Date.now()}`;
   setLaraAccessToken(access);
@@ -43,16 +62,22 @@ async function createPreviewLoginSession(email: string): Promise<LaraTokenResult
 
 export async function loginToLaraApi(input: LaraLoginRequest): Promise<LaraTokenResult> {
   if (getRuntimeMode().Mode === "preview") {
-    return createPreviewLoginSession(input.Email);
+    return verifyPreviewLoginCredentials(input.Email, input.Password);
   }
-  const [result] = await requestLaraApi("/Auth/Token", tokenResultSchema, {
+  const [result] = await requestLaraApi("/Api/Auth/Login", tokenResultSchema, {
     method: HttpMethodType.Post,
     body: input,
   });
-  setLaraAccessToken(result.AccessToken);
-  setLaraRefreshToken(result.RefreshToken);
+  const token = result.AccessToken || result.Token || "";
+  setLaraAccessToken(token);
+  if (result.RefreshToken) setLaraRefreshToken(result.RefreshToken);
 
-  return result;
+  return {
+    AccessToken: token,
+    RefreshToken: result.RefreshToken || "",
+    TokenType: "Bearer",
+    ExpiresIn: result.ExpiresIn || 3600,
+  };
 }
 
 export async function fetchLoginCaptcha(): Promise<LaraCaptchaChallenge> {
@@ -153,13 +178,29 @@ function buildPreviewDeveloperResult(email: string, token: string): LaraDevelope
   };
 }
 
+async function recordPreviewDeveloperCredentials(email: string, pass: string): Promise<void> {
+  const normalized = email.trim().toLowerCase();
+  const creds = (await read<Record<string, string>>("auth", "credentials")) || {};
+  if (creds[normalized]) {
+    throw new LaraApiError(
+      "An account with this email already exists.",
+      ApiErrorCodeType.AuthUserConflict,
+      409,
+    );
+  }
+  creds[normalized] = pass;
+  await write("auth", "credentials", creds);
+}
+
 async function createPreviewDeveloperSession(
   input: LaraDeveloperRegisterRequest,
 ): Promise<LaraDeveloperRegisterResult> {
+  await recordPreviewDeveloperCredentials(input.Email, input.Password);
   const token = `seed_access_developer_${Date.now()}`;
   setLaraAccessToken(token);
   setLaraRefreshToken(`seed_refresh_developer_${Date.now()}`);
   await writePreviewMeUser(input.Email, input.DisplayName);
+
   return buildPreviewDeveloperResult(input.Email, token);
 }
 

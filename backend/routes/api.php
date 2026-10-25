@@ -50,6 +50,8 @@ Route::middleware('rate.auth:register')->post('/Auth/Register', RegisterControll
 Route::middleware('rate.auth:register')->post('/v1/auth/developer-register', DeveloperRegisterController::class)->name('api.v1.auth.developer_register');
 Route::middleware('rate.auth:register')->post('/Auth/DeveloperRegister', DeveloperRegisterController::class)->name('api.auth.developer_register');
 Route::middleware('rate.auth:login')->post('/Auth/Login', LoginController::class)->name('api.auth.login');
+Route::middleware('rate.auth:login')->post('/v1/auth/login', LoginController::class)->name('api.v1.auth.login');
+Route::middleware('rate.auth:login')->post('/api/v1/auth/login', LoginController::class)->name('api.compat.v1.auth.login');
 Route::middleware('rate.auth:captcha')->get('/Auth/Captcha', CaptchaController::class)->name('api.auth.captcha');
 Route::middleware('rate.auth:forgot')->post('/Auth/ForgotPassword', ForgotPasswordController::class)->name('api.auth.forgot_password');
 Route::middleware('rate.auth:reset')->post('/Auth/ResetPassword', ResetPasswordController::class)->name('api.auth.reset_password');

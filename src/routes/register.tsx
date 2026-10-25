@@ -45,7 +45,8 @@ function DeveloperRegisterPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   return (
-    <AuthCard
+    <>
+      <AuthCard
       title="Create Developer Account"
       description="Select your platform subscription tier and bootstrap your product licensing workspace."
       headerBadge="Developer Portal"
@@ -84,8 +85,9 @@ function DeveloperRegisterPage() {
           onSuccess={() => navigate({ to: "/portal/home", replace: true })}
           onError={(msg) => setErrorMessage(msg)}
         />
-        <RuntimeModeFlipButton />
       </div>
     </AuthCard>
+    <RuntimeModeFlipButton />
+  </>
   );
 }

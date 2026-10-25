@@ -101,6 +101,8 @@ final class LoginController
             'Token' => $token,
             'AccessToken' => $token,
             'RefreshToken' => $refreshToken,
+            'TokenType' => 'Bearer',
+            'ExpiresIn' => 3600,
             'RememberMe' => $rememberMe,
             'Me' => ['Role' => $role, 'Capabilities' => $capabilities],
         ];
@@ -113,6 +115,8 @@ final class LoginController
             'AccessToken' => $token,
             'RefreshToken' => $refreshToken,
             'Token' => $token,
+            'TokenType' => 'Bearer',
+            'ExpiresIn' => 3600,
             'SessionId' => $session->SessionId,
             'ExpiresAt' => $session->ExpiresAt->toIso8601String(),
             'UserId' => (int) $user->getKey(),
