@@ -117,9 +117,24 @@ export type LaraSuccessDecode<T> =
   | { kind: "success"; results: T[] }
   | { kind: "mismatch"; issues: z.ZodIssue[] };
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function tryDecodeObjectResults<T>(body: unknown, schema: z.ZodType<T>): T[] | undefined {
+  if (!isRecord(body) || !isRecord(body.Results)) return undefined;
+  const raw = body.Results as Record<string, unknown>;
+  const candidate = "0" in raw && isRecord(raw["0"]) ? raw["0"] : raw;
+  const parsed = schema.safeParse(candidate);
+
+  return parsed.success ? [parsed.data] : undefined;
+}
+
 export function decodeLaraSuccess<T>(body: unknown, schema: z.ZodType<T>): LaraSuccessDecode<T> {
   const parsed = createApiSuccessSchema(schema).safeParse(body);
   if (parsed.success) return { kind: "success", results: parsed.data.Results };
+  const fallback = tryDecodeObjectResults(body, schema);
+  if (fallback) return { kind: "success", results: fallback };
 
   return { kind: "mismatch", issues: parsed.error.issues };
 }

@@ -64,6 +64,19 @@ describe("lara-envelope", () => {
     expect(decoded.results).toHaveLength(2);
   });
 
+  it("decodes a dictionary-wrapped single-resource success envelope", () => {
+    const body = {
+      Status: { IsSuccess: true, Code: 200, Message: "OK" },
+      Attributes: baseAttrs,
+      Results: { "0": { Id: 42, Token: "abc" }, Token: "abc" },
+    };
+    const decoded = decodeLaraSuccess(body, z.object({ Id: z.number(), Token: z.string() }));
+    expect(decoded.kind).toBe("success");
+    if (decoded.kind !== "success") return;
+    expect(decoded.results).toHaveLength(1);
+    expect(decoded.results[0].Id).toBe(42);
+  });
+
   it("re-exports the strict failure schema for contract snapshotting", () => {
     // Sanity check that step 42 (snapshot) can import the schema directly.
     expect(apiFailureSchema).toBeDefined();

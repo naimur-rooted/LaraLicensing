@@ -62,7 +62,7 @@ function PortalRedirect() {
         />
       );
     }
-    if (me.RoleName === "EndUser") {
+    if (me.RoleName === "EndUser" || me.RoleName === "Developer" || me.RoleName === "AppBuilder") {
       return <Navigate to="/portal/home" replace />;
     }
 

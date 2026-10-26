@@ -128,12 +128,17 @@ class ProductService
         );');
         $pdo->exec('CREATE TABLE IF NOT EXISTS MachineBindings (
             MachineBindingId INTEGER PRIMARY KEY AUTOINCREMENT,
-            SerialValue VARCHAR(128) NOT NULL,
+            LicenseId INTEGER NOT NULL,
+            SerialValue VARCHAR(128),
             FingerprintHash VARCHAR(64) NOT NULL,
-            IpAddress VARCHAR(45),
-            Hostname VARCHAR(128),
+            Hostname VARCHAR(128) DEFAULT \'Client PC\',
+            ClientIp VARCHAR(45) DEFAULT \'127.0.0.1\',
+            CountryCode VARCHAR(10) DEFAULT \'US\',
+            CountryName VARCHAR(64) DEFAULT \'United States\',
             FirstSeenAt DATETIME,
             LastSeenAt DATETIME,
+            ReleasedAt DATETIME,
+            RebindCooldownUntil DATETIME,
             CreatedAt DATETIME,
             UpdatedAt DATETIME
         );');

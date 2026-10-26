@@ -56,7 +56,7 @@ final class LoginController
         $rememberMe = (bool) ($validated['RememberMe'] ?? false);
         $captchaId = (string) ($validated['CaptchaChallengeId'] ?? '');
         $captchaAnswer = (string) ($validated['CaptchaAnswer'] ?? '');
-        $requestId = (string) $request->attributes->get('X-Request-Id', '');
+        $requestId = (string) ($request->attributes->get('lara.request_id') ?? $request->headers->get('X-Request-Id', ''));
 
         $this->enforceCaptcha($email, $request, $captchaId, $captchaAnswer, $requestId);
 
@@ -91,23 +91,6 @@ final class LoginController
         return ApiEnvelope::success($payload, $requestId);
     }
 
-    private function buildLoginItem(User $user, mixed $session, string $token, string $refreshToken, bool $rememberMe, string $role, array $capabilities): array
-    {
-        return [
-            'UserId' => (int) $user->getKey(),
-            'Email' => (string) $user->Email,
-            'SessionId' => $session->SessionId,
-            'ExpiresAt' => $session->ExpiresAt->toIso8601String(),
-            'Token' => $token,
-            'AccessToken' => $token,
-            'RefreshToken' => $refreshToken,
-            'TokenType' => 'Bearer',
-            'ExpiresIn' => 3600,
-            'RememberMe' => $rememberMe,
-            'Me' => ['Role' => $role, 'Capabilities' => $capabilities],
-        ];
-    }
-
     private function composeLoginPayload(array $item, string $token, string $refreshToken, mixed $session, User $user, bool $rememberMe, string $role, array $capabilities): array
     {
         return [
@@ -121,6 +104,23 @@ final class LoginController
             'ExpiresAt' => $session->ExpiresAt->toIso8601String(),
             'UserId' => (int) $user->getKey(),
             'Email' => (string) $user->Email,
+            'RememberMe' => $rememberMe,
+            'Me' => ['Role' => $role, 'Capabilities' => $capabilities],
+        ];
+    }
+
+    private function buildLoginItem(User $user, mixed $session, string $token, string $refreshToken, bool $rememberMe, string $role, array $capabilities): array
+    {
+        return [
+            'UserId' => (int) $user->getKey(),
+            'Email' => (string) $user->Email,
+            'SessionId' => $session->SessionId,
+            'ExpiresAt' => $session->ExpiresAt->toIso8601String(),
+            'Token' => $token,
+            'AccessToken' => $token,
+            'RefreshToken' => $refreshToken,
+            'TokenType' => 'Bearer',
+            'ExpiresIn' => 3600,
             'RememberMe' => $rememberMe,
             'Me' => ['Role' => $role, 'Capabilities' => $capabilities],
         ];
