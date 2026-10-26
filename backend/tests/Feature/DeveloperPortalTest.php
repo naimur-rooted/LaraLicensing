@@ -130,6 +130,8 @@ class DeveloperPortalTest extends TestCase
         $markdown = $response->json('Data.BlueprintMarkdown');
         $this->assertStringContainsString('Autonomous Client License Verification Blueprint', $markdown);
         $this->assertStringContainsString($product->productSlug, $markdown);
+        $this->assertStringContainsString('Deals Catalog Endpoint:', $markdown);
+        $this->assertStringContainsString('Dual-Section Storefront & Activation Dialog:', $markdown);
     }
 
     public function test_can_issue_license_via_decoupled_webhook(): void

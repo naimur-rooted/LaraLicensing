@@ -326,5 +326,23 @@
         "MaxActivations": 5,
         "IsRevoked": false,
         "RegisteredAt": "2026-10-25T19:48:21.445036Z"
+    },
+    "LARA-ONCE-0001": {
+        "SerialId": 3540710806,
+        "SerialValue": "LARA-ONCE-0001",
+        "Category": "Yearly",
+        "TierName": "Scale",
+        "CustomerName": "Jane Doe",
+        "CustomerEmail": "approve-test@domain.com",
+        "Status": "active",
+        "ExpiresAt": "2027-10-26T12:53:45.440Z",
+        "Features": [
+            "core.reports",
+            "core.dashboards",
+            "addon.exports"
+        ],
+        "MaxActivations": 5,
+        "IsRevoked": false,
+        "RegisteredAt": "2026-10-26T12:53:46.497502Z"
     }
 }

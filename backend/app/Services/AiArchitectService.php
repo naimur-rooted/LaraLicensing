@@ -74,6 +74,7 @@ class AiArchitectService
         }
 
         $verifyUrl = url("/api/v1/products/{$product->productSlug}/verify");
+        $dealsUrl = url("/api/v1/products/{$product->productSlug}/deals");
         $dealsList = $product->deals ? $product->deals->map(fn($d) => "- {$d->dealName} ({$d->dealCode}): seats={$d->allowedMachineSeats}, features=" . json_encode($d->features ?? []))->implode("\n") : 'None';
 
         $prompt = <<<PROMPT
@@ -86,6 +87,7 @@ PRODUCT DETAILS:
 - Category: {$product->category}
 - Description: {$product->description}
 - Verification Endpoint: {$verifyUrl}
+- Deals Catalog Endpoint: {$dealsUrl} (GET for live pricing)
 - Public Key (Ed25519): {$product->ed25519PublicKey}
 - Cadence Check Interval: Every {$product->checkIntervalDays} days
 - Configured Deals & Features:
@@ -97,7 +99,7 @@ ADDITIONAL DEVELOPER NOTES: {$customNotes}
 ARCHITECTURAL MANDATES:
 1. Generate real, runnable client code (not pseudocode).
 2. Hardware/Environment Fingerprinting:
-   - For Desktop (Python/C#/Electron): hash machine GUID or MAC.
+   - For Desktop (Python/C#/Electron/Java): hash machine GUID or MAC.
    - For Chrome Extension: generate or retrieve a persistent client UUID stored in chrome.storage.local.
    - For WordPress: hash site home_url() and server hostname.
 3. Offline Caching & Ed25519 Verification:
@@ -105,6 +107,16 @@ ARCHITECTURAL MANDATES:
    - On startup, check if offline token exists and is valid. If network is offline, allow access if token is within {$product->checkIntervalDays} days.
 4. Feature Gating:
    - Provide a clean helper method e.g. `hasFeature(featureName)` or `canAccess(module)`.
+5. Client Storefront & Dual-Mode UI Mandate:
+   - For any UI-facing framework (Java Swing, Python PyQt/Tkinter, C# WPF/WinForms, Electron, React/Web):
+     The unactivated dialog/screen MUST NOT be a bare license key input box alone.
+     It MUST render a dual-section UI:
+     a) Top Section (Pricing Deals Storefront): Render each deal from 'Configured Deals & Features' as an attractive card showing: Deal Name, Price, Allowed Seats, Features bullet points, and a 'Buy Plan' button (which launches the payment checkout link or opens browser).
+     b) Bottom Section (Activation Gate): 'Already have a license key?' input field and an 'Activate License' button that sends the verification request.
+   - Visual Structure:
+     [ Card 1: Deal Name / Price ] [ Card 2: Deal Name / Price ] [ Card 3: Best Value ]
+     ---------------------------------------------------------------------------------
+     Already purchased? [ Enter Serial Key Here... ] -> [ Activate License Button ]
 
 OUTPUT SCHEMA (JSON ONLY):
 {

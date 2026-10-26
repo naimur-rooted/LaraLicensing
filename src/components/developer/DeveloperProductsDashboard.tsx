@@ -278,7 +278,8 @@ Integrate LaraLicensing into this application using the following contract:
 
 - Product Slug: ${p.productSlug}
 - Product Category: ${p.category}
-- Verification Endpoint: http://localhost:8000/api/v1/products/${p.productSlug}/verify
+- Verification Endpoint: ${getApiBaseUrl()}/api/v1/products/${p.productSlug}/verify
+- Deals Catalog Endpoint: ${getApiBaseUrl()}/api/v1/products/${p.productSlug}/deals (GET for live pricing)
 - Public Key (Ed25519): ${p.ed25519PublicKey || "AUTO_GENERATED"}
 - Re-Verification Cadence: Every ${p.checkIntervalDays} days
 - Available Deals & Seats:
@@ -288,7 +289,16 @@ ${dealsList}
 1. Generate hardware fingerprint from Machine GUID or MAC hash.
 2. Call verification endpoint on initial activation and cache the signed JWT offline token.
 3. Verify the token signature locally using the public key on each startup.
-4. Schedule background re-verification every ${p.checkIntervalDays} days.`;
+4. Schedule background re-verification every ${p.checkIntervalDays} days.
+5. Dual-Section Storefront & Activation Dialog:
+   - When unactivated, the application MUST NOT render a bare license key input box alone.
+   - It MUST render a dual-section modal or window:
+     a) Top Section (Pricing Storefront): Render each deal from 'Available Deals & Seats' as a distinct card with: Deal Name, Price, Allowed Seats, Features, and a 'Buy Plan' button that opens the payment link in the default browser.
+     b) Bottom Section (Activation Gate): 'Already have a license key?' text field + 'Activate License' button that calls the verification endpoint.
+6. Visual Structural Pattern:
+   [ Card 1: Deal Name / Price ] [ Card 2: Deal Name / Price ] [ Card 3: Best Value ]
+   ---------------------------------------------------------------------------------
+   Already purchased? [ Enter Serial Key Here... ] -> [ Activate License Button ]`;
   };
 
   const handleProductCreated = (newProduct: DeveloperProductItem) => {
