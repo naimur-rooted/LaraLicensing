@@ -266,39 +266,60 @@ export function DeveloperProductsDashboard({ onOpenPlanModal }: DeveloperProduct
   };
 
   const generateBlueprintText = (p: DeveloperProductItem) => {
-    const dealsList = p.deals
-      .map(
-        (d) =>
-          `- ${d.dealName} (${d.dealCode}): $${(d.priceCents / 100).toFixed(2)} / ${d.billingInterval}, ${d.allowedMachineSeats} seat(s)`
-      )
-      .join("\n");
+    const dealsList =
+      p.deals && p.deals.length > 0
+        ? p.deals
+            .map((d) => {
+              const price = (d.priceCents / 100).toFixed(2);
+              const features =
+                d.features && d.features.length > 0
+                  ? ` | Features: ${d.features.join(", ")}`
+                  : "";
+              return `- ${d.dealName} (${d.dealCode}): $${price} / ${d.billingInterval} (${d.allowedMachineSeats} seat(s))${features}`;
+            })
+            .join("\n")
+        : "- Standard Plan (STD): $49.00 / yearly (1 seat)";
 
-    return `# Autonomous Client License Verification Blueprint
-Integrate LaraLicensing into this application using the following contract:
+    return `# Autonomous Client License Verification & Commercial Storefront Blueprint
+Integrate LaraLicensing into this application adhering strictly to the contract below.
 
+## 1. Product Identity & Cryptographic Contract
+- Product Name: ${p.productName}
 - Product Slug: ${p.productSlug}
-- Product Category: ${p.category}
-- Verification Endpoint: ${getApiBaseUrl()}/api/v1/products/${p.productSlug}/verify
-- Deals Catalog Endpoint: ${getApiBaseUrl()}/api/v1/products/${p.productSlug}/deals (GET for live pricing)
+- Verification Endpoint (POST): ${getApiBaseUrl()}/api/v1/products/${p.productSlug}/verify
+- Live Deals Endpoint (GET): ${getApiBaseUrl()}/api/v1/products/${p.productSlug}/deals
 - Public Key (Ed25519): ${p.ed25519PublicKey || "AUTO_GENERATED"}
-- Re-Verification Cadence: Every ${p.checkIntervalDays} days
-- Available Deals & Seats:
-${dealsList}
+- Cadence: Re-verify every ${p.checkIntervalDays} days
 
-## Architecture Invariants:
-1. Generate hardware fingerprint from Machine GUID or MAC hash.
-2. Call verification endpoint on initial activation and cache the signed JWT offline token.
-3. Verify the token signature locally using the public key on each startup.
-4. Schedule background re-verification every ${p.checkIntervalDays} days.
-5. Dual-Section Storefront & Activation Dialog:
-   - When unactivated, the application MUST NOT render a bare license key input box alone.
-   - It MUST render a dual-section modal or window:
-     a) Top Section (Pricing Storefront): Render each deal from 'Available Deals & Seats' as a distinct card with: Deal Name, Price, Allowed Seats, Features, and a 'Buy Plan' button that opens the payment link in the default browser.
-     b) Bottom Section (Activation Gate): 'Already have a license key?' text field + 'Activate License' button that calls the verification endpoint.
-6. Visual Structural Pattern:
-   [ Card 1: Deal Name / Price ] [ Card 2: Deal Name / Price ] [ Card 3: Best Value ]
-   ---------------------------------------------------------------------------------
-   Already purchased? [ Enter Serial Key Here... ] -> [ Activate License Button ]`;
+## 2. Configured Pricing Packages (Ground Truth):
+${dealsList}
+(Formula: Display Price = priceCents / 100.0, e.g., 3900 -> $39.00)
+
+## 3. Strict Non-Negotiable Architecture Invariants (Zero-Hallucination):
+
+1. Dual-Section Storefront & Activation Dialog:
+   - When the software starts without an active license, it MUST NOT render a bare license key text box alone.
+   - It MUST render a dual-section UI:
+     * Top Section: Display the 3 configured pricing deals as cards showing Deal Name, formatted Price ($xx.xx / interval), allowed PC seats, and feature perks.
+     * Bottom Section: "Already have a license key?" input box + "Activate License" button.
+
+2. Zero Dummy Fallback Mandate (CRITICAL):
+   - You MUST NOT hardcode invented dummy prices ($29, $290, $490, etc.) in catch blocks or fallbacks.
+   - Prices and features MUST strictly reflect the provided deals list above or be parsed from the Live Deals Endpoint.
+   - If network or parsing fails, show a clean "Cannot reach licensing server. [Retry]" label. NEVER display fake numbers.
+
+3. Zero-Dependency Parser Mandate:
+   - For Java or C++, do NOT assume external JSON libraries (Gson, Jackson) exist.
+   - Use standard library regex matching to parse \`dealName\`, \`priceCents\`, and \`allowedMachineSeats\` safely.
+
+4. Buy Plan Action Mandate:
+   - DO NOT open the raw API URL (.../deals) in the user's web browser.
+   - When "Buy Plan" is clicked, display a purchase instruction modal (e.g., "To activate this package, contact vendor or visit vendor checkout") or open the vendor's actual checkout URL.
+
+5. Hardware Fingerprinting & Offline Token:
+   - Read the machine GUID / hardware digest.
+   - Send verification POST request with {"serialValue": "...", "hardwareDigest": "..."}.
+   - Cache the signed Ed25519 JWT offline token locally. Verify signature offline on startup without hitting the network every time.`;
   };
 
   const handleProductCreated = (newProduct: DeveloperProductItem) => {

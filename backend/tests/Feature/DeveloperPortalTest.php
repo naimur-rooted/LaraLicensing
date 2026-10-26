@@ -128,10 +128,13 @@ class DeveloperPortalTest extends TestCase
             ->assertJsonPath('IsSuccess', true)
             ->assertJsonStructure(['Data' => ['BlueprintMarkdown', 'ProductSlug']]);
         $markdown = $response->json('Data.BlueprintMarkdown');
-        $this->assertStringContainsString('Autonomous Client License Verification Blueprint', $markdown);
+        $this->assertStringContainsString('Autonomous Client License Verification & Commercial Storefront Blueprint', $markdown);
         $this->assertStringContainsString($product->productSlug, $markdown);
-        $this->assertStringContainsString('Deals Catalog Endpoint:', $markdown);
+        $this->assertStringContainsString('Live Deals Endpoint (GET):', $markdown);
         $this->assertStringContainsString('Dual-Section Storefront & Activation Dialog:', $markdown);
+        $this->assertStringContainsString('Zero Dummy Fallback Mandate', $markdown);
+        $this->assertStringContainsString('Zero-Dependency Parser Mandate', $markdown);
+        $this->assertStringContainsString('Buy Plan Action Mandate', $markdown);
     }
 
     public function test_can_issue_license_via_decoupled_webhook(): void

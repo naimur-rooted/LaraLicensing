@@ -86,17 +86,17 @@ PRODUCT DETAILS:
 - Slug: {$product->productSlug}
 - Category: {$product->category}
 - Description: {$product->description}
-- Verification Endpoint: {$verifyUrl}
-- Deals Catalog Endpoint: {$dealsUrl} (GET for live pricing)
+- Verification Endpoint (POST): {$verifyUrl}
+- Live Deals Endpoint (GET): {$dealsUrl}
 - Public Key (Ed25519): {$product->ed25519PublicKey}
 - Cadence Check Interval: Every {$product->checkIntervalDays} days
-- Configured Deals & Features:
+- Configured Deals & Features (Ground Truth):
 {$dealsList}
 
 TARGET FRAMEWORK / LANGUAGE: {$targetFramework}
 ADDITIONAL DEVELOPER NOTES: {$customNotes}
 
-ARCHITECTURAL MANDATES:
+ARCHITECTURAL MANDATES (ZERO-HALLUCINATION):
 1. Generate real, runnable client code (not pseudocode).
 2. Hardware/Environment Fingerprinting:
    - For Desktop (Python/C#/Electron/Java): hash machine GUID or MAC.
@@ -107,16 +107,22 @@ ARCHITECTURAL MANDATES:
    - On startup, check if offline token exists and is valid. If network is offline, allow access if token is within {$product->checkIntervalDays} days.
 4. Feature Gating:
    - Provide a clean helper method e.g. `hasFeature(featureName)` or `canAccess(module)`.
-5. Client Storefront & Dual-Mode UI Mandate:
+5. Dual-Section Storefront & Activation Dialog:
    - For any UI-facing framework (Java Swing, Python PyQt/Tkinter, C# WPF/WinForms, Electron, React/Web):
-     The unactivated dialog/screen MUST NOT be a bare license key input box alone.
+     When the software starts without an active license, it MUST NOT render a bare license key text box alone.
      It MUST render a dual-section UI:
-     a) Top Section (Pricing Deals Storefront): Render each deal from 'Configured Deals & Features' as an attractive card showing: Deal Name, Price, Allowed Seats, Features bullet points, and a 'Buy Plan' button (which launches the payment checkout link or opens browser).
-     b) Bottom Section (Activation Gate): 'Already have a license key?' input field and an 'Activate License' button that sends the verification request.
-   - Visual Structure:
-     [ Card 1: Deal Name / Price ] [ Card 2: Deal Name / Price ] [ Card 3: Best Value ]
-     ---------------------------------------------------------------------------------
-     Already purchased? [ Enter Serial Key Here... ] -> [ Activate License Button ]
+     * Top Section: Display the configured pricing deals as cards showing Deal Name, formatted Price (\$priceCents / 100.0 / interval), allowed PC seats, and feature perks.
+     * Bottom Section: "Already have a license key?" input box + "Activate License" button.
+6. Zero Dummy Fallback Mandate (CRITICAL):
+   - You MUST NOT hardcode invented dummy prices (\$29, \$290, \$490, etc.) in catch blocks or fallbacks.
+   - Prices and features MUST strictly reflect the provided deals list above or be parsed from the Live Deals Endpoint: {$dealsUrl}.
+   - If network or parsing fails, show a clean "Cannot reach licensing server. [Retry]" label. NEVER display fake numbers.
+7. Zero-Dependency Parser Mandate:
+   - For Java or C++, do NOT assume external JSON libraries (Gson, Jackson) exist.
+   - Use standard library regex matching to parse `dealName`, `priceCents`, and `allowedMachineSeats` safely.
+8. Buy Plan Action Mandate:
+   - DO NOT open the raw API URL (.../deals) in the user's web browser.
+   - When "Buy Plan" is clicked, display a purchase instruction modal (e.g., "To activate this package, contact vendor or visit vendor checkout") or open the vendor's actual checkout URL.
 
 OUTPUT SCHEMA (JSON ONLY):
 {
