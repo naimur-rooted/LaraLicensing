@@ -206,8 +206,15 @@ It is referenced from `.ai-memory/coding-guidelines.md` as a required read befor
 | `24-sync` | [`24-sync/readme.md`](../01-prompts/24-sync/readme.md) | Multi-Repository Synchronization Prompts (`24-sync`) — Index & Catalog |
 | `25-ai-verification` | [`25-ai-verification/01-retrospective-ai-verification.md`](../01-prompts/25-ai-verification/01-retrospective-ai-verification.md) | High Priority Instruction: Retrospective AI Verification Audit |
 | `25-ai-verification` | [`25-ai-verification/readme.md`](../01-prompts/25-ai-verification/readme.md) | AI Verification Prompts (`25-ai-verification`) |
-| `26-gitmap` | [`26-gitmap/01-gitmap-core-engine.md`](../01-prompts/26-gitmap/01-gitmap-core-engine.md) | GitMap Core Engine & Autonomous Developer Automation — Canonical Specification (must follow) |
+| `26-gitmap` | [`26-gitmap/01-gitmap-core-engine.md`](../01-prompts/26-gitmap/01-gitmap-core-engine.md) | GitMap Core Engine & Autonomous Developer Automation - Canonical Specification (must follow) |
 | `26-gitmap` | [`26-gitmap/readme.md`](../01-prompts/26-gitmap/readme.md) | GitMap AI Training & Autonomous Automation Prompts (`26-gitmap`) |
+| `27-muse-prompts` | [`27-muse-prompts/01-muse-master-prompt.md`](../01-prompts/27-muse-prompts/01-muse-master-prompt.md) | [V6] Muse Master Onboarding & Autonomous Execution Directive |
+| `27-muse-prompts` | [`27-muse-prompts/02-muse-execute-in-a-step.md`](../01-prompts/27-muse-prompts/02-muse-execute-in-a-step.md) | Muse Execute-in-a-Step One-Shot Execution Prompt |
+| `27-muse-prompts` | [`27-muse-prompts/03-muse-high-level-test-audit.md`](../01-prompts/27-muse-prompts/03-muse-high-level-test-audit.md) | Muse Chunked High-Level Application Test Audit & Verification Prompt |
+| `27-muse-prompts` | [`27-muse-prompts/04-muse-generic-prompt-by-legendary-alim-karim.md`](../01-prompts/27-muse-prompts/04-muse-generic-prompt-by-legendary-alim-karim.md) | [V6] Muse Generic Master Onboarding, GitMap Suite & Autonomous Execution Directive |
+| `27-muse-prompts` | [`27-muse-prompts/readme.md`](../01-prompts/27-muse-prompts/readme.md) | Muse Prompts (`27-muse-prompts`) - Index & Catalog |
+| `28-mastery-prompts` | [`28-mastery-prompts/01-mastery-bootstrap-prompt.md`](../01-prompts/28-mastery-prompts/01-mastery-bootstrap-prompt.md) | Standalone Bootstrap & Complete Environment Reproduction Prompt |
+| `28-mastery-prompts` | [`28-mastery-prompts/readme.md`](../01-prompts/28-mastery-prompts/readme.md) | Mastery Prompts (`28-mastery-prompts`) - Index & Catalog |
 | `.` | [`readme.md`](../01-prompts/readme.md) | Prompt Architect: Canonical AI Prompts Library |
 
 ## Maintenance

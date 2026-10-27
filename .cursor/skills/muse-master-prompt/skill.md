@@ -7,10 +7,11 @@ description: >-
 # [V6] Muse Master Onboarding & Autonomous Execution Skill
 
 Source prompt: [`01-prompts/27-muse-prompts/01-muse-master-prompt.md`](01-prompts/27-muse-prompts/01-muse-master-prompt.md)
+Generic Directive: [`01-prompts/27-muse-prompts/04-muse-generic-prompt-by-legendary-alim-karim.md`](01-prompts/27-muse-prompts/04-muse-generic-prompt-by-legendary-alim-karim.md)
 Canonical Execution Engine: [`01-prompts/14-execute/02-execute-parent-task-with-n-steps-v6.md`](01-prompts/14-execute/02-execute-parent-task-with-n-steps-v6.md)
 
 ```text
-N = 300 (Total self-loop steps budget — editable top-header parameter, default: 300)
+N = 300 (Total self-loop steps budget  -  editable top-header parameter, default: 300)
 A = 2   (MANDATORY number of spawned autonomous subagents running concurrently via invoke_subagent, default: 2)
 H = 2   (Operational hands per agent: dual-task batch capacity & parallel tool dispatch, default: 2)
 C = 30  (Tool calls per worker before it must report, default: 30)
@@ -25,13 +26,13 @@ WAVES = ceil(subtasks / (A x H))
 > **Top-Instruction Priority Mandate (Above Precedence / Preamble Precedence):**
 > Whatever directives, constraints, checklists, or user instructions are given ABOVE this prompt/skill (in the user preamble or header blocks) are HIGHEST PRIORITY and strictly NON-NEGOTIABLE. Inspect and follow the instructions above with absolute precedence.
 
-[/goal](slashCommand;goal) Autonomously boot the session through Phases 0–5 without permission-seeking, FIRST showcase the confirmed task breakdown in visible chat during Turn 1, capture requests verbatim, spawn autonomous subagents via `invoke_subagent` (A = 2, H = 2; solo execution of multi-part work is an auto-reject failure) in disjoint file boxes using GitMap high-speed commands as primary, prove every single claim with concrete evidence, enforce coding guidelines to 100%, and finish each task with one atomic GitMap commit (`gitmap cpf "<module> - <summary>"` / `gitmap cpb "<module> - <summary>"`) using hyphen format pushed immediately.
+[/goal](slashCommand;goal) Autonomously boot the session through Phases 0-5 without permission-seeking, FIRST showcase the confirmed task breakdown in visible chat during Turn 1, capture requests verbatim, spawn autonomous subagents via `invoke_subagent` (A = 2, H = 2; solo execution of multi-part work is an auto-reject failure) in disjoint file boxes using GitMap high-speed commands as primary, prove every single claim with concrete evidence, enforce coding guidelines to 100%, and finish each task with one atomic GitMap commit (`gitmap cpf "<module> - <summary>"` / `gitmap cpb "<module> - <summary>"`) using hyphen format pushed immediately.
 
 [/learn](slashCommand;learn) Enforce the Top-Instruction Priority Mandate: whatever directives are provided ABOVE this prompt outrank everything below. Turn 1 of any task MUST showcase the given task list in visible chat before any background execution. Operating contract lives in memory; active tasks live in SQLite task manager and ledger.
 
 [/plan](slashCommand;plan) Execute thorough step-by-step planning before execution. Ensure all deliverables, architecture boundaries, and requirements are clearly defined in the audit ledger and subtask plans before dispatching worker waves.
 
-### 🚨 MANDATORY SUBAGENT SPAWNING GATE (A = 2, H = 2 — ZERO SOLO EXECUTION ALLOWED)
+### 🚨 MANDATORY SUBAGENT SPAWNING GATE (A = 2, H = 2  -  ZERO SOLO EXECUTION ALLOWED)
 
 - **ACTUAL TOOL CALL REQUIRED:** You must ACTUALLY CALL the `invoke_subagent` tool via your tool-calling API. Do NOT just print the text "Dispatched Worker..." and stop. If you only print text, the agents will not spawn and the task will fail! You must execute the `invoke_subagent` JSON tool payload.
 - **3-STAGE MANDATORY DISPATCH:** You must invoke `A = 2` agents (`invoke_subagent`) at every stage of multi-part work:
@@ -44,7 +45,7 @@ WAVES = ceil(subtasks / (A x H))
 
 ## Operating Instructions
 
-### 1. Onboarding Protocol (Phases 0–5)
+### 1. Onboarding Protocol (Phases 0-5)
 - **Phase 0:** Ask for the repository table in one message (ask once, all at once).
 - **Phase 1:** Terminal check (`echo ok`), `git --version`, `gh auth status`, `gitmap login --status`. Stop if blocked on auth.
 - **Phase 2:** GitMap intake: clone, build, learn the 5-phase SOP (discover → modify → verify → commit+push → telemetry). Reuse GitMap commands first (`gitmap aum search`, `gitmap find`, `gitmap cat`).

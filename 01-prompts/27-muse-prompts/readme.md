@@ -1,4 +1,4 @@
-# Muse Prompts (`27-muse-prompts`) — Index & Catalog
+# Muse Prompts (`27-muse-prompts`) - Index & Catalog
 
 > [!IMPORTANT]
 > Category: `27-muse-prompts`
@@ -9,12 +9,12 @@
 
 ## Overview
 
-The `27-muse-prompts` prompt category houses the master onboarding prompt for
+The `27-muse-prompts` prompt category houses the master onboarding prompts for
 Muse AI sessions. Pasting the master prompt into a fresh Muse chat boots a
 fully-onboarded autonomous agent: repository intake, terminal + GitHub auth
 bootstrap, GitMap clone/build/learn, a memory operating-contract checklist
 (turbo mode, strict no-delete guards), coding-guideline and design-system
-intake — and then the standing **Task Confirmation & Multi-Agent Execution
+intake, and then the standing **Task Confirmation & Multi-Agent Execution
 Protocol**: every user message that is work gets a confirmed task breakdown
 first (`Understood: [YES]` per task), then multiple concurrent agents complete it.
 
@@ -31,9 +31,10 @@ Its installable skill is `muse-master-prompt`
 
 | Prompt File | Version | Scope | Key Capabilities |
 | :--- | :--- | :--- | :--- |
-| [`01-muse-master-prompt.md`](01-muse-master-prompt.md) | 6.0.0 | Master Onboarding | Self-loop Phases 0–5, auth bootstrap, GitMap intake, memory contract checklist, task-confirm + multi-agent protocol (A=2/H=2), verification gates, Top-Instruction Priority Mandate. |
+| [`01-muse-master-prompt.md`](01-muse-master-prompt.md) | 6.0.0 | Master Onboarding | Self-loop Phases 0-5, auth bootstrap, GitMap intake, memory contract checklist, task-confirm + multi-agent protocol (A=2/H=2), verification gates, Top-Instruction Priority Mandate. |
 | [`02-muse-execute-in-a-step.md`](02-muse-execute-in-a-step.md) | 1.0.0 | Execute-in-a-Step | Breakdown-first listing, RUNNING + ETA declaration ("Are you running or not?"), 5-minute status pings, commit+push completion, both prompts as MD code blocks for Literally. |
 | [`03-muse-high-level-test-audit.md`](03-muse-high-level-test-audit.md) | 1.0.0 | High-Level Test Audit | Chunked 5-phase test audit, daemon checks, backend/frontend parity, live handshake probing, zero-hallucination guardrails. |
+| [`04-muse-generic-prompt-by-legendary-alim-karim.md`](04-muse-generic-prompt-by-legendary-alim-karim.md) | 6.0.0 | Generic Master Onboarding | 5-Step Generic Onboarding Ritual, multi-platform GitMap installation (curl/irm), multi-repo workspace structure discovery, Letterly task ingestion, GitMap RC heatmap invariants, contention protection, companion setup and run scripts. |
 
 ---
 
@@ -41,8 +42,9 @@ Its installable skill is `muse-master-prompt`
 
 ```text
 01-prompts/27-muse-prompts/
-├── 01-muse-master-prompt.md          # master onboarding prompt (paste into a fresh Muse session)
-├── 02-muse-execute-in-a-step.md      # one-shot execution prompt (breakdown → RUNNING+ETA → 5-min pings → commit+push)
-├── 03-muse-high-level-test-audit.md  # chunked high-level application test audit & verification prompt
-└── readme.md                          # this index
+├── 01-muse-master-prompt.md                             # master onboarding prompt (paste into a fresh Muse session)
+├── 02-muse-execute-in-a-step.md                         # one-shot execution prompt (breakdown -> RUNNING+ETA -> 5-min pings -> commit+push)
+├── 03-muse-high-level-test-audit.md                     # chunked high-level application test audit & verification prompt
+├── 04-muse-generic-prompt-by-legendary-alim-karim.md    # generic master onboarding & GitMap suite directive (learn and bootstrap from clone)
+└── readme.md                                            # this index
 ```
