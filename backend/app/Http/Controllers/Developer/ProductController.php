@@ -69,7 +69,12 @@ class ProductController extends Controller
             'ProductSlug' => (string) $product->productSlug,
             'ProductName' => (string) $product->productName,
         ]);
-        return response()->json(['IsSuccess' => true, 'Data' => $product], 201);
+        // Blueprint auto-generation on creation, reusing the existing
+        // on-demand format. Data shape is unchanged; the blueprint is an
+        // additional top-level field so existing clients keep working.
+        $blueprint = $this->productService->generateAiBlueprint($product);
+
+        return response()->json(['IsSuccess' => true, 'Data' => $product, 'BlueprintMarkdown' => $blueprint], 201);
     }
 
     private function resolveUserId(Request $request): int

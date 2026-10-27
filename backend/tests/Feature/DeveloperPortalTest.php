@@ -103,6 +103,26 @@ class DeveloperPortalTest extends TestCase
         $this->cleanUpShard($slug);
     }
 
+    public function test_product_creation_returns_auto_generated_blueprint(): void
+    {
+        // Blueprint auto-generation on creation, reusing the existing format.
+        $user = new User();
+        $user->UserId = 999;
+        $slug = 'blueprint-tool-' . time();
+        $response = $this->actingAs($user, 'sanctum')->postJson('/api/v1/developer/products', [
+            'productName' => 'Blueprint Tool',
+            'productSlug' => $slug,
+            'category' => 'DesktopApp',
+        ]);
+        $response->assertStatus(201)
+            ->assertJsonPath('IsSuccess', true);
+        $markdown = (string) $response->json('BlueprintMarkdown');
+        $this->assertStringContainsString('Autonomous Client License Verification & Commercial Storefront Blueprint', $markdown);
+        $this->assertStringContainsString($slug, $markdown);
+        $this->assertStringNotContainsString('$49.00', $markdown);
+        $this->cleanUpShard($slug);
+    }
+
     public function test_duplicate_product_slug_is_rejected_not_500(): void
     {
         // B2: previously a duplicate slug hit a DB unique constraint as 500.

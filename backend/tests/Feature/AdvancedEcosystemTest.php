@@ -78,13 +78,14 @@ class AdvancedEcosystemTest extends TestCase
             'hardwareDigest' => 'HWID_FIRST_MACHINE',
         ])->assertStatus(200);
 
-        // Second device attempt on 1-seat license -> 403 SeatLimitExceeded
+        // Second device attempt on 1-seat license -> 409 SeatLimitExceeded,
+        // now consistent with activate() (previously 403 on this path).
         $response = $this->postJson("/api/v1/products/{$product->productSlug}/verify", [
             'serialValue' => 'ELM-SEAT-TEST-001',
             'hardwareDigest' => 'HWID_SECOND_MACHINE',
         ]);
 
-        $response->assertStatus(403)
+        $response->assertStatus(409)
             ->assertJsonPath('IsSuccess', false)
             ->assertJsonPath('Data.errorCode', 'SeatLimitExceeded');
     }

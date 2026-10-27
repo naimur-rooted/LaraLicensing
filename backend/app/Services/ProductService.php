@@ -343,7 +343,7 @@ class ProductService
                 $featuresFormatted = !empty($features) ? ' | Features: ' . implode(', ', $features) : '';
                 return "- {$d->dealName} ({$d->dealCode}): {$priceFormatted} / {$d->billingInterval} ({$d->allowedMachineSeats} seat(s)){$featuresFormatted}";
             })->implode("\n")
-            : "- Standard Plan (STD): $49.00 / yearly (1 seat)";
+            : '- No pricing deals configured yet. Add a deal to this product, then regenerate the blueprint.';
 
         return <<<MARKDOWN
 # Autonomous Client License Verification & Commercial Storefront Blueprint

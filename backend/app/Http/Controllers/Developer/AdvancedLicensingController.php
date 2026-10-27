@@ -33,7 +33,10 @@ class AdvancedLicensingController extends Controller
             $inputs['slug'], $inputs['serial'], $inputs['hwid'], $inputs['ip'],
             $inputs['hostname'], $inputs['countryCode'], $inputs['countryName']
         );
-        $status = $result['isValid'] ? 200 : (($result['errorCode'] ?? '') === 'SeatLimitExceeded' && !$request->is('*/products/*/verify') ? 409 : 403);
+        // Seat-limit status is now consistent with activate(): 409 in both
+        // paths. Previously /v1/verify returned 409 but
+        // /v1/products/{slug}/verify returned 403 for the same error.
+        $status = $result['isValid'] ? 200 : (($result['errorCode'] ?? '') === 'SeatLimitExceeded' ? 409 : 403);
 
         return $this->envelopeResponse($result, $status, $result['message'] ?? 'Verification decision produced.', $request);
     }
