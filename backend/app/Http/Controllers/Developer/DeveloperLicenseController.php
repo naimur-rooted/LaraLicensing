@@ -178,6 +178,61 @@ class DeveloperLicenseController extends Controller
     }
 
     /**
+     * Revoke a license: mark it revoked/inactive and release all bound
+     * machines, so the developer can then delete it. This is the endpoint
+     * deleteLicense's 409 message points to ("revoke it instead").
+     */
+    public function revokeLicense(Request $request, string $productSlug, int $licenseId): JsonResponse
+    {
+        $userId = $this->resolveUserId($request);
+        if ($userId <= 0) {
+            throw AuthException::unauthorized('Authentication is required.');
+        }
+
+        $product = Product::where('productSlug', $productSlug)->first();
+        if (!$product) {
+            throw NotFoundException::notFound("Product '{$productSlug}' not found.");
+        }
+
+        $ownerId = (int) ($product->userId ?? $product->UserId ?? 0);
+        if ($ownerId !== $userId) {
+            throw AuthException::forbidden('You do not have permission to revoke licenses for this product.');
+        }
+
+        $shardPath = database_path("product_{$productSlug}.sqlite");
+        if (!file_exists($shardPath)) {
+            throw NotFoundException::notFound('Product shard not found.');
+        }
+
+        $pdo = new PDO("sqlite:{$shardPath}");
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+        $stmt = $pdo->prepare('SELECT id, isRevoked FROM ProductLicenses WHERE id = :lid LIMIT 1');
+        $stmt->execute([':lid' => $licenseId]);
+        $license = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$license) {
+            throw NotFoundException::notFound('License not found.');
+        }
+
+        $pdo->prepare('UPDATE ProductLicenses SET isRevoked = 1, isActive = 0 WHERE id = :lid')
+            ->execute([':lid' => $licenseId]);
+
+        $checkHbTable = $pdo->query("SELECT name FROM sqlite_master WHERE type='table' AND name='HardwareBindings'")->fetch();
+        if ($checkHbTable) {
+            $pdo->prepare('DELETE FROM HardwareBindings WHERE licenseId = :lid')->execute([':lid' => $licenseId]);
+        }
+        $checkMbTable = $pdo->query("SELECT name FROM sqlite_master WHERE type='table' AND name='MachineBindings'")->fetch();
+        if ($checkMbTable) {
+            $pdo->prepare('DELETE FROM MachineBindings WHERE LicenseId = :lid')->execute([':lid' => $licenseId]);
+        }
+
+        return response()->json([
+            'IsSuccess' => true,
+            'Message' => 'License revoked successfully.',
+        ]);
+    }
+
+    /**
      * Resolve the authenticated user ID from Sanctum token or session.
      */
     private function resolveUserId(Request $request): int

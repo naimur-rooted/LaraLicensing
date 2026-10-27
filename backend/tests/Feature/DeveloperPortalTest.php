@@ -439,6 +439,41 @@ class DeveloperPortalTest extends TestCase
             ->assertJsonPath('Message', 'License deleted successfully.');
     }
 
+    public function test_developer_can_revoke_license_with_bound_seats_then_delete(): void
+    {
+        // B7: delete's 409 message points to revoke; previously no developer
+        // revoke endpoint existed. Revoke releases bindings, then delete succeeds.
+        $product = Product::first();
+        $this->assertNotNull($product);
+        $ownerId = (int) ($product->userId ?? $product->UserId ?? 1);
+        $owner = new User();
+        $owner->UserId = $ownerId;
+
+        $issueRes = $this->postJson("/api/v1/products/{$product->productSlug}/licenses/issue", [
+            'transactionId' => 'tx_revoke_' . uniqid(),
+            'customerEmail' => 'revokable@example.test',
+            'dealCode' => 'ELM_1M_SINGLE',
+        ]);
+        $issueRes->assertStatus(200);
+        $serial = (string) $issueRes->json('Data.SerialValue');
+        $this->postJson("/api/v1/products/{$product->productSlug}/activate", [
+            'serialValue' => $serial,
+            'hardwareDigest' => 'hwid-revoke-device',
+        ])->assertStatus(200);
+
+        $listRes = $this->actingAs($owner, 'sanctum')->getJson("/api/v1/developer/products/{$product->productSlug}/licenses");
+        $licenseId = (int) $listRes->json('Data.0.licenseId');
+
+        $delRes = $this->actingAs($owner, 'sanctum')->deleteJson("/api/v1/developer/products/{$product->productSlug}/licenses/{$licenseId}");
+        $delRes->assertStatus(409);
+
+        $revokeRes = $this->actingAs($owner, 'sanctum')->postJson("/api/v1/developer/products/{$product->productSlug}/licenses/{$licenseId}/revoke");
+        $revokeRes->assertStatus(200)->assertJsonPath('IsSuccess', true);
+
+        $delSuccess = $this->actingAs($owner, 'sanctum')->deleteJson("/api/v1/developer/products/{$product->productSlug}/licenses/{$licenseId}");
+        $delSuccess->assertStatus(200)->assertJsonPath('IsSuccess', true);
+    }
+
     public function test_non_owner_or_unauthenticated_cannot_delete_license(): void
     {
         $product = Product::first();

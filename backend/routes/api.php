@@ -655,6 +655,7 @@ Route::middleware('auth:sanctum')->prefix('v1/developer')->group(function (): vo
     Route::get('/products/{slug}/blueprint', [\App\Http\Controllers\Developer\ProductController::class, 'aiBlueprint'])->name('api.developer.products.blueprint');
     Route::get('/products/{slug}/licenses', [\App\Http\Controllers\Developer\DeveloperLicenseController::class, 'listProductLicenses'])->name('api.developer.products.licenses');
     Route::delete('/products/{slug}/licenses/{licenseId}', [\App\Http\Controllers\Developer\DeveloperLicenseController::class, 'deleteLicense'])->name('api.developer.products.licenses.destroy');
+    Route::post('/products/{slug}/licenses/{licenseId}/revoke', [\App\Http\Controllers\Developer\DeveloperLicenseController::class, 'revokeLicense'])->name('api.developer.products.licenses.revoke');
     Route::post('/ai/design-pricing', [\App\Http\Controllers\Developer\AiArchitectController::class, 'designPricing'])->name('api.developer.ai.design_pricing');
     Route::post('/products/{slug}/apply-ai-deals', [\App\Http\Controllers\Developer\AiArchitectController::class, 'applyAiDeals'])->name('api.developer.products.apply_ai_deals');
     Route::post('/products/{slug}/blueprint-code', [\App\Http\Controllers\Developer\AiArchitectController::class, 'generateBlueprintCode'])->name('api.developer.products.blueprint_code');
