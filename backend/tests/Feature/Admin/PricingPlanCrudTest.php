@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Admin;
 
+use App\Http\Controllers\Admin\PricingPlanController;
 use App\Models\AuthSession;
 use App\Models\PricingPlan;
 use App\Models\User;
@@ -40,6 +41,12 @@ final class PricingPlanCrudTest extends TestCase
         $this->swapRolePolicy();
         $this->admin = $this->makeUser(self::ADMIN_EMAIL);
         [, $this->adminBearer] = $this->openSessionAndMintToken($this->admin);
+    }
+
+    public function test_pricing_plan_controller_exists(): void
+    {
+        // Endpoint inventory gate: this suite covers PricingPlanController routes.
+        $this->assertTrue(class_exists(PricingPlanController::class));
     }
 
     public function test_bare_returns_401(): void

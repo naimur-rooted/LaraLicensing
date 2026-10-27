@@ -139,6 +139,23 @@ class ProductController extends Controller
         if (!$product) {
             throw NotFoundException::notFound('Product not found.');
         }
+        [$txId, $email] = $this->validateWebhookInputs($request);
+        $deal = $this->resolveWebhookDeal($product, $request);
+        $seats = (int) $deal->allowedMachineSeats;
+        $resolvedDeal = (string) $deal->dealCode;
+        $serialValue = strtoupper($product->productSlug . '-' . substr(md5($txId . $email), 0, 16));
+        $this->productService->recordShardLicense($product, $serialValue, $resolvedDeal, $seats);
+        $payload = $this->buildWebhookPayload($product, $serialValue, $email, $resolvedDeal);
+        return response()->json([
+            'IsSuccess' => true,
+            'Message' => 'License issued successfully via decoupled webhook.',
+            'Data' => $payload,
+        ]);
+    }
+
+    /** @return array{0:string,1:string} */
+    private function validateWebhookInputs(Request $request): array
+    {
         $txId = trim((string) $request->input('transactionId', ''));
         $email = trim((string) $request->input('customerEmail', ''));
         if (empty($txId) || empty($email)) {
@@ -147,44 +164,30 @@ class ProductController extends Controller
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             throw ValidationException::invalidInput('customerEmail must be a valid email address.');
         }
+        return [$txId, $email];
+    }
 
+    // A license must be linked to a real deal for this product.
+    // Previously an unknown dealCode fell back to 'DEFAULT' and minted
+    // a license with no deal linkage, so portal and verify could not
+    // tell what was actually purchased.
+    private function resolveWebhookDeal($product, Request $request)
+    {
         $dealCode = trim((string) $request->input('dealCode', ''));
-        // A license must be linked to a real deal for this product.
-        // Previously an unknown dealCode fell back to 'DEFAULT' and minted
-        // a license with no deal linkage, so portal and verify could not
-        // tell what was actually purchased.
         $deal = $dealCode !== '' ? $product->deals->where('dealCode', strtoupper($dealCode))->first() : null;
         if (!$deal) {
             throw ValidationException::invalidInput('dealCode must match an existing deal for this product.');
         }
-        $seats = (int) $deal->allowedMachineSeats;
-        $resolvedDeal = (string) $deal->dealCode;
-
-        $serialValue = strtoupper($product->productSlug . '-' . substr(md5($txId . $email), 0, 16));
-        $this->productService->recordShardLicense($product, $serialValue, $resolvedDeal, $seats);
-
-        $payload = [
-            'SerialValue' => $serialValue,
-            'CustomerEmail' => $email,
-            'ProductSlug' => $product->productSlug,
-            'DealCode' => $resolvedDeal,
-            'IssuedAt' => now()->toISOString(),
-        ];
-        return response()->json([
-            'IsSuccess' => true,
-            'Message' => 'License issued successfully via decoupled webhook.',
-            'Data' => $payload,
-        ]);
+        return $deal;
     }
 
-    private function buildWebhookPayload($product, string $txId, string $email, string $dealCode): array
+    private function buildWebhookPayload($product, string $serialValue, string $email, string $dealCode): array
     {
-        $serialValue = strtoupper($product->productSlug . '-' . substr(md5($txId . $email), 0, 16));
         return [
             'SerialValue' => $serialValue,
             'CustomerEmail' => $email,
             'ProductSlug' => $product->productSlug,
-            'DealCode' => $dealCode ?: 'DEFAULT',
+            'DealCode' => $dealCode,
             'IssuedAt' => now()->toISOString(),
         ];
     }

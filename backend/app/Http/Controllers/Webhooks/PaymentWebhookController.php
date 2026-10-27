@@ -44,6 +44,7 @@ class PaymentWebhookController extends Controller
         if (!$this->webhookService->isSupportedEvent($gateway, $eventData['eventName'] ?? '')) {
             return $this->ignoredEvent($gateway, $request, $eventData);
         }
+        $productSlug = (string) ($eventData['productSlug'] ?? '');
         // Signature is checked before product existence, so an invalid
         // signature always returns 401 (and does not leak whether the
         // product exists). A missing secret also fails closed as 401.
@@ -51,7 +52,22 @@ class PaymentWebhookController extends Controller
         // license is minted or any WebhookEvents row is inserted:
         // previously an unknown slug could pass via a fallback secret,
         // insert a row, and return a success serial that existed nowhere.
-        $productSlug = (string) ($eventData['productSlug'] ?? '');
+        $signatureError = $this->checkSignature($gateway, $request, $productSlug);
+        if ($signatureError !== null) {
+            return $signatureError;
+        }
+        $productError = $this->checkProduct($gateway, $request, $productSlug);
+        if ($productError !== null) {
+            return $productError;
+        }
+        if (empty($eventData['customerEmail'])) {
+            return $this->payloadError($gateway, $request);
+        }
+        return $this->processValidWebhook($gateway, $request, $eventData);
+    }
+
+    private function checkSignature(string $gateway, Request $request, string $productSlug): ?JsonResponse
+    {
         $secret = $this->webhookService->resolveSecret($gateway, $productSlug);
         if ($secret === null || $secret === '') {
             return $this->signatureError($gateway, $request);
@@ -59,26 +75,37 @@ class PaymentWebhookController extends Controller
         if (!$this->webhookService->isSignatureValid($gateway, $request, $secret)) {
             return $this->signatureError($gateway, $request);
         }
-        $product = $productSlug !== '' && $productSlug !== 'default-app'
-            ? Product::query()->where('productSlug', $productSlug)->where('isActive', true)->first()
-            : null;
+        return null;
+    }
+
+    private function checkProduct(string $gateway, Request $request, string $productSlug): ?JsonResponse
+    {
+        $product = $this->findActiveProduct($productSlug);
         if ($product === null) {
-            $requestId = (string) ($request->attributes->get('lara.request_id') ?? uniqid('req_', true));
-
-            return ApiEnvelope::failure(
-                'ProductNotFound',
-                "Product [{$productSlug}] not found.",
-                $requestId,
-                404,
-                'ProductNotFound',
-                ['Gateway' => $gateway]
-            );
+            return $this->productNotFound($gateway, $request, $productSlug);
         }
-        if (empty($eventData['customerEmail'])) {
-            return $this->payloadError($gateway, $request);
-        }
+        return null;
+    }
 
-        return $this->processValidWebhook($gateway, $request, $eventData);
+    private function findActiveProduct(string $productSlug): ?Product
+    {
+        if ($productSlug === '' || $productSlug === 'default-app') {
+            return null;
+        }
+        return Product::query()->where('productSlug', $productSlug)->where('isActive', true)->first();
+    }
+
+    private function productNotFound(string $gateway, Request $request, string $productSlug): JsonResponse
+    {
+        $requestId = (string) ($request->attributes->get('lara.request_id') ?? uniqid('req_', true));
+        return ApiEnvelope::failure(
+            'ProductNotFound',
+            "Product [{$productSlug}] not found.",
+            $requestId,
+            404,
+            'ProductNotFound',
+            ['Gateway' => $gateway]
+        );
     }
 
     private function processValidWebhook(string $gateway, Request $request, array $eventData): JsonResponse

@@ -163,3 +163,81 @@ B7. Admin packages and pricing, and portal controls.
 - backend/app/Models/Product.php (F3)
 - .ai-memory/plans/pending/muse-overnight-testing-report.md (this file)
 - .ai-memory/ambiguous-questions/muse-overnight-testing-confusion.md (appended entries, no deletions)
+
+## Phase 2 — autonomous continuation (2026-10-28, branch muse)
+
+### Environment actually working
+- PHP 8.3.6 installed via apt (php8.3-cli, mbstring, xml, curl, zip, sqlite3, bcmath, intl, pgsql, tokenizer, fileinfo). User in VM is root, so no sudo needed; system changes outside home are ephemeral.
+- Composer via repo backend/composer.phar, version 2.11-dev, PHP 8.3.6.
+- composer install without flags FAILED exit 2: lock file not up to date, locked symfony 8.1 packages require php >=8.4.1, contradicting composer.json php ^8.3. Lock was generated on PHP 8.4.
+- composer install with --ignore-platform-reqs, COMPOSER_ALLOW_SUPERUSER=1, --prefer-dist, --no-interaction SUCCEEDED exit 0, 129/129 packages, vendor present. Vendor is gitignored, must not be committed. Any phpunit pass on 8.3 must be reported with this caveat, not as a clean 8.4 run.
+- backend/.env created for tests only (gitignored, from phpunit.xml settings: SQLite in-memory, array mail/cache/session, sync queue, APP_KEY from phpunit.xml). This removed the phpdotenv "Failed to open stream: No such file" warnings in Pest runs. .env is NOT committed.
+- Frontend vitest not re-run in phase 2 (no frontend files changed in phase 2; previous run: 145 files / 951 tests passed).
+- Playwright: NOT run. `npx playwright install chromium` entered pending_user_confirmation in this environment and was terminated, not bypassed. ~/.cache/ms-playwright still absent. No browser, no seeded backend+frontend E2E, so E2E is NOT claimed passed. Exact blocker: browser install requires user confirmation in this environment.
+- Typecheck baseline CONFIRMED: repo script `tsgo --noEmit` fails because tsgo is not installed and `tsgo` is 404 on npm. Its successor `@typescript/native-preview` (7.0.0-dev.20260707.2, via `bun x`, no repo files changed) runs and reports exactly 44 errors, same count as the tsc fallback. Breakdown: preview-fixtures/stubs.ts 14, badge/registry.ts 5, reseller serials routes 3, lara-serial.ts 3, portal.tsx 2, lara-license.ts 2, lara-customer-request.ts 2, plus single errors in 11 other files. None are in files changed in phase 2 (backend only). Decision: do NOT blindly fix all 44 in this phase; they are pre-existing and unrelated to the security/validation batches.
+
+### B1 — developer auth (DONE, live-verified)
+- backend/routes/api.php: developer group now `Route::middleware('auth:sanctum')->prefix('v1/developer')`. Public deals route stays outside; client verify/activate and gateway webhooks stay unauthenticated by design (license-serial / HMAC, not developer login).
+- ProductController show/addDeal/updateDeal/deleteDeal/aiBlueprint now enforce ownership via requireOwnerForRequest (401 unauthenticated, 403 non-owner). DeveloperLicenseController already enforced ownership.
+- Tests updated in same batch: DeveloperPortalTest actingAs now uses 'sanctum' guard; unauthenticated list test split into unauthenticated-401 + authenticated-200; add-deal and blueprint tests now act as owner.
+- Result: DeveloperPortalTest 22 passed (latest run 147 assertions; assertion totals vary between runs, pass count is stable).
+
+### B3 — decoupled webhookIssue (PARTIAL, live-verified)
+- webhookIssue now validates customerEmail with FILTER_VALIDATE_EMAIL and requires dealCode to match an existing deal (uppercased lookup); unknown/empty dealCode throws ValidationException (400), no 'DEFAULT' fallback, seats come from the real deal.
+- recordShardLicense check-then-insert changed to INSERT OR IGNORE inside try/catch, ignoring only UNIQUE/23000 PDOExceptions, so concurrent replays do not 500.
+- NOT done: HMAC gating for webhookIssue. That would break all existing webhookIssue tests and developer integrations using the simple endpoint; gateway webhook path already provides HMAC. Logged as confusion entry 16, decision needed, not silently applied.
+
+### B4 — gateway webhooks (DONE, live-verified)
+- Hardcoded fallback secret constant removed entirely from PaymentWebhookService. resolveSecret now returns product webhookSecret, else env <GATEWAY>_WEBHOOK_SECRET, else null. New test: unknown product has no fallback secret (assertNull).
+- Controller order: unsupported event -> ignored first (no row, no license); then secret null -> 401 signature error; then signature check -> 401; then product existence/active check -> 404 ProductNotFound with no serial and no WebhookEvents row; then customerEmail -> 422; then process. Signature-before-product keeps the existing invalid-signature test at 401 and does not leak product existence.
+- Stripe timestamp freshness: isStripeTimestampValid now rejects timestamps more than 300 seconds old or in the future. Existing tests use time() at request time, so valid webhooks still pass.
+- Result: PaymentWebhookTest 7 passed (31 assertions), including valid Stripe/LemonSqueezy/WooCommerce, invalid signature 401, unsupported ignored, missing email 422, unknown-product no fallback secret.
+
+### B6 — verify (PARTIAL, live-verified; full split NOT done)
+- Done: verify SeatLimitExceeded status unified to 409 to match activate(). Previously /v1/verify returned 409 but /v1/products/{slug}/verify returned 403. AdvancedEcosystemTest updated in same batch (403 -> 409).
+- Result: AdvancedEcosystemTest 4 passed (23 assertions); EndUserVerificationTest 8 passed (34 assertions) — baseline unchanged.
+- NOT done: verify read-only / activate-only-binding split, and expiry handling. Reason: existing tests (EndUserVerificationTest, AdvancedEcosystemTest) and the Serials->ProductLicenses bridge rely on verify/activate auto-registering unknown serials; gateway-issued serials live only in Serials until first verify. A blunt split would break those tests and legacy clients. ProductLicenses has no expiry column, so expiry derivation from billingInterval would need a schema migration plus shard-schema changes in multiple places. Both are logged as confusion entries 17-18 with a concrete plan, not claimed fixed.
+
+### B2 — validation (DONE, live-verified)
+- ProductService: slug empty after Str::slug -> ValidationException; duplicate slug -> ValidationException (was DB 500). ALLOWED_BILLING_INTERVALS = daily, weekly, monthly, quarterly, yearly, biennial, lifetime (from AiArchitectService string, not invented). validateDealAttributes: dealName/dealCode required, interval in set, priceCents numeric >=0, allowedMachineSeats numeric >=1, dealCode unique per product (excluding self on update). createDeal and updateDeal (merged values) both validate.
+- ProductController deleteDeal now throws NotFoundException 404 for missing deal (was 200 with IsSuccess false), matching updateDeal and license delete.
+- Validation errors map to 400 ValidationInputInvalid per 02-spec/21-app/12-error-taxonomy.md, not 422. New tests: duplicate slug -> 400 (not 500), negative deal price -> 400.
+- Product $hidden (F3 from phase 1) is now live-verified indirectly: Product model serialisation in developer list/show tests passes with private key/webhook secret hidden in the model definition; no test asserts the hidden fields explicitly — that explicit assertion remains a small follow-up, not claimed as a dedicated test.
+
+### B7 — portal/admin (DONE for backend; frontend developer license UI remains open)
+- Developer license revoke: POST /v1/developer/products/{slug}/licenses/{licenseId}/revoke in DeveloperLicenseController, ownership-checked, sets isRevoked=1/isActive=0 and deletes HardwareBindings + MachineBindings, so the license can then be deleted. This is the endpoint delete's 409 message previously pointed to but did not exist. Test: revoke with bound seats then delete passes.
+- Admin PricingPlans CRUD: new Admin\PricingPlanController inside the existing Admin group (auth:sanctum + session.active + require.role:Admin|SuperAdmin), reusing the PricingPlan model and its fillable fields, no new package system. Routes: GET/POST /Api/Admin/PricingPlans, GET/PATCH/DELETE /Api/Admin/PricingPlans/{id}. Validation: planCode required + unique, planName required, interval in allowed set, prices >=0, slots >=1. Public GET /Pricing/Plans (active only) unchanged. Test: PricingPlanCrudTest 5 passed (59 assertions) — bare 401, non-Admin 403, CRUD round-trip, duplicate code 400, negative price 400.
+- Portal UI note: customer portal already has unbind/deactivate UI (CustomerRequestsHistory.tsx, Unbind Device button). Developer dashboard has no license-list UI; backend list/delete/revoke exist, frontend developer license management UI is still open work, not claimed done.
+
+### Blueprint (DONE for backend auto-generation, no new format, no Gemini required)
+- ProductController store now returns BlueprintMarkdown alongside unchanged Data, generated via existing ProductService::generateAiBlueprint (same format as on-demand GET blueprint). No new format, no Gemini key for the default path.
+- Dummy fallback removed: when a product has no deals, blueprint previously emitted "- Standard Plan (STD): $49.00 / yearly (1 seat)". Now it emits a neutral "No pricing deals configured yet. Add a deal, then regenerate the blueprint." line, consistent with the blueprint's own Zero Dummy Fallback mandate.
+- Test: product creation returns auto-generated blueprint containing the blueprint title and product slug, and not containing $49.00.
+- NOT done: blueprint storage in a Products column/migration. Blueprint is generated on creation (returned in response) and on demand (existing endpoint), not persisted. A migration decision is logged as confusion entry 19.
+
+### Commits pushed to muse in phase 2
+- 16bead9 muse - developer auth, webhook fallback secret, and deal validation
+- 26b08ed muse - blueprint on product creation, dummy fallback removed, verify seat status unified
+- 511d030 muse - admin PricingPlans CRUD in existing Admin group
+- bf30a9f muse - developer license revoke endpoint for bound seats
+- (Report/confusion update commit to follow after full pest suite; origin/main unchanged at 413986c throughout.)
+
+### What remains (with evidence)
+1. Full backend pest suite: running at report time; do not claim full-suite pass until its tail is captured.
+2. B6 full split (verify read-only, activate binds only) + expiry schema: see confusion 17-18. Requires test updates in EndUserVerificationTest and AdvancedEcosystemTest (activate first, then verify; unknown serial -> LicenseNotFound) and a migration decision for expiry.
+3. B3 full HMAC gating for webhookIssue: breaking-change decision, see confusion 16.
+4. Blueprint persistence (column/migration vs response + on-demand): see confusion 19.
+5. Frontend developer license management UI (list/revoke/delete in DeveloperProductsDashboard): backend exists, UI does not.
+6. Playwright 5 smoke specs: blocked by browser-install user confirmation (see above). Needs a seeded backend + frontend + E2E_ADMIN_EMAIL/PASSWORD, which are not set in this environment.
+7. Frontend typecheck 44 errors: pre-existing, baseline confirmed via @typescript/native-preview, not fixed in this phase by design.
+8. Frontend vitest re-run in phase 2: not run (no frontend changes in phase 2); last pass was phase 1, 145 files / 951 tests.
+9. Explicit Product $hidden assertion test: follow-up, not yet written.
+
+### Phase 2 addendum — full suite and architecture gates
+- Full backend Pest suite, latest run: 518 passed, 27 failed, 13 skipped, 10010 assertions, duration ~33s, exit 2. Do NOT claim full-suite pass.
+- The 27 failures break down as: (a) Postgres QueryException "connection to server at 127.0.0.1, port 5432 failed: Connection refused" for Admin (Features, Licenses, Metrics, Serials, Users), Auth (DemoLogin, MeEndpoint, Refresh), ResellerPortalArchitecture, and Seed suites — these suites require a live Postgres shard, which is not running in this VM, and are unrelated to phase 2 changes; (b) FunctionBodyLineCapTest, EndpointInventoryTest, TraceRedactorTest — see below.
+- FunctionBodyLineCapTest: phase 2 initially introduced 4 new violations (validateDealAttributes, buildUpdateDealAttributes, handleGateway, webhookIssue worsened). Those were refactored into helpers (validateDealIdentity, validateDealNumbers, assertDealCodeUnique, mergeDealAttributes, parseDealFeatures, buildDealUpdateResult, checkSignature, checkProduct, findActiveProduct, productNotFound, validateWebhookInputs, resolveWebhookDeal, buildWebhookPayload) with NO baseline additions. After refactor, the test fails only on 3 pre-existing violations untouched by phase 2: DeveloperRegisterController::buildSuccessResponse (21), AdvancedLicensingController::extractClientInputs (32), ClientHandshakeService::bindMachineSeat (28). That test was already failing before phase 2 for those 3.
+- EndpointInventoryTest: phase 2 new routes (PricingPlans CRUD, license revoke) initially added missing-test offenders. Fixed by referencing the controller classes in their covering tests (PricingPlanCrudTest, DeveloperPortalTest class_exists tests). Remaining offenders are pre-existing, e.g. AiArchitectController apply-ai-deals and blueprint-code routes. Our routes are no longer offenders.
+- TraceRedactorTest: 1 failed, 2 passed in isolation, unrelated to phase 2 (no redaction code touched) — pre-existing/environment failure, token-shape masking case.
+- Flakiness note: an earlier full-suite run failed AdvancedEcosystemTest (2 tests) and DeveloperPortalTest revoke/cannot-delete tests, while isolated runs passed consistently and the latest full run passes them. That is test-order/shared-state flakiness in those suites, not a deterministic phase 2 regression, but it must be noted, not hidden.
+- Affected suites after refactor, all passing in isolation: DeveloperPortalTest 23 passed, PaymentWebhookTest 7 passed, PricingPlanCrudTest 6 passed, AdvancedEcosystemTest 4 passed, EndUserVerificationTest 8 passed.

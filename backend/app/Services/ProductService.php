@@ -207,6 +207,15 @@ class ProductService
 
     private function validateDealAttributes(Product $product, array $attributes, ?int $excludeDealId = null): array
     {
+        $identity = $this->validateDealIdentity($attributes);
+        $numbers = $this->validateDealNumbers($attributes);
+        $this->assertDealCodeUnique($product, $identity['dealCode'], $excludeDealId);
+        return array_merge($identity, $numbers);
+    }
+
+    /** @return array{dealName:string,dealCode:string,billingInterval:string} */
+    private function validateDealIdentity(array $attributes): array
+    {
         $dealName = trim((string) ($attributes['dealName'] ?? ''));
         if ($dealName === '') {
             throw ValidationException::invalidInput('dealName is required.');
@@ -219,6 +228,12 @@ class ProductService
         if (!in_array($interval, self::ALLOWED_BILLING_INTERVALS, true)) {
             throw ValidationException::invalidInput('billingInterval must be one of: daily, weekly, monthly, quarterly, yearly, biennial, lifetime.');
         }
+        return ['dealName' => $dealName, 'dealCode' => $dealCode, 'billingInterval' => $interval];
+    }
+
+    /** @return array{priceCents:int,allowedMachineSeats:int} */
+    private function validateDealNumbers(array $attributes): array
+    {
         $priceRaw = $attributes['priceCents'] ?? 0;
         if (!is_numeric($priceRaw) || (int) $priceRaw < 0) {
             throw ValidationException::invalidInput('priceCents must be a non-negative integer.');
@@ -227,23 +242,18 @@ class ProductService
         if (!is_numeric($seatsRaw) || (int) $seatsRaw < 1) {
             throw ValidationException::invalidInput('allowedMachineSeats must be at least 1.');
         }
-        $dealQuery = ProductDeal::query()
-            ->where('productId', $product->ProductId)
-            ->where('dealCode', $dealCode);
+        return ['priceCents' => (int) $priceRaw, 'allowedMachineSeats' => (int) $seatsRaw];
+    }
+
+    private function assertDealCodeUnique(Product $product, string $dealCode, ?int $excludeDealId): void
+    {
+        $dealQuery = ProductDeal::query()->where('productId', $product->ProductId)->where('dealCode', $dealCode);
         if ($excludeDealId !== null) {
             $dealQuery->where('ProductDealId', '!=', $excludeDealId);
         }
         if ($dealQuery->exists()) {
             throw ValidationException::invalidInput('dealCode already exists for this product.');
         }
-
-        return [
-            'dealName' => $dealName,
-            'dealCode' => $dealCode,
-            'billingInterval' => $interval,
-            'priceCents' => (int) $priceRaw,
-            'allowedMachineSeats' => (int) $seatsRaw,
-        ];
     }
 
     /** Create a deal/pricing package for a product. */
@@ -290,24 +300,39 @@ class ProductService
         // Merge with existing values so validation sees a complete deal,
         // then validate the merged result (including per-product uniqueness
         // excluding this deal itself).
-        $merged = [
+        $merged = $this->mergeDealAttributes($deal, $attrs);
+        $product = Product::query()->where('ProductId', $deal->productId)->first();
+        if ($product !== null) {
+            $merged = array_merge($merged, $this->validateDealAttributes($product, $merged, (int) $deal->ProductDealId));
+        }
+        $features = $this->parseDealFeatures($attrs, $deal);
+        return $this->buildDealUpdateResult($deal, $attrs, $merged, $features);
+    }
+
+    private function mergeDealAttributes(ProductDeal $deal, array $attrs): array
+    {
+        return [
             'dealName' => $attrs['dealName'] ?? $deal->dealName,
             'dealCode' => $attrs['dealCode'] ?? $deal->dealCode,
             'billingInterval' => $attrs['billingInterval'] ?? $deal->billingInterval,
             'priceCents' => $attrs['priceCents'] ?? $deal->priceCents,
             'allowedMachineSeats' => $attrs['allowedMachineSeats'] ?? $deal->allowedMachineSeats,
         ];
-        // Product is needed for the uniqueness check; resolve it from the deal.
-        $product = Product::query()->where('ProductId', $deal->productId)->first();
-        if ($product !== null) {
-            $validated = $this->validateDealAttributes($product, $merged, (int) $deal->ProductDealId);
-            $merged = array_merge($merged, $validated);
-        }
+    }
+
+    /** @return array<int,string> */
+    private function parseDealFeatures(array $attrs, ProductDeal $deal): array
+    {
         $features = $attrs['features'] ?? $deal->features;
         if (is_string($features)) {
             $features = array_values(array_filter(array_map('trim', explode("\n", $features))));
         }
+        return is_array($features) ? $features : [];
+    }
 
+    /** @return array<string,mixed> */
+    private function buildDealUpdateResult(ProductDeal $deal, array $attrs, array $merged, array $features): array
+    {
         return [
             'dealName' => $merged['dealName'],
             'dealCode' => $merged['dealCode'],
@@ -316,7 +341,7 @@ class ProductService
             'allowedMachineSeats' => $merged['allowedMachineSeats'],
             'allowedDomains' => isset($attrs['allowedDomains']) ? (int) $attrs['allowedDomains'] : $deal->allowedDomains,
             'isDecoyTarget' => isset($attrs['isDecoyTarget']) ? (bool) $attrs['isDecoyTarget'] : $deal->isDecoyTarget,
-            'features' => is_array($features) ? $features : [],
+            'features' => $features,
             'isActive' => isset($attrs['isActive']) ? (bool) $attrs['isActive'] : $deal->isActive,
         ];
     }
