@@ -150,6 +150,63 @@ class DeveloperPortalTest extends TestCase
         $this->assertStringContainsStringIgnoringCase($product->productSlug, $response->json('Data.SerialValue'));
     }
 
+    public function test_unauthenticated_cannot_list_product_licenses(): void
+    {
+        $product = Product::first();
+        $this->assertNotNull($product);
+        $response = $this->getJson("/api/v1/developer/products/{$product->productSlug}/licenses");
+        $response->assertStatus(401);
+    }
+
+    public function test_can_list_sharded_product_licenses_for_owner(): void
+    {
+        $product = Product::first();
+        $this->assertNotNull($product);
+
+        $ownerId = (int) ($product->userId ?? $product->UserId ?? 1);
+        $owner = new User();
+        $owner->UserId = $ownerId;
+        $owner->Email = 'owner@example.test';
+
+        // Issue a license into the shard
+        $this->postJson("/api/v1/products/{$product->productSlug}/licenses/issue", [
+            'transactionId' => 'tx_test_' . uniqid(),
+            'customerEmail' => 'buyer@example.test',
+            'dealCode' => 'MONTHLY_ANCHOR',
+        ]);
+
+        $response = $this->actingAs($owner)->getJson("/api/v1/developer/products/{$product->productSlug}/licenses");
+        $response->assertStatus(200)
+            ->assertJsonPath('IsSuccess', true)
+            ->assertJsonStructure([
+                'IsSuccess',
+                'Data' => [
+                    '*' => [
+                        'licenseId',
+                        'serialValue',
+                        'dealCode',
+                        'allowedSeats',
+                        'activeSeats',
+                        'isActive',
+                        'createdAt',
+                        'boundMachines',
+                    ],
+                ],
+            ]);
+    }
+
+    public function test_non_owner_cannot_list_product_licenses(): void
+    {
+        $product = Product::first();
+        $this->assertNotNull($product);
+
+        $otherUser = new User();
+        $otherUser->UserId = 99999;
+
+        $response = $this->actingAs($otherUser)->getJson("/api/v1/developer/products/{$product->productSlug}/licenses");
+        $response->assertStatus(403);
+    }
+
     private function cleanUpShard(string $slug): void
     {
         $shardPath = database_path("product_{$slug}.sqlite");

@@ -104,8 +104,24 @@ export function CustomerRequestsHistory({
     },
   });
 
-  if (isLoading || !requests || requests.length === 0) {
-    return null;
+  if (isLoading) {
+    return (
+      <div className="rounded-lg border border-border/60 bg-card p-4 text-xs text-muted-foreground flex items-center gap-2">
+        <Clock className="size-4 animate-spin text-muted-foreground/60" />
+        <span>Loading direct customer requests...</span>
+      </div>
+    );
+  }
+
+  if (!requests || requests.length === 0) {
+    return (
+      <div className="rounded-lg border border-dashed border-border/70 bg-card/60 p-4 text-center text-xs text-muted-foreground">
+        <p className="font-medium text-foreground">No Direct Customer Requests</p>
+        <p className="text-[11px] text-muted-foreground/80 mt-0.5">
+          End-user customer requests submitted for your account will appear here.
+        </p>
+      </div>
+    );
   }
 
   const archivedCount = requests.filter((r) => r.IsArchived).length;
@@ -242,7 +258,7 @@ export function CustomerRequestsHistory({
                 </span>
                 {req.Notes && (
                   <span className="text-muted-foreground/80 italic font-sans">
-                    — {req.Notes}
+                    - {req.Notes}
                   </span>
                 )}
               </div>

@@ -6,7 +6,7 @@ import urllib.error
 
 PORT = 5050
 LARALICENSING_API = "http://127.0.0.1:8000"
-DEFAULT_PRODUCT_SLUG = "lara-sandbox-desktop-client"
+DEFAULT_PRODUCT_SLUG = "hotel-reservation-system"
 
 HTML_TEMPLATE = """<!DOCTYPE html>
 <html lang="en">
@@ -73,7 +73,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         <div class="control-panel">
             <div class="input-group">
                 <span>Product Slug:</span>
-                <input type="text" id="productSlugInput" value="lara-sandbox-desktop-client">
+                <input type="text" id="productSlugInput" value="hotel-reservation-system">
                 <button onclick="fetchPricing()">Re-Sync Deals</button>
             </div>
             <div class="input-group">

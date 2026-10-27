@@ -118,7 +118,20 @@ class ProductController extends Controller
         }
 
         $dealCode = trim((string) $request->input('dealCode', ''));
-        $payload = $this->buildWebhookPayload($product, $txId, $email, $dealCode);
+        $deal = $product->deals->where('dealCode', $dealCode)->first();
+        $seats = $deal ? (int) $deal->allowedMachineSeats : 1;
+        $resolvedDeal = $deal ? (string) $deal->dealCode : ($dealCode ?: 'DEFAULT');
+
+        $serialValue = strtoupper($product->productSlug . '-' . substr(md5($txId . $email), 0, 16));
+        $this->productService->recordShardLicense($product, $serialValue, $resolvedDeal, $seats);
+
+        $payload = [
+            'SerialValue' => $serialValue,
+            'CustomerEmail' => $email,
+            'ProductSlug' => $product->productSlug,
+            'DealCode' => $resolvedDeal,
+            'IssuedAt' => now()->toISOString(),
+        ];
         return response()->json([
             'IsSuccess' => true,
             'Message' => 'License issued successfully via decoupled webhook.',

@@ -142,6 +142,47 @@ class ProductService
             CreatedAt DATETIME,
             UpdatedAt DATETIME
         );');
+        $pdo->exec('CREATE TABLE IF NOT EXISTS ProductLicenses (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            serialValue TEXT NOT NULL,
+            dealCode TEXT NOT NULL,
+            allowedSeats INTEGER DEFAULT 1,
+            isActive INTEGER DEFAULT 1,
+            isRevoked INTEGER DEFAULT 0,
+            createdAt TEXT NOT NULL
+        );');
+        $pdo->exec('CREATE TABLE IF NOT EXISTS HardwareBindings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            licenseId INTEGER NOT NULL,
+            hardwareDigest TEXT NOT NULL,
+            hostname TEXT DEFAULT \'Client PC\',
+            boundAt TEXT NOT NULL,
+            lastSeenAt TEXT NOT NULL,
+            clientIp TEXT DEFAULT \'127.0.0.1\',
+            countryCode TEXT DEFAULT \'US\',
+            countryName TEXT DEFAULT \'United States\'
+        );');
+    }
+
+    /** Record an issued serial license into the isolated product SQLite shard. */
+    public function recordShardLicense(Product $product, string $serial, string $dealCode, int $allowedSeats): void
+    {
+        $this->provisionProductShard($product->productSlug);
+        $shardPath = database_path("product_{$product->productSlug}.sqlite");
+        $pdo = new PDO("sqlite:{$shardPath}");
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+        $check = $pdo->prepare('SELECT id FROM ProductLicenses WHERE serialValue = :s LIMIT 1');
+        $check->execute([':s' => $serial]);
+        if (!$check->fetch()) {
+            $ins = $pdo->prepare('INSERT INTO ProductLicenses (serialValue, dealCode, allowedSeats, isActive, isRevoked, createdAt) VALUES (:s, :d, :seats, 1, 0, :dt)');
+            $ins->execute([
+                ':s' => $serial,
+                ':d' => $dealCode,
+                ':seats' => max(1, $allowedSeats),
+                ':dt' => now()->toISOString(),
+            ]);
+        }
     }
 
     /** Create a deal/pricing package for a product. */

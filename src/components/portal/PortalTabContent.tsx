@@ -1,5 +1,6 @@
 import { SerialLookupPanel } from "./serial-lookup-panel";
 import { CustomerRequestsHistory } from "./CustomerRequestsHistory";
+import { ProductShardLicensesView } from "@/components/developer/licenses/ProductShardLicensesView";
 import { DeveloperProductsDashboard } from "@/components/developer/DeveloperProductsDashboard";
 import { DeveloperOverviewDashboard } from "@/components/developer/DeveloperOverviewDashboard";
 import { DeveloperBillingTab } from "@/components/developer/DeveloperBillingTab";
@@ -44,12 +45,13 @@ export function PortalTabContent({
   if (activeTab === "security") return <FraudAlertCenter />;
   return (
     <div className="flex flex-col gap-6">
-      <CustomerRequestsHistory customerEmail={customerEmail} onApplySerial={onApplySerial} />
+      <ProductShardLicensesView onApplySerial={onApplySerial} />
       <SerialLookupPanel
         key={selectedSerial}
         initialSerial={selectedSerial}
         testIdPrefix="portal-home-serial"
       />
+      <CustomerRequestsHistory customerEmail={customerEmail} onApplySerial={onApplySerial} />
     </div>
   );
 }
