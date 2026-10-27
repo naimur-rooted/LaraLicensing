@@ -89,15 +89,46 @@ class AdvancedLicensingController extends Controller
     /** Extract standardized client handshake inputs from request. */
     private function extractClientInputs(Request $request, ?string $slug): array
     {
-        $resolvedSlug = (string) ($slug ?: $request->route('slug') ?: $request->input('productSlug') ?: 'elementor-assistant');
-        $serial = strtoupper(trim((string) ($request->input('serialValue') ?: $request->input('serial') ?: '')));
-        $hwid = strtolower(trim((string) ($request->input('hardwareDigest') ?: $request->input('hwid') ?: $request->input('fingerprintHash') ?: '')));
+        $resolvedSlug = (string) ($slug ?: $request->route('slug') ?: $request->input('productSlug') ?: '');
+        if ($resolvedSlug === '') {
+            throw \App\Exceptions\ValidationException::validationFailed('Product slug is required.');
+        }
+
+        $serial = strtoupper(trim((string) (
+            $request->input('serialValue')
+            ?: $request->input('serial')
+            ?: $request->input('license_key')
+            ?: $request->input('licenseKey')
+            ?: $request->input('key')
+            ?: ''
+        )));
+
+        $hwid = strtolower(trim((string) (
+            $request->input('hardwareDigest')
+            ?: $request->input('hwid')
+            ?: $request->input('machine_id')
+            ?: $request->input('machineId')
+            ?: $request->input('machineGuid')
+            ?: $request->input('fingerprintHash')
+            ?: ''
+        )));
+
+        $hostname = (string) (
+            $request->input('hostname')
+            ?: $request->input('machineName')
+            ?: $request->input('computerName')
+            ?: 'Client Device'
+        );
+
         $cc = strtoupper(trim((string) ($request->header('CF-IPCountry') ?: $request->input('countryCode') ?: '')));
 
         return [
-            'slug' => $resolvedSlug, 'serial' => $serial, 'hwid' => $hwid,
-            'hostname' => (string) ($request->input('hostname') ?: 'Client Workstation'),
-            'ip' => (string) $request->ip(), 'countryCode' => $cc ?: null,
+            'slug' => $resolvedSlug,
+            'serial' => $serial,
+            'hwid' => $hwid,
+            'hostname' => $hostname,
+            'ip' => (string) $request->ip(),
+            'countryCode' => $cc ?: null,
             'countryName' => trim((string) ($request->input('countryName') ?: '')),
         ];
     }

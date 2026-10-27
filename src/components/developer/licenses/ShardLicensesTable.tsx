@@ -5,9 +5,14 @@ import { ShardLicensesTableRow } from "./ShardLicensesTableRow";
 interface ShardLicensesTableProps {
   readonly licenses: readonly ShardLicense[];
   readonly onApplySerial?: (serial: string) => void;
+  readonly onDeleteLicense?: (licenseId: number) => void;
 }
 
-export function ShardLicensesTable({ licenses, onApplySerial }: ShardLicensesTableProps) {
+export function ShardLicensesTable({
+  licenses,
+  onApplySerial,
+  onDeleteLicense,
+}: ShardLicensesTableProps) {
   const [copiedSerial, setCopiedSerial] = useState<string | null>(null);
 
   const handleCopy = (serial: string) => {
@@ -27,6 +32,7 @@ export function ShardLicensesTable({ licenses, onApplySerial }: ShardLicensesTab
             <th className="py-2.5 px-3">Hardware Seats</th>
             <th className="py-2.5 px-3">Status</th>
             <th className="py-2.5 px-3 text-right">Created</th>
+            <th className="py-2.5 px-3 text-right">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -37,6 +43,7 @@ export function ShardLicensesTable({ licenses, onApplySerial }: ShardLicensesTab
               copiedSerial={copiedSerial}
               onCopy={handleCopy}
               onApplySerial={onApplySerial}
+              onDelete={onDeleteLicense}
             />
           ))}
         </tbody>

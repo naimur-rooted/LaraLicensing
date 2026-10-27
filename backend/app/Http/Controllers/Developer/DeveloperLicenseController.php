@@ -106,6 +106,78 @@ class DeveloperLicenseController extends Controller
     }
 
     /**
+     * Delete a license from the product shard if it has no active machine bindings.
+     */
+    public function deleteLicense(Request $request, string $productSlug, int $licenseId): JsonResponse
+    {
+        $userId = $this->resolveUserId($request);
+        if ($userId <= 0) {
+            throw AuthException::unauthorized('Authentication is required.');
+        }
+
+        $product = Product::where('productSlug', $productSlug)->first();
+        if (!$product) {
+            throw NotFoundException::notFound("Product '{$productSlug}' not found.");
+        }
+
+        $ownerId = (int) ($product->userId ?? $product->UserId ?? 0);
+        if ($ownerId !== $userId) {
+            throw AuthException::forbidden('You do not have permission to delete licenses for this product.');
+        }
+
+        $shardPath = database_path("product_{$productSlug}.sqlite");
+        if (!file_exists($shardPath)) {
+            throw NotFoundException::notFound('Product shard not found.');
+        }
+
+        $pdo = new PDO("sqlite:{$shardPath}");
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+        $checkTable = $pdo->query("SELECT name FROM sqlite_master WHERE type='table' AND name='ProductLicenses'")->fetch();
+        if (!$checkTable) {
+            throw NotFoundException::notFound('License not found.');
+        }
+
+        $stmt = $pdo->prepare('SELECT id FROM ProductLicenses WHERE id = :lid LIMIT 1');
+        $stmt->execute([':lid' => $licenseId]);
+        $license = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$license) {
+            throw NotFoundException::notFound('License not found.');
+        }
+
+        $checkHbTable = $pdo->query("SELECT name FROM sqlite_master WHERE type='table' AND name='HardwareBindings'")->fetch();
+        $activeSeats = 0;
+        if ($checkHbTable) {
+            $bStmt = $pdo->prepare('SELECT COUNT(*) as cnt FROM HardwareBindings WHERE licenseId = :lid');
+            $bStmt->execute([':lid' => $licenseId]);
+            $activeSeats = (int) ($bStmt->fetch(PDO::FETCH_ASSOC)['cnt'] ?? 0);
+        }
+
+        if ($activeSeats > 0) {
+            $conflictStatus = 409;
+            return response()->json([
+                'IsSuccess' => false,
+                'ErrorCode' => 'ActiveSeatsConflict',
+                'Message' => 'Cannot delete an active license with bound machines; revoke it instead.',
+            ], $conflictStatus);
+        }
+
+        $delStmt = $pdo->prepare('DELETE FROM ProductLicenses WHERE id = :lid');
+        $delStmt->execute([':lid' => $licenseId]);
+
+        $checkMbTable = $pdo->query("SELECT name FROM sqlite_master WHERE type='table' AND name='MachineBindings'")->fetch();
+        if ($checkMbTable) {
+            $delMb = $pdo->prepare('DELETE FROM MachineBindings WHERE LicenseId = :lid');
+            $delMb->execute([':lid' => $licenseId]);
+        }
+
+        return response()->json([
+            'IsSuccess' => true,
+            'Message' => 'License deleted successfully.',
+        ]);
+    }
+
+    /**
      * Resolve the authenticated user ID from Sanctum token or session.
      */
     private function resolveUserId(Request $request): int

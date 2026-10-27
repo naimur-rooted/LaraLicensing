@@ -7,7 +7,7 @@ interface BoundMachinesListProps {
 export function BoundMachinesList({ machines }: BoundMachinesListProps) {
   return (
     <tr className="bg-muted/15 border-b border-border/40">
-      <td colSpan={6} className="py-2.5 px-6">
+      <td colSpan={7} className="py-2.5 px-6">
         <div className="text-[11px] font-semibold text-muted-foreground uppercase mb-1.5">
           Bound Hardware Devices ({machines.length}):
         </div>

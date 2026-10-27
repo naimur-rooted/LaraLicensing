@@ -82,12 +82,10 @@ class ClientHandshakeService
         return $this->touchHeartbeatBinding($pdo, $license, $hardwareDigest, $product);
     }
 
-    /** Resolve active product by slug or default active product. */
+    /** Resolve active product by slug. */
     public function resolveActiveProduct(string $slug): ?Product
     {
-        $product = Product::with('deals')->where('productSlug', $slug)->where('isActive', true)->first();
-
-        return $product ?: Product::with('deals')->where('isActive', true)->first();
+        return Product::with('deals')->where('productSlug', $slug)->where('isActive', true)->first();
     }
 
     /** Process verification pipeline after license is validated. */
@@ -163,27 +161,52 @@ class ClientHandshakeService
         return ['isSuccess' => true, 'isDeactivated' => true, 'releasedAt' => $now->toISOString(), 'allowedSeats' => $allowedSeats, 'activeSeats' => $remaining, 'availableSeats' => max(0, $allowedSeats - $remaining)];
     }
 
-    /** Bind or refresh machine seat in MachineBindings. */
+    /** Bind or refresh machine seat in MachineBindings and HardwareBindings. */
     private function bindMachineSeat(PDO $pdo, int $licenseId, string $hwid, string $hostname, int $maxSeats, string $clientIp, string $countryCode, string $countryName): array
     {
-        $existing = $this->findActiveMachineBinding($pdo, $licenseId, $hwid);
-        if ($existing !== null) {
-            $this->updateMachineLastSeen($pdo, (int) $existing['MachineBindingId'], $hostname, $clientIp, $countryCode, $countryName);
-            $activeCount = $this->countActiveMachineBindings($pdo, $licenseId);
+        $normalizedHwid = strtolower(trim($hwid));
+
+        // Step A: Check Existing Binding in HardwareBindings or MachineBindings
+        $stmtHb = $pdo->prepare('SELECT * FROM HardwareBindings WHERE licenseId = :lid AND LOWER(hardwareDigest) = :hwid LIMIT 1');
+        $stmtHb->execute([':lid' => $licenseId, ':hwid' => $normalizedHwid]);
+        $existingHb = $stmtHb->fetch(PDO::FETCH_ASSOC);
+
+        $stmtMb = $pdo->prepare('SELECT * FROM MachineBindings WHERE LicenseId = :lid AND LOWER(FingerprintHash) = :hwid AND ReleasedAt IS NULL LIMIT 1');
+        $stmtMb->execute([':lid' => $licenseId, ':hwid' => $normalizedHwid]);
+        $existingMb = $stmtMb->fetch(PDO::FETCH_ASSOC);
+
+        // Step B: Idempotent Hit
+        if ($existingHb || $existingMb) {
+            $now = Carbon::now()->toISOString();
+
+            if ($existingMb) {
+                $updMb = $pdo->prepare('UPDATE MachineBindings SET LastSeenAt = :dt, Hostname = :h, ClientIp = :ip, CountryCode = :cc, CountryName = :cn, UpdatedAt = :dt WHERE MachineBindingId = :id');
+                $updMb->execute([':dt' => $now, ':h' => $hostname, ':ip' => $clientIp, ':cc' => $countryCode, ':cn' => $countryName, ':id' => $existingMb['MachineBindingId']]);
+            } else {
+                $insMb = $pdo->prepare('INSERT INTO MachineBindings (LicenseId, FingerprintHash, Hostname, ClientIp, CountryCode, CountryName, FirstSeenAt, LastSeenAt, ReleasedAt, RebindCooldownUntil, CreatedAt, UpdatedAt) VALUES (:lid, :hwid, :h, :ip, :cc, :cn, :dt, :dt, NULL, NULL, :dt, :dt)');
+                $insMb->execute([':lid' => $licenseId, ':hwid' => $normalizedHwid, ':h' => $hostname, ':ip' => $clientIp, ':cc' => $countryCode, ':cn' => $countryName, ':dt' => $now]);
+            }
+
+            if ($existingHb) {
+                $updHb = $pdo->prepare('UPDATE HardwareBindings SET lastSeenAt = :dt, hostname = :h, clientIp = :ip, countryCode = :cc, countryName = :cn WHERE id = :id');
+                $updHb->execute([':dt' => $now, ':h' => $hostname, ':ip' => $clientIp, ':cc' => $countryCode, ':cn' => $countryName, ':id' => $existingHb['id']]);
+            } else {
+                $insHb = $pdo->prepare('INSERT INTO HardwareBindings (licenseId, hardwareDigest, hostname, boundAt, lastSeenAt, clientIp, countryCode, countryName) VALUES (:lid, :hwid, :h, :dt, :dt, :ip, :cc, :cn)');
+                $insHb->execute([':lid' => $licenseId, ':hwid' => $normalizedHwid, ':h' => $hostname, ':dt' => $now, ':ip' => $clientIp, ':cc' => $countryCode, ':cn' => $countryName]);
+            }
+
+            $activeCount = max($this->countActiveMachineBindings($pdo, $licenseId), $this->countActiveHardwareBindings($pdo, $licenseId));
+
             return ['isBound' => true, 'activeCount' => $activeCount];
         }
 
-        return $this->attemptNewMachineBinding($pdo, $licenseId, $hwid, $hostname, $maxSeats, $clientIp, $countryCode, $countryName);
-    }
-
-    /** Attempt to bind a new machine seat subject to limits. */
-    private function attemptNewMachineBinding(PDO $pdo, int $licenseId, string $hwid, string $hostname, int $maxSeats, string $clientIp, string $countryCode, string $countryName): array
-    {
-        $activeCount = $this->countActiveMachineBindings($pdo, $licenseId);
+        // Step C: New Binding Gate
+        $activeCount = max($this->countActiveMachineBindings($pdo, $licenseId), $this->countActiveHardwareBindings($pdo, $licenseId));
         if ($activeCount >= $maxSeats) {
             return $this->seatLimitPayload($pdo, $licenseId, $maxSeats, $activeCount);
         }
-        $this->insertMachineBinding($pdo, $licenseId, $hwid, $hostname, $clientIp, $countryCode, $countryName);
+
+        $this->insertMachineBinding($pdo, $licenseId, $normalizedHwid, $hostname, $clientIp, $countryCode, $countryName);
 
         return ['isBound' => true, 'activeCount' => $activeCount + 1];
     }
@@ -202,11 +225,21 @@ class ClientHandshakeService
     /** Find active binding for given license and hardware digest. */
     private function findActiveMachineBinding(PDO $pdo, int $licenseId, string $hwid): ?array
     {
-        $stmt = $pdo->prepare('SELECT * FROM MachineBindings WHERE LicenseId = :lid AND FingerprintHash = :hwid AND ReleasedAt IS NULL LIMIT 1');
-        $stmt->execute([':lid' => $licenseId, ':hwid' => $hwid]);
+        $stmt = $pdo->prepare('SELECT * FROM MachineBindings WHERE LicenseId = :lid AND LOWER(FingerprintHash) = :hwid AND ReleasedAt IS NULL LIMIT 1');
+        $stmt->execute([':lid' => $licenseId, ':hwid' => strtolower(trim($hwid))]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
         return $row ?: null;
+    }
+
+    /** Count active hardware bindings for a license. */
+    private function countActiveHardwareBindings(PDO $pdo, int $licenseId): int
+    {
+        $stmt = $pdo->prepare('SELECT COUNT(*) as cnt FROM HardwareBindings WHERE licenseId = :lid');
+        $stmt->execute([':lid' => $licenseId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return (int) ($row['cnt'] ?? 0);
     }
 
     /** Update LastSeenAt timestamp on existing machine binding. */

@@ -20,6 +20,7 @@ export function ProductShardLicensesView({ onApplySerial }: ProductShardLicenses
     searchTerm,
     setSearchTerm,
     simulateMint,
+    deleteLicense,
     refresh,
   } = useShardLicenses();
 
@@ -46,7 +47,11 @@ export function ProductShardLicensesView({ onApplySerial }: ProductShardLicenses
           <span>Querying SQLite shard product_{selectedSlug}.sqlite...</span>
         </div>
       ) : hasLicenses ? (
-        <ShardLicensesTable licenses={licenses} onApplySerial={onApplySerial} />
+        <ShardLicensesTable
+          licenses={licenses}
+          onApplySerial={onApplySerial}
+          onDeleteLicense={deleteLicense}
+        />
       ) : (
         <ShardLicensesEmptyState
           selectedSlug={selectedSlug}

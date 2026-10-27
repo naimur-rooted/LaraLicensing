@@ -207,6 +207,181 @@ class DeveloperPortalTest extends TestCase
         $response->assertStatus(403);
     }
 
+    public function test_windows_style_idempotent_reactivation_and_seat_limits(): void
+    {
+        $product = Product::first();
+        $this->assertNotNull($product);
+
+        $issueRes = $this->postJson("/api/v1/products/{$product->productSlug}/licenses/issue", [
+            'transactionId' => 'tx_reactivate_' . uniqid(),
+            'customerEmail' => 'seatbuyer@example.test',
+            'dealCode' => 'ELM_1M_SINGLE',
+        ]);
+        $issueRes->assertStatus(200);
+        $serial = (string) $issueRes->json('Data.SerialValue');
+
+        // First activation by HWID alpha-123
+        $act1 = $this->postJson("/api/v1/products/{$product->productSlug}/activate", [
+            'serialValue' => $serial,
+            'hardwareDigest' => 'hwid-alpha-123',
+            'hostname' => 'Alpha Workstation',
+        ]);
+        $act1->assertStatus(200)
+            ->assertJsonPath('Data.isValid', true)
+            ->assertJsonPath('Data.activeSeats', 1);
+
+        // Idempotent re-activation with same HWID (uppercase variation)
+        $act2 = $this->postJson("/api/v1/products/{$product->productSlug}/activate", [
+            'license_key' => $serial,
+            'hwid' => 'HWID-ALPHA-123',
+            'machineName' => 'Alpha Workstation Renamed',
+        ]);
+        $act2->assertStatus(200)
+            ->assertJsonPath('Data.isValid', true)
+            ->assertJsonPath('Data.activeSeats', 1);
+
+        // Different machine attempt should be rejected with SeatLimitExceeded (409)
+        $act3 = $this->postJson("/api/v1/products/{$product->productSlug}/activate", [
+            'serial' => $serial,
+            'machineId' => 'hwid-beta-999',
+            'computerName' => 'Beta Workstation',
+        ]);
+        $act3->assertStatus(409)
+            ->assertJsonPath('Data.isValid', false)
+            ->assertJsonPath('Data.errorCode', 'SeatLimitExceeded');
+    }
+
+    public function test_dynamic_payload_extractor_aliases_and_missing_slug_validation(): void
+    {
+        $product = Product::first();
+        $this->assertNotNull($product);
+
+        // Missing slug should fail with 400
+        $failRes = $this->postJson('/api/v1/activate', [
+            'serial' => 'ANY-KEY',
+            'hwid' => 'any-hwid',
+        ]);
+        $failRes->assertStatus(400);
+
+        $issueRes = $this->postJson("/api/v1/products/{$product->productSlug}/licenses/issue", [
+            'transactionId' => 'tx_aliases_' . uniqid(),
+            'customerEmail' => 'aliastester@example.test',
+            'dealCode' => 'ELM_1Y_THREE',
+        ]);
+        $issueRes->assertStatus(200);
+        $serial = (string) $issueRes->json('Data.SerialValue');
+
+        // Test with key, machineGuid, computerName aliases via productSlug body parameter
+        $act = $this->postJson('/api/v1/activate', [
+            'productSlug' => $product->productSlug,
+            'key' => strtolower($serial),
+            'machineGuid' => 'GUID-TEST-456',
+            'computerName' => 'Developer Rig',
+        ]);
+        $act->assertStatus(200)
+            ->assertJsonPath('Data.isValid', true)
+            ->assertJsonPath('Data.serialValue', strtoupper($serial));
+    }
+
+    public function test_developer_can_delete_license_without_active_seats(): void
+    {
+        $product = Product::first();
+        $this->assertNotNull($product);
+
+        $ownerId = (int) ($product->userId ?? $product->UserId ?? 1);
+        $owner = new User();
+        $owner->UserId = $ownerId;
+
+        $issueRes = $this->postJson("/api/v1/products/{$product->productSlug}/licenses/issue", [
+            'transactionId' => 'tx_del_' . uniqid(),
+            'customerEmail' => 'deletable@example.test',
+            'dealCode' => 'ELM_1M_SINGLE',
+        ]);
+        $issueRes->assertStatus(200);
+
+        // List licenses to find the created licenseId
+        $listRes = $this->actingAs($owner)->getJson("/api/v1/developer/products/{$product->productSlug}/licenses");
+        $listRes->assertStatus(200);
+        $licenses = $listRes->json('Data');
+        $this->assertNotEmpty($licenses);
+        $targetLicense = $licenses[0];
+        $licenseId = (int) $targetLicense['licenseId'];
+
+        // Delete license
+        $delRes = $this->actingAs($owner)->deleteJson("/api/v1/developer/products/{$product->productSlug}/licenses/{$licenseId}");
+        $delRes->assertStatus(200)
+            ->assertJsonPath('IsSuccess', true)
+            ->assertJsonPath('Message', 'License deleted successfully.');
+
+        // Deleting non-existent license returns 404
+        $delAgain = $this->actingAs($owner)->deleteJson("/api/v1/developer/products/{$product->productSlug}/licenses/{$licenseId}");
+        $delAgain->assertStatus(404);
+    }
+
+    public function test_cannot_delete_license_with_active_seats_conflict(): void
+    {
+        $product = Product::first();
+        $this->assertNotNull($product);
+
+        $ownerId = (int) ($product->userId ?? $product->UserId ?? 1);
+        $owner = new User();
+        $owner->UserId = $ownerId;
+
+        $issueRes = $this->postJson("/api/v1/products/{$product->productSlug}/licenses/issue", [
+            'transactionId' => 'tx_conflict_' . uniqid(),
+            'customerEmail' => 'activebound@example.test',
+            'dealCode' => 'ELM_1M_SINGLE',
+        ]);
+        $issueRes->assertStatus(200);
+        $serial = (string) $issueRes->json('Data.SerialValue');
+
+        // Activate seat
+        $this->postJson("/api/v1/products/{$product->productSlug}/activate", [
+            'serialValue' => $serial,
+            'hardwareDigest' => 'hwid-bound-device',
+        ])->assertStatus(200);
+
+        // Get license ID
+        $listRes = $this->actingAs($owner)->getJson("/api/v1/developer/products/{$product->productSlug}/licenses");
+        $licenses = $listRes->json('Data');
+        $licenseId = (int) $licenses[0]['licenseId'];
+
+        // Attempt deletion while seat is bound
+        $delRes = $this->actingAs($owner)->deleteJson("/api/v1/developer/products/{$product->productSlug}/licenses/{$licenseId}");
+        $delRes->assertStatus(409)
+            ->assertJsonPath('IsSuccess', false)
+            ->assertJsonPath('ErrorCode', 'ActiveSeatsConflict')
+            ->assertJsonPath('Message', 'Cannot delete an active license with bound machines; revoke it instead.');
+
+        // Now deactivate seat
+        $this->postJson("/api/v1/products/{$product->productSlug}/deactivate", [
+            'serialValue' => $serial,
+            'hardwareDigest' => 'hwid-bound-device',
+        ])->assertStatus(200);
+
+        // Deletion should now succeed
+        $delSuccess = $this->actingAs($owner)->deleteJson("/api/v1/developer/products/{$product->productSlug}/licenses/{$licenseId}");
+        $delSuccess->assertStatus(200)
+            ->assertJsonPath('IsSuccess', true)
+            ->assertJsonPath('Message', 'License deleted successfully.');
+    }
+
+    public function test_non_owner_or_unauthenticated_cannot_delete_license(): void
+    {
+        $product = Product::first();
+        $this->assertNotNull($product);
+
+        // Unauthenticated -> 401
+        $this->deleteJson("/api/v1/developer/products/{$product->productSlug}/licenses/1")
+            ->assertStatus(401);
+
+        // Non-owner -> 403
+        $otherUser = new User();
+        $otherUser->UserId = 88888;
+        $this->actingAs($otherUser)->deleteJson("/api/v1/developer/products/{$product->productSlug}/licenses/1")
+            ->assertStatus(403);
+    }
+
     private function cleanUpShard(string $slug): void
     {
         $shardPath = database_path("product_{$slug}.sqlite");

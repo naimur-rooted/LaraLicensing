@@ -1,6 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
 import type { ShardLicense, ProductSelectItem } from "./types";
-import { getApiBaseUrl } from "@/lib/lara-api-client";
+import {
+  fetchProductList,
+  fetchProductLicenses,
+  issueSimulatedLicense,
+  deleteProductLicenseShard,
+} from "./shardLicensesApi";
 
 export function useShardLicenses() {
   const [products, setProducts] = useState<readonly ProductSelectItem[]>([]);
@@ -10,71 +15,54 @@ export function useShardLicenses() {
   const [isMinting, setIsMinting] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState<string>("");
 
-  const getHeaders = useCallback((): HeadersInit => {
-    const token = sessionStorage.getItem("LicensingPortal.AccessToken") ?? "";
-    const headers: Record<string, string> = { Accept: "application/json" };
-    if (token.length > 0) {
-      headers.Authorization = `Bearer ${token}`;
+  const loadProducts = useCallback(async () => {
+    const list = await fetchProductList();
+    setProducts(list);
+    if (list.length > 0) {
+      setSelectedSlug((prev) => (prev.length > 0 ? prev : list[0].productSlug));
     }
-    return headers;
   }, []);
 
-  const fetchProducts = useCallback(async () => {
-    try {
-      const res = await fetch(`${getApiBaseUrl()}/api/v1/developer/products`, { headers: getHeaders() });
-      const json = await res.json();
-      const list: ProductSelectItem[] = json?.Data ?? [];
-      setProducts(list);
-      if (list.length > 0) {
-        setSelectedSlug((prev) => (prev.length > 0 ? prev : list[0].productSlug));
-      }
-    } catch {
-      setProducts([]);
-    }
-  }, [getHeaders]);
-
-  const fetchLicenses = useCallback(async (slug: string) => {
+  const loadLicenses = useCallback(async (slug: string) => {
     if (slug.length === 0) return;
     setIsLoading(true);
     try {
-      const res = await fetch(`${getApiBaseUrl()}/api/v1/developer/products/${slug}/licenses`, { headers: getHeaders() });
-      const json = await res.json();
-      setLicenses(json?.Data ?? []);
-    } catch {
-      setLicenses([]);
+      const data = await fetchProductLicenses(slug);
+      setLicenses(data);
     } finally {
       setIsLoading(false);
     }
-  }, [getHeaders]);
+  }, []);
 
   const simulateMint = useCallback(async (dealCode: string = "MONTHLY_ANCHOR") => {
     if (selectedSlug.length === 0) return;
     setIsMinting(true);
     try {
-      await fetch(`${getApiBaseUrl()}/api/v1/products/${selectedSlug}/licenses/issue`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getHeaders() },
-        body: JSON.stringify({
-          transactionId: `tx_mock_${Date.now()}`,
-          customerEmail: "developer-test@domain.local",
-          dealCode,
-        }),
-      });
-      await fetchLicenses(selectedSlug);
+      await issueSimulatedLicense(selectedSlug, dealCode);
+      await loadLicenses(selectedSlug);
     } finally {
       setIsMinting(false);
     }
-  }, [selectedSlug, getHeaders, fetchLicenses]);
+  }, [selectedSlug, loadLicenses]);
+
+  const deleteLicense = useCallback(async (licenseId: number): Promise<boolean> => {
+    if (selectedSlug.length === 0) return false;
+    const ok = await deleteProductLicenseShard(selectedSlug, licenseId);
+    if (ok) {
+      await loadLicenses(selectedSlug);
+    }
+    return ok;
+  }, [selectedSlug, loadLicenses]);
 
   useEffect(() => {
-    fetchProducts();
-  }, [fetchProducts]);
+    loadProducts();
+  }, [loadProducts]);
 
   useEffect(() => {
     if (selectedSlug.length > 0) {
-      fetchLicenses(selectedSlug);
+      loadLicenses(selectedSlug);
     }
-  }, [selectedSlug, fetchLicenses]);
+  }, [selectedSlug, loadLicenses]);
 
   const filteredLicenses = licenses.filter((item) => {
     if (searchTerm.length === 0) return true;
@@ -93,6 +81,7 @@ export function useShardLicenses() {
     searchTerm,
     setSearchTerm,
     simulateMint,
-    refresh: () => fetchLicenses(selectedSlug),
+    deleteLicense,
+    refresh: () => loadLicenses(selectedSlug),
   };
 }

@@ -3,12 +3,14 @@ import { Copy, Check, ChevronDown, ChevronRight, Laptop, ShieldCheck, Ban } from
 import { Button } from "@/components/ui/button";
 import type { ShardLicense } from "./types";
 import { BoundMachinesList } from "./BoundMachinesList";
+import { DeleteLicenseButton } from "./DeleteLicenseButton";
 
 interface ShardLicensesTableRowProps {
   readonly license: ShardLicense;
   readonly copiedSerial: string | null;
   readonly onCopy: (serial: string) => void;
   readonly onApplySerial?: (serial: string) => void;
+  readonly onDelete?: (licenseId: number) => void;
 }
 
 export function ShardLicensesTableRow({
@@ -16,6 +18,7 @@ export function ShardLicensesTableRow({
   copiedSerial,
   onCopy,
   onApplySerial,
+  onDelete,
 }: ShardLicensesTableRowProps) {
   const [isExpanded, setIsExpanded] = useState<boolean>(false);
   const isCopied = copiedSerial === license.serialValue;
@@ -61,25 +64,27 @@ export function ShardLicensesTableRow({
 
         <td className="py-2.5 px-3">
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-secondary text-secondary-foreground">
-            <Laptop className="size-3" />
-            {license.activeSeats} / {license.allowedSeats} Seats
+            <Laptop className="size-3" /> {license.activeSeats} / {license.allowedSeats} Seats
           </span>
         </td>
 
         <td className="py-2.5 px-3">
-          {license.isActive ? (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-              <ShieldCheck className="size-3" /> Active
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
-              <Ban className="size-3" /> Revoked
-            </span>
-          )}
+          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium border ${license.isActive ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20" : "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20"}`}>
+            {license.isActive ? <ShieldCheck className="size-3" /> : <Ban className="size-3" />} {license.isActive ? "Active" : "Revoked"}
+          </span>
         </td>
 
         <td className="py-2.5 px-3 text-muted-foreground text-right whitespace-nowrap">
           {license.createdAt.length > 10 ? license.createdAt.substring(0, 10) : license.createdAt}
+        </td>
+
+        <td className="py-2.5 px-3 text-right whitespace-nowrap">
+          <DeleteLicenseButton
+            licenseId={license.licenseId}
+            serialValue={license.serialValue}
+            activeSeats={license.activeSeats}
+            onDelete={onDelete}
+          />
         </td>
       </tr>
 
