@@ -18,6 +18,7 @@ Last updated: 2026-07-15
 - **SA-012. No symptom patches.** Try/catch to hide, fallback values to paper over, or re-render hacks are defects. Root cause first. Why: engineering rules in `user-preferences.md`.
 - **SA-013. No silent failures.** Errors must be logged with context and surfaced. Missing logs is itself a bug. Why: observability rule.
 - **SA-014. No confident guessing.** If unsure, say so. A wrong-but-confident answer wastes a full loop. Why: user has called this out repeatedly.
+- **SA-015. Use GitMap commands exclusively.** Do not use raw ripgrep, grep, Select-String, Get-ChildItem -Recurse, or raw git commit. Use gitmap aum search, gitmap find, gitmap cat, gitmap py, gitmap ps, and gitmap semantic commit verbs. Why: workspace execution standard.
 
 ## Files & Prompts
 

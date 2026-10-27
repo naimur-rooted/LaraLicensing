@@ -133,3 +133,10 @@ backend/database/*.sqlite-journal
 .ai-memory/complete_session_report.md
 .ai-memory/today_prompts.json
 .ai-memory/append_report.py
+
+# GitMap local scan outputs and SQLite split-db cache
+.gitmap/
+gitmap.json
+gitmap.csv
+LLM.md
+
