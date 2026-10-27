@@ -35,6 +35,14 @@ class Product extends Model
         'isActive' => 'boolean',
     ];
 
+    // Never serialize the private key or webhook secret in API responses.
+    // ProductController returns the model directly, so without this the
+    // private key and webhook secret would leak to any caller of show/index.
+    protected $hidden = [
+        'ed25519PrivateKey',
+        'webhookSecret',
+    ];
+
     public function deals(): HasMany
     {
         return $this->hasMany(ProductDeal::class, 'productId', 'ProductId');

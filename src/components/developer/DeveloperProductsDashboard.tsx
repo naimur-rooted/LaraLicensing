@@ -160,6 +160,7 @@ export function DeveloperProductsDashboard({ onOpenPlanModal }: DeveloperProduct
   const [dealSeats, setDealSeats] = useState("5");
   const [dealFeatures, setDealFeatures] = useState("");
   const [isDecoy, setIsDecoy] = useState(true);
+  const [addDealError, setAddDealError] = useState<string | null>(null);
 
   // Edit Deal Modal State
   const [isEditDealOpen, setIsEditDealOpen] = useState(false);
@@ -343,13 +344,26 @@ ${dealsList}
       features: parsedFeatures,
     };
 
+    setAddDealError(null);
     try {
-      await fetch(`${getApiBaseUrl()}/api/v1/developer/products/${targetProduct.productSlug}/deals`, {
+      const res = await fetch(`${getApiBaseUrl()}/api/v1/developer/products/${targetProduct.productSlug}/deals`, {
         method: "POST",
         headers: getDeveloperHeaders(),
         body: JSON.stringify(newDeal),
       });
-    } catch {}
+      if (!res.ok) {
+        setAddDealError("Deal could not be saved. Please try again.");
+        return;
+      }
+      const payload = await res.json().catch(() => null);
+      if (payload && payload.IsSuccess === false) {
+        setAddDealError("Deal could not be saved. Please try again.");
+        return;
+      }
+    } catch {
+      setAddDealError("Deal could not be saved. Please check your connection and try again.");
+      return;
+    }
 
     const updated = products.map((p) => {
       if (p.productSlug === targetProduct.productSlug) {
@@ -359,6 +373,7 @@ ${dealsList}
     });
     setProducts(updated);
     setIsAddDealOpen(false);
+    setAddDealError(null);
     setDealName("");
     setDealCode("");
     setDealFeatures("");
@@ -842,6 +857,9 @@ ${dealsList}
               />
             </div>
           </div>
+          {addDealError ? (
+            <p className="text-xs text-red-600 px-1">{addDealError}</p>
+          ) : null}
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAddDealOpen(false)}>
               Cancel

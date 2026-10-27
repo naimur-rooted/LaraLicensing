@@ -37,6 +37,7 @@ export function CreateProductDialog({ isOpen, onOpenChange, onProductCreated }: 
   const [aiStrategy, setAiStrategy] = useState<"decoy-matrix" | "daily-pass" | "appsumo-ltd" | "b2b-agency" | "low-barrier">("decoy-matrix");
   const [aiKillerFeatures, setAiKillerFeatures] = useState("");
   const [aiTargetPrice, setAiTargetPrice] = useState("");
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const handleCategoryChange = (val: string) => {
     setCategory(val);
@@ -191,20 +192,14 @@ export function CreateProductDialog({ isOpen, onOpenChange, onProductCreated }: 
       };
     });
 
-    const newProduct: DeveloperProductItem = {
-      ProductId: Date.now(),
-      productSlug: cleanSlug,
-      productName: productName.trim(),
-      category: finalCategory,
-      description: description.trim() || undefined,
-      checkIntervalDays: parseInt(checkIntervalDays, 10) || 7,
-      ed25519PublicKey: "MCowBQYDK2VwAyEA" + Math.random().toString(36).substring(2, 15) + "=",
-      deals: processedDeals,
-    };
-
-    // Provision real SQLite shard and deals on the backend
+    setSubmitError(null);
+    // Provision real SQLite shard and deals on the backend.
+    // Do not fabricate a key locally and do not claim success on failure.
+    // Only the server response may supply a public key, and only a
+    // successful response closes the dialog and adds the product.
+    let serverPublicKey: string | undefined;
     try {
-      await fetch(`${getApiBaseUrl()}/api/v1/developer/products`, {
+      const res = await fetch(`${getApiBaseUrl()}/api/v1/developer/products`, {
         method: "POST",
         headers: getDeveloperHeaders(),
         body: JSON.stringify({
@@ -216,15 +211,40 @@ export function CreateProductDialog({ isOpen, onOpenChange, onProductCreated }: 
           deals: processedDeals,
         }),
       });
+      if (!res.ok) {
+        setSubmitError("Product could not be created. Please try again.");
+        return;
+      }
+      const payload = await res.json().catch(() => null);
+      if (payload && payload.IsSuccess === false) {
+        setSubmitError("Product could not be created. Please try again.");
+        return;
+      }
+      if (payload && payload.Data && typeof payload.Data.ed25519PublicKey === "string") {
+        serverPublicKey = payload.Data.ed25519PublicKey;
+      }
     } catch {
-      // Local fallback
+      setSubmitError("Product could not be created. Please check your connection and try again.");
+      return;
     }
+
+    const newProduct: DeveloperProductItem = {
+      ProductId: Date.now(),
+      productSlug: cleanSlug,
+      productName: productName.trim(),
+      category: finalCategory,
+      description: description.trim() || undefined,
+      checkIntervalDays: parseInt(checkIntervalDays, 10) || 7,
+      ed25519PublicKey: serverPublicKey,
+      deals: processedDeals,
+    };
 
     onProductCreated(newProduct);
     onOpenChange(false);
     setProductName("");
     setCustomCategory("");
     setDescription("");
+    setSubmitError(null);
   };
 
   return (
@@ -577,6 +597,9 @@ export function CreateProductDialog({ isOpen, onOpenChange, onProductCreated }: 
           </div>
         </div>
 
+        {submitError ? (
+          <p className="text-xs text-red-600 px-1">{submitError}</p>
+        ) : null}
         <DialogFooter className="sm:justify-between pt-2">
           <span className="text-xs text-muted-foreground flex items-center gap-1">
             <CheckCircle2 className="size-3.5 text-emerald-500" />
