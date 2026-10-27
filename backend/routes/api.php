@@ -20,6 +20,7 @@ declare(strict_types=1);
 use App\Http\Controllers\Admin\BindingController as AdminBindingController;
 use App\Http\Controllers\Admin\LicenseController;
 use App\Http\Controllers\Admin\FeatureController;
+use App\Http\Controllers\Admin\PricingPlanController;
 use App\Http\Controllers\Admin\PrefixController;
 use App\Http\Controllers\Admin\QuotaRequestController as AdminQuotaRequestController;
 use App\Http\Controllers\Admin\ResellerController;
@@ -92,6 +93,15 @@ Route::middleware(['auth:sanctum', 'session.active', 'require.role:Admin|SuperAd
 
         // Plan 06 step 70. Feature catalog + TierFeatures matrix (Root, read-only).
         Route::get('/Features', [FeatureController::class, 'index'])->name('features.index');
+
+        // Admin PricingPlans CRUD (Root DB). The public read path
+        // GET /Pricing/Plans (active plans only) is unchanged; this admin
+        // surface lists all plans and allows create/update/delete.
+        Route::get('/PricingPlans', [PricingPlanController::class, 'index'])->name('pricing_plans.index');
+        Route::post('/PricingPlans', [PricingPlanController::class, 'store'])->name('pricing_plans.store');
+        Route::get('/PricingPlans/{PricingPlanId}', [PricingPlanController::class, 'show'])->where('PricingPlanId', '[0-9]+')->name('pricing_plans.show');
+        Route::patch('/PricingPlans/{PricingPlanId}', [PricingPlanController::class, 'update'])->where('PricingPlanId', '[0-9]+')->name('pricing_plans.update');
+        Route::delete('/PricingPlans/{PricingPlanId}', [PricingPlanController::class, 'destroy'])->where('PricingPlanId', '[0-9]+')->name('pricing_plans.destroy');
 
         // Plan 06 step 30. Prefix registry on the Root DB.
         Route::get('/Prefixes', [PrefixController::class, 'index'])->name('prefixes.index');
