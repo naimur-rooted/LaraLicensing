@@ -29,13 +29,29 @@ class ProductController extends Controller
         return response()->json(['IsSuccess' => true, 'Data' => $products]);
     }
 
-    public function show(string $slug): JsonResponse
+    public function show(string $slug, Request $request): JsonResponse
     {
         $product = $this->productService->getProductBySlug($slug);
         if (!$product) {
             throw NotFoundException::notFound('Product not found.');
         }
+        $this->requireOwnerForRequest($product, $request);
         return response()->json(['IsSuccess' => true, 'Data' => $product]);
+    }
+
+    // Defence in depth: route middleware already requires Sanctum auth,
+    // but a direct controller call must still not leak another developer's
+    // product. The product owner is the only caller allowed here.
+    private function requireOwnerForRequest($product, Request $request): void
+    {
+        $userId = $this->resolveUserId($request);
+        if ($userId <= 0) {
+            throw AuthException::unauthorized('Authentication is required.');
+        }
+        $ownerId = (int) ($product->userId ?? $product->UserId ?? 0);
+        if ($ownerId !== $userId) {
+            throw AuthException::forbidden('You do not have permission to access this product.');
+        }
     }
 
     public function store(Request $request): JsonResponse
@@ -68,6 +84,7 @@ class ProductController extends Controller
         if (!$product) {
             throw NotFoundException::notFound('Product not found.');
         }
+        $this->requireOwnerForRequest($product, $request);
         $deal = $this->productService->createDeal($product, $request->all());
         return response()->json(['IsSuccess' => true, 'Data' => $deal], 201);
     }
@@ -78,6 +95,7 @@ class ProductController extends Controller
         if (!$product) {
             throw NotFoundException::notFound('Product not found.');
         }
+        $this->requireOwnerForRequest($product, $request);
         $deal = $this->productService->updateDeal($product, $dealId, $request->all());
         if (!$deal) {
             throw NotFoundException::notFound('Deal not found.');
@@ -85,22 +103,27 @@ class ProductController extends Controller
         return response()->json(['IsSuccess' => true, 'Data' => $deal]);
     }
 
-    public function deleteDeal(string $slug, int $dealId): JsonResponse
+    public function deleteDeal(string $slug, int $dealId, Request $request): JsonResponse
     {
         $product = $this->productService->getProductBySlug($slug);
         if (!$product) {
             throw NotFoundException::notFound('Product not found.');
         }
+        $this->requireOwnerForRequest($product, $request);
         $deleted = $this->productService->deleteDeal($product, $dealId);
-        return response()->json(['IsSuccess' => $deleted]);
+        if (!$deleted) {
+            throw NotFoundException::notFound('Deal not found.');
+        }
+        return response()->json(['IsSuccess' => true]);
     }
 
-    public function aiBlueprint(string $slug): JsonResponse
+    public function aiBlueprint(string $slug, Request $request): JsonResponse
     {
         $product = $this->productService->getProductBySlug($slug);
         if (!$product) {
             throw NotFoundException::notFound('Product not found.');
         }
+        $this->requireOwnerForRequest($product, $request);
         $blueprint = $this->productService->generateAiBlueprint($product);
         return response()->json(['IsSuccess' => true, 'Data' => ['BlueprintMarkdown' => $blueprint, 'ProductSlug' => $slug]]);
     }
@@ -116,11 +139,21 @@ class ProductController extends Controller
         if (empty($txId) || empty($email)) {
             throw ValidationException::invalidInput('transactionId and customerEmail are required.');
         }
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            throw ValidationException::invalidInput('customerEmail must be a valid email address.');
+        }
 
         $dealCode = trim((string) $request->input('dealCode', ''));
-        $deal = $product->deals->where('dealCode', $dealCode)->first();
-        $seats = $deal ? (int) $deal->allowedMachineSeats : 1;
-        $resolvedDeal = $deal ? (string) $deal->dealCode : ($dealCode ?: 'DEFAULT');
+        // A license must be linked to a real deal for this product.
+        // Previously an unknown dealCode fell back to 'DEFAULT' and minted
+        // a license with no deal linkage, so portal and verify could not
+        // tell what was actually purchased.
+        $deal = $dealCode !== '' ? $product->deals->where('dealCode', strtoupper($dealCode))->first() : null;
+        if (!$deal) {
+            throw ValidationException::invalidInput('dealCode must match an existing deal for this product.');
+        }
+        $seats = (int) $deal->allowedMachineSeats;
+        $resolvedDeal = (string) $deal->dealCode;
 
         $serialValue = strtoupper($product->productSlug . '-' . substr(md5($txId . $email), 0, 16));
         $this->productService->recordShardLicense($product, $serialValue, $resolvedDeal, $seats);

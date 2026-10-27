@@ -264,6 +264,16 @@ class PaymentWebhookTest extends TestCase
         $this->assertSame([], $response->json('Results'));
     }
 
+    public function test_unknown_product_has_no_fallback_secret(): void
+    {
+        // B4: previously resolveSecret returned a literal default for an
+        // unknown product, so a forged signature could pass. Now it must
+        // return null when no product secret and no env secret exist.
+        $secret = app(\App\Services\PaymentWebhookService::class)
+            ->resolveSecret('stripe', 'definitely-not-a-real-product-slug');
+        $this->assertNull($secret);
+    }
+
     public function test_missing_customer_email_returns_422(): void
     {
         $payloadArray = [

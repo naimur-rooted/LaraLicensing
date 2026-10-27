@@ -629,7 +629,11 @@ Route::post('/Serials/OfflineToken', function (\Illuminate\Http\Request $request
 // Developer Portal Product Management & AI Integration Endpoints
 // Public Deals API for Method 1 Headless Synchronization
 Route::get('/v1/products/{slug}/deals', [\App\Http\Controllers\Developer\ProductController::class, 'publicDeals'])->name('api.products.deals.public');
-Route::prefix('v1/developer')->group(function (): void {
+// Developer portal routes require Sanctum auth. Public pricing JSON stays
+// outside this group (publicDeals above), and client verify/activate and
+// gateway webhooks below stay unauthenticated by design — they are
+// protected by license-serial and HMAC checks, not by developer login.
+Route::middleware('auth:sanctum')->prefix('v1/developer')->group(function (): void {
     Route::get('/overview', [\App\Http\Controllers\Developer\DeveloperOverviewController::class, 'overview'])->name('api.developer.overview');
     Route::post('/ai/chat', [\App\Http\Controllers\Developer\DeveloperOverviewController::class, 'chat'])->name('api.developer.ai.chat');
     Route::get('/products', [\App\Http\Controllers\Developer\ProductController::class, 'index'])->name('api.developer.products.index');

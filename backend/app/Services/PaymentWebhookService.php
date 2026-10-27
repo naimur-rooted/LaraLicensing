@@ -18,7 +18,12 @@ use PDO;
  */
 class PaymentWebhookService
 {
-    private const DEFAULT_SECRET = 'whsec_test_shared_secret_key_123';
+    // No hardcoded fallback secret: if a product has no webhookSecret and
+    // no gateway env secret is configured, the caller must fail closed
+    // with 401 instead of accepting a signature made with a public default.
+    // Previous behaviour returned a literal default here, which meant an
+    // attacker who read the repo could forge a valid signature for any
+    // unknown product slug.
 
     public function isSignatureValid(string $gateway, Request $request, string $secret): bool
     {
@@ -51,6 +56,12 @@ class PaymentWebhookService
         $timestamp = $tMatches[1] ?? '';
         $expectedSig = $v1Matches[1] ?? '';
         if ($timestamp === '' || $expectedSig === '') {
+            return false;
+        }
+        // Stripe replay protection: reject timestamps more than 5 minutes
+        // old or in the future. Tests use time() at request time, so this
+        // does not break valid current webhooks.
+        if (abs(time() - (int) $timestamp) > 300) {
             return false;
         }
 
@@ -225,15 +236,16 @@ class PaymentWebhookService
         }
     }
 
-    public function resolveSecret(string $gateway, string $productSlug): string
+    public function resolveSecret(string $gateway, string $productSlug): ?string
     {
         $product = Product::query()->where('productSlug', $productSlug)->first();
         if ($product !== null && !empty($product->webhookSecret)) {
             return (string) $product->webhookSecret;
         }
         $envKey = strtoupper($gateway) . '_WEBHOOK_SECRET';
+        $envSecret = (string) env($envKey, '');
 
-        return (string) env($envKey, self::DEFAULT_SECRET);
+        return $envSecret !== '' ? $envSecret : null;
     }
 
     private function ensureWebhookTableExists(): void

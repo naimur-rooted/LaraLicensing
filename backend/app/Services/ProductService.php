@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Exceptions\ValidationException;
 use App\Models\Product;
 use App\Models\ProductDeal;
 use Illuminate\Database\Eloquent\Collection;
@@ -37,6 +38,12 @@ class ProductService
     public function createProduct(int $userId, array $attributes): Product
     {
         $slug = Str::slug((string) ($attributes['productSlug'] ?? $attributes['productName']));
+        if ($slug === '') {
+            throw ValidationException::invalidInput('productSlug could not be derived from productName.');
+        }
+        if (Product::query()->where('productSlug', $slug)->exists()) {
+            throw ValidationException::invalidInput('productSlug already exists.');
+        }
         $keyPair = $this->generateKeyPair();
         $product = Product::create($this->buildProductPayload($userId, $slug, $attributes, $keyPair));
         $this->provisionProductShard($slug);
@@ -175,19 +182,74 @@ class ProductService
         $check = $pdo->prepare('SELECT id FROM ProductLicenses WHERE serialValue = :s LIMIT 1');
         $check->execute([':s' => $serial]);
         if (!$check->fetch()) {
-            $ins = $pdo->prepare('INSERT INTO ProductLicenses (serialValue, dealCode, allowedSeats, isActive, isRevoked, createdAt) VALUES (:s, :d, :seats, 1, 0, :dt)');
-            $ins->execute([
-                ':s' => $serial,
-                ':d' => $dealCode,
-                ':seats' => max(1, $allowedSeats),
-                ':dt' => now()->toISOString(),
-            ]);
+            try {
+                $ins = $pdo->prepare('INSERT OR IGNORE INTO ProductLicenses (serialValue, dealCode, allowedSeats, isActive, isRevoked, createdAt) VALUES (:s, :d, :seats, 1, 0, :dt)');
+                $ins->execute([
+                    ':s' => $serial,
+                    ':d' => $dealCode,
+                    ':seats' => max(1, $allowedSeats),
+                    ':dt' => now()->toISOString(),
+                ]);
+            } catch (\PDOException $e) {
+                // Concurrent replay racing the check above: a UNIQUE
+                // violation means the serial already exists, which is
+                // idempotent success, not a 500. Re-throw anything else.
+                if (!str_contains((string) $e->getMessage(), 'UNIQUE') && (int) $e->getCode() !== 23000) {
+                    throw $e;
+                }
+            }
         }
+    }
+
+    private const ALLOWED_BILLING_INTERVALS = [
+        'daily', 'weekly', 'monthly', 'quarterly', 'yearly', 'biennial', 'lifetime',
+    ];
+
+    private function validateDealAttributes(Product $product, array $attributes, ?int $excludeDealId = null): array
+    {
+        $dealName = trim((string) ($attributes['dealName'] ?? ''));
+        if ($dealName === '') {
+            throw ValidationException::invalidInput('dealName is required.');
+        }
+        $dealCode = strtoupper(trim((string) ($attributes['dealCode'] ?? '')));
+        if ($dealCode === '') {
+            throw ValidationException::invalidInput('dealCode is required.');
+        }
+        $interval = (string) ($attributes['billingInterval'] ?? 'monthly');
+        if (!in_array($interval, self::ALLOWED_BILLING_INTERVALS, true)) {
+            throw ValidationException::invalidInput('billingInterval must be one of: daily, weekly, monthly, quarterly, yearly, biennial, lifetime.');
+        }
+        $priceRaw = $attributes['priceCents'] ?? 0;
+        if (!is_numeric($priceRaw) || (int) $priceRaw < 0) {
+            throw ValidationException::invalidInput('priceCents must be a non-negative integer.');
+        }
+        $seatsRaw = $attributes['allowedMachineSeats'] ?? 1;
+        if (!is_numeric($seatsRaw) || (int) $seatsRaw < 1) {
+            throw ValidationException::invalidInput('allowedMachineSeats must be at least 1.');
+        }
+        $dealQuery = ProductDeal::query()
+            ->where('productId', $product->ProductId)
+            ->where('dealCode', $dealCode);
+        if ($excludeDealId !== null) {
+            $dealQuery->where('ProductDealId', '!=', $excludeDealId);
+        }
+        if ($dealQuery->exists()) {
+            throw ValidationException::invalidInput('dealCode already exists for this product.');
+        }
+
+        return [
+            'dealName' => $dealName,
+            'dealCode' => $dealCode,
+            'billingInterval' => $interval,
+            'priceCents' => (int) $priceRaw,
+            'allowedMachineSeats' => (int) $seatsRaw,
+        ];
     }
 
     /** Create a deal/pricing package for a product. */
     public function createDeal(Product $product, array $attributes): ProductDeal
     {
+        $validated = $this->validateDealAttributes($product, $attributes);
         $features = $attributes['features'] ?? [];
         if (is_string($features)) {
             $features = array_values(array_filter(array_map('trim', explode("\n", $features))));
@@ -195,11 +257,11 @@ class ProductService
 
         return ProductDeal::create([
             'productId' => $product->ProductId,
-            'dealName' => (string) $attributes['dealName'],
-            'dealCode' => strtoupper(trim((string) $attributes['dealCode'])),
-            'billingInterval' => (string) ($attributes['billingInterval'] ?? 'monthly'),
-            'priceCents' => (int) ($attributes['priceCents'] ?? 0),
-            'allowedMachineSeats' => (int) ($attributes['allowedMachineSeats'] ?? 1),
+            'dealName' => $validated['dealName'],
+            'dealCode' => $validated['dealCode'],
+            'billingInterval' => $validated['billingInterval'],
+            'priceCents' => $validated['priceCents'],
+            'allowedMachineSeats' => $validated['allowedMachineSeats'],
             'allowedDomains' => (int) ($attributes['allowedDomains'] ?? 1),
             'isDecoyTarget' => (bool) ($attributes['isDecoyTarget'] ?? false),
             'features' => is_array($features) ? $features : [],
@@ -225,17 +287,33 @@ class ProductService
 
     private function buildUpdateDealAttributes(ProductDeal $deal, array $attrs): array
     {
+        // Merge with existing values so validation sees a complete deal,
+        // then validate the merged result (including per-product uniqueness
+        // excluding this deal itself).
+        $merged = [
+            'dealName' => $attrs['dealName'] ?? $deal->dealName,
+            'dealCode' => $attrs['dealCode'] ?? $deal->dealCode,
+            'billingInterval' => $attrs['billingInterval'] ?? $deal->billingInterval,
+            'priceCents' => $attrs['priceCents'] ?? $deal->priceCents,
+            'allowedMachineSeats' => $attrs['allowedMachineSeats'] ?? $deal->allowedMachineSeats,
+        ];
+        // Product is needed for the uniqueness check; resolve it from the deal.
+        $product = Product::query()->where('ProductId', $deal->productId)->first();
+        if ($product !== null) {
+            $validated = $this->validateDealAttributes($product, $merged, (int) $deal->ProductDealId);
+            $merged = array_merge($merged, $validated);
+        }
         $features = $attrs['features'] ?? $deal->features;
         if (is_string($features)) {
             $features = array_values(array_filter(array_map('trim', explode("\n", $features))));
         }
 
         return [
-            'dealName' => (string) ($attrs['dealName'] ?? $deal->dealName),
-            'dealCode' => isset($attrs['dealCode']) ? strtoupper(trim((string) $attrs['dealCode'])) : $deal->dealCode,
-            'billingInterval' => (string) ($attrs['billingInterval'] ?? $deal->billingInterval),
-            'priceCents' => isset($attrs['priceCents']) ? (int) $attrs['priceCents'] : $deal->priceCents,
-            'allowedMachineSeats' => isset($attrs['allowedMachineSeats']) ? (int) $attrs['allowedMachineSeats'] : $deal->allowedMachineSeats,
+            'dealName' => $merged['dealName'],
+            'dealCode' => $merged['dealCode'],
+            'billingInterval' => $merged['billingInterval'],
+            'priceCents' => $merged['priceCents'],
+            'allowedMachineSeats' => $merged['allowedMachineSeats'],
             'allowedDomains' => isset($attrs['allowedDomains']) ? (int) $attrs['allowedDomains'] : $deal->allowedDomains,
             'isDecoyTarget' => isset($attrs['isDecoyTarget']) ? (bool) $attrs['isDecoyTarget'] : $deal->isDecoyTarget,
             'features' => is_array($features) ? $features : [],

@@ -31,9 +31,19 @@ class DeveloperPortalTest extends TestCase
         }
     }
 
-    public function test_can_list_developer_products_with_deals(): void
+    public function test_unauthenticated_cannot_list_developer_products(): void
     {
+        // B1: developer routes now require Sanctum auth. Previously this
+        // unauthenticated call returned 200 with an empty list.
         $response = $this->getJson('/api/v1/developer/products');
+        $response->assertStatus(401);
+    }
+
+    public function test_authenticated_can_list_developer_products_with_deals(): void
+    {
+        $user = new User();
+        $user->UserId = 999;
+        $response = $this->actingAs($user, 'sanctum')->getJson('/api/v1/developer/products');
         $response->assertStatus(200)->assertJsonPath('IsSuccess', true);
     }
 
@@ -41,7 +51,7 @@ class DeveloperPortalTest extends TestCase
     {
         $user = new User();
         $user->UserId = 999;
-        $response = $this->actingAs($user)->getJson('/api/v1/developer/products');
+        $response = $this->actingAs($user, 'sanctum')->getJson('/api/v1/developer/products');
         $response->assertStatus(200)
             ->assertJsonPath('IsSuccess', true)
             ->assertJsonCount(0, 'Data');
@@ -51,7 +61,7 @@ class DeveloperPortalTest extends TestCase
     {
         $user = new User();
         $user->UserId = 999;
-        $response = $this->actingAs($user)->getJson('/api/v1/developer/overview');
+        $response = $this->actingAs($user, 'sanctum')->getJson('/api/v1/developer/overview');
         $response->assertStatus(200)
             ->assertJsonPath('IsSuccess', true)
             ->assertJsonPath('Data.productsCount', 0)
@@ -65,13 +75,13 @@ class DeveloperPortalTest extends TestCase
         $user = new User();
         $user->UserId = 999;
         $slug = 'scoped-tool-' . time();
-        $response = $this->actingAs($user)->postJson('/api/v1/developer/products', [
+        $response = $this->actingAs($user, 'sanctum')->postJson('/api/v1/developer/products', [
             'productName' => 'Scoped Developer Tool',
             'productSlug' => $slug,
             'category' => 'DesktopApp',
         ]);
         $response->assertStatus(201)->assertJsonPath('Data.userId', 999);
-        $this->actingAs($user)->getJson('/api/v1/developer/products')
+        $this->actingAs($user, 'sanctum')->getJson('/api/v1/developer/products')
             ->assertStatus(200)->assertJsonCount(1, 'Data');
         $this->cleanUpShard($slug);
     }
@@ -81,7 +91,7 @@ class DeveloperPortalTest extends TestCase
         $user = new User();
         $user->UserId = 1;
         $slug = 'test-scraper-' . time();
-        $response = $this->actingAs($user)->postJson('/api/v1/developer/products', [
+        $response = $this->actingAs($user, 'sanctum')->postJson('/api/v1/developer/products', [
             'productName' => 'Test Lead Scraper',
             'productSlug' => $slug,
             'category' => 'ChromeExtension',
@@ -91,6 +101,41 @@ class DeveloperPortalTest extends TestCase
             ->assertJsonPath('Data.productSlug', $slug);
         $this->assertFileExists(database_path("product_{$slug}.sqlite"));
         $this->cleanUpShard($slug);
+    }
+
+    public function test_duplicate_product_slug_is_rejected_not_500(): void
+    {
+        // B2: previously a duplicate slug hit a DB unique constraint as 500.
+        $user = new User();
+        $user->UserId = 999;
+        $slug = 'dup-slug-' . time();
+        $this->actingAs($user, 'sanctum')->postJson('/api/v1/developer/products', [
+            'productName' => 'Dup Tool',
+            'productSlug' => $slug,
+            'category' => 'DesktopApp',
+        ])->assertStatus(201);
+        $this->actingAs($user, 'sanctum')->postJson('/api/v1/developer/products', [
+            'productName' => 'Dup Tool Again',
+            'productSlug' => $slug,
+            'category' => 'DesktopApp',
+        ])->assertStatus(400);
+        $this->cleanUpShard($slug);
+    }
+
+    public function test_negative_deal_price_is_rejected(): void
+    {
+        // B2: previously negative prices were accepted via blind cast.
+        $product = Product::first();
+        $this->assertNotNull($product);
+        $owner = new User();
+        $owner->UserId = (int) ($product->userId ?? $product->UserId ?? 1);
+        $this->actingAs($owner, 'sanctum')->postJson("/api/v1/developer/products/{$product->productSlug}/deals", [
+            'dealName' => 'Bad Deal',
+            'dealCode' => 'BAD_' . time(),
+            'billingInterval' => 'monthly',
+            'priceCents' => -100,
+            'allowedMachineSeats' => 1,
+        ])->assertStatus(400);
     }
 
     public function test_unauthenticated_caller_cannot_create_product(): void
@@ -107,7 +152,11 @@ class DeveloperPortalTest extends TestCase
     {
         $product = Product::first();
         $this->assertNotNull($product);
-        $response = $this->postJson("/api/v1/developer/products/{$product->productSlug}/deals", [
+        // B1: deal creation now requires the product owner via Sanctum.
+        // Previously this unauthenticated call returned 201.
+        $owner = new User();
+        $owner->UserId = (int) ($product->userId ?? $product->UserId ?? 1);
+        $response = $this->actingAs($owner, 'sanctum')->postJson("/api/v1/developer/products/{$product->productSlug}/deals", [
             'dealName' => 'Special 2-Year',
             'dealCode' => 'DEAL_2Y_' . time(),
             'billingInterval' => 'biennial',
@@ -123,7 +172,10 @@ class DeveloperPortalTest extends TestCase
     {
         $product = Product::first();
         $this->assertNotNull($product);
-        $response = $this->getJson("/api/v1/developer/products/{$product->productSlug}/blueprint");
+        // B1: blueprint now requires the product owner via Sanctum.
+        $owner = new User();
+        $owner->UserId = (int) ($product->userId ?? $product->UserId ?? 1);
+        $response = $this->actingAs($owner, 'sanctum')->getJson("/api/v1/developer/products/{$product->productSlug}/blueprint");
         $response->assertStatus(200)
             ->assertJsonPath('IsSuccess', true)
             ->assertJsonStructure(['Data' => ['BlueprintMarkdown', 'ProductSlug']]);
@@ -168,14 +220,15 @@ class DeveloperPortalTest extends TestCase
         $owner->UserId = $ownerId;
         $owner->Email = 'owner@example.test';
 
-        // Issue a license into the shard
+        // Issue a license into the shard. B3: webhookIssue now requires
+        // a real deal for this product, so use a seeded deal code.
         $this->postJson("/api/v1/products/{$product->productSlug}/licenses/issue", [
             'transactionId' => 'tx_test_' . uniqid(),
             'customerEmail' => 'buyer@example.test',
-            'dealCode' => 'MONTHLY_ANCHOR',
+            'dealCode' => 'ELM_1M_SINGLE',
         ]);
 
-        $response = $this->actingAs($owner)->getJson("/api/v1/developer/products/{$product->productSlug}/licenses");
+        $response = $this->actingAs($owner, 'sanctum')->getJson("/api/v1/developer/products/{$product->productSlug}/licenses");
         $response->assertStatus(200)
             ->assertJsonPath('IsSuccess', true)
             ->assertJsonStructure([
@@ -203,7 +256,7 @@ class DeveloperPortalTest extends TestCase
         $otherUser = new User();
         $otherUser->UserId = 99999;
 
-        $response = $this->actingAs($otherUser)->getJson("/api/v1/developer/products/{$product->productSlug}/licenses");
+        $response = $this->actingAs($otherUser, 'sanctum')->getJson("/api/v1/developer/products/{$product->productSlug}/licenses");
         $response->assertStatus(403);
     }
 
@@ -300,7 +353,7 @@ class DeveloperPortalTest extends TestCase
         $issueRes->assertStatus(200);
 
         // List licenses to find the created licenseId
-        $listRes = $this->actingAs($owner)->getJson("/api/v1/developer/products/{$product->productSlug}/licenses");
+        $listRes = $this->actingAs($owner, 'sanctum')->getJson("/api/v1/developer/products/{$product->productSlug}/licenses");
         $listRes->assertStatus(200);
         $licenses = $listRes->json('Data');
         $this->assertNotEmpty($licenses);
@@ -308,13 +361,13 @@ class DeveloperPortalTest extends TestCase
         $licenseId = (int) $targetLicense['licenseId'];
 
         // Delete license
-        $delRes = $this->actingAs($owner)->deleteJson("/api/v1/developer/products/{$product->productSlug}/licenses/{$licenseId}");
+        $delRes = $this->actingAs($owner, 'sanctum')->deleteJson("/api/v1/developer/products/{$product->productSlug}/licenses/{$licenseId}");
         $delRes->assertStatus(200)
             ->assertJsonPath('IsSuccess', true)
             ->assertJsonPath('Message', 'License deleted successfully.');
 
         // Deleting non-existent license returns 404
-        $delAgain = $this->actingAs($owner)->deleteJson("/api/v1/developer/products/{$product->productSlug}/licenses/{$licenseId}");
+        $delAgain = $this->actingAs($owner, 'sanctum')->deleteJson("/api/v1/developer/products/{$product->productSlug}/licenses/{$licenseId}");
         $delAgain->assertStatus(404);
     }
 
@@ -342,12 +395,12 @@ class DeveloperPortalTest extends TestCase
         ])->assertStatus(200);
 
         // Get license ID
-        $listRes = $this->actingAs($owner)->getJson("/api/v1/developer/products/{$product->productSlug}/licenses");
+        $listRes = $this->actingAs($owner, 'sanctum')->getJson("/api/v1/developer/products/{$product->productSlug}/licenses");
         $licenses = $listRes->json('Data');
         $licenseId = (int) $licenses[0]['licenseId'];
 
         // Attempt deletion while seat is bound
-        $delRes = $this->actingAs($owner)->deleteJson("/api/v1/developer/products/{$product->productSlug}/licenses/{$licenseId}");
+        $delRes = $this->actingAs($owner, 'sanctum')->deleteJson("/api/v1/developer/products/{$product->productSlug}/licenses/{$licenseId}");
         $delRes->assertStatus(409)
             ->assertJsonPath('IsSuccess', false)
             ->assertJsonPath('ErrorCode', 'ActiveSeatsConflict')
@@ -360,7 +413,7 @@ class DeveloperPortalTest extends TestCase
         ])->assertStatus(200);
 
         // Deletion should now succeed
-        $delSuccess = $this->actingAs($owner)->deleteJson("/api/v1/developer/products/{$product->productSlug}/licenses/{$licenseId}");
+        $delSuccess = $this->actingAs($owner, 'sanctum')->deleteJson("/api/v1/developer/products/{$product->productSlug}/licenses/{$licenseId}");
         $delSuccess->assertStatus(200)
             ->assertJsonPath('IsSuccess', true)
             ->assertJsonPath('Message', 'License deleted successfully.');
@@ -378,7 +431,7 @@ class DeveloperPortalTest extends TestCase
         // Non-owner -> 403
         $otherUser = new User();
         $otherUser->UserId = 88888;
-        $this->actingAs($otherUser)->deleteJson("/api/v1/developer/products/{$product->productSlug}/licenses/1")
+        $this->actingAs($otherUser, 'sanctum')->deleteJson("/api/v1/developer/products/{$product->productSlug}/licenses/1")
             ->assertStatus(403);
     }
 

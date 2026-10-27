@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Webhooks;
 
 use App\Http\Controllers\Controller;
+use App\Models\Product;
 use App\Services\PaymentWebhookService;
 use App\Support\ApiEnvelope;
 use Illuminate\Http\JsonResponse;
@@ -38,12 +39,40 @@ class PaymentWebhookController extends Controller
     private function handleGateway(string $gateway, Request $request): JsonResponse
     {
         $eventData = $this->webhookService->extractEventData($gateway, $request);
-        $secret = $this->webhookService->resolveSecret($gateway, $eventData['productSlug'] ?? 'default');
+        // Ignored events must not mint a license and must not insert a
+        // WebhookEvents row, so they are filtered before any product check.
+        if (!$this->webhookService->isSupportedEvent($gateway, $eventData['eventName'] ?? '')) {
+            return $this->ignoredEvent($gateway, $request, $eventData);
+        }
+        // Signature is checked before product existence, so an invalid
+        // signature always returns 401 (and does not leak whether the
+        // product exists). A missing secret also fails closed as 401.
+        // Product existence is checked after signature, before any
+        // license is minted or any WebhookEvents row is inserted:
+        // previously an unknown slug could pass via a fallback secret,
+        // insert a row, and return a success serial that existed nowhere.
+        $productSlug = (string) ($eventData['productSlug'] ?? '');
+        $secret = $this->webhookService->resolveSecret($gateway, $productSlug);
+        if ($secret === null || $secret === '') {
+            return $this->signatureError($gateway, $request);
+        }
         if (!$this->webhookService->isSignatureValid($gateway, $request, $secret)) {
             return $this->signatureError($gateway, $request);
         }
-        if (!$this->webhookService->isSupportedEvent($gateway, $eventData['eventName'] ?? '')) {
-            return $this->ignoredEvent($gateway, $request, $eventData);
+        $product = $productSlug !== '' && $productSlug !== 'default-app'
+            ? Product::query()->where('productSlug', $productSlug)->where('isActive', true)->first()
+            : null;
+        if ($product === null) {
+            $requestId = (string) ($request->attributes->get('lara.request_id') ?? uniqid('req_', true));
+
+            return ApiEnvelope::failure(
+                'ProductNotFound',
+                "Product [{$productSlug}] not found.",
+                $requestId,
+                404,
+                'ProductNotFound',
+                ['Gateway' => $gateway]
+            );
         }
         if (empty($eventData['customerEmail'])) {
             return $this->payloadError($gateway, $request);
