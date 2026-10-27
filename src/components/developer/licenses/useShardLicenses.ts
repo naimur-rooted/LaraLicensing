@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import type { ShardLicense, ProductSelectItem } from "./types";
-import { getApiBaseUrl } from "@/lib/api-client-boundary";
+import { getApiBaseUrl } from "@/lib/lara-api-client";
 
 export function useShardLicenses() {
   const [products, setProducts] = useState<readonly ProductSelectItem[]>([]);
