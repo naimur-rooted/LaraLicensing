@@ -34,7 +34,7 @@ export function useShardLicenses() {
     }
   }, []);
 
-  const simulateMint = useCallback(async (dealCode: string = "MONTHLY_ANCHOR") => {
+  const simulateMint = useCallback(async (dealCode?: string) => {
     if (selectedSlug.length === 0) return;
     setIsMinting(true);
     try {

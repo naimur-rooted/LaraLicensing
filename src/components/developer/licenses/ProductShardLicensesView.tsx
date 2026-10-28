@@ -34,7 +34,7 @@ export function ProductShardLicensesView({ onApplySerial }: ProductShardLicenses
         onSelectProduct={setSelectedSlug}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
-        onSimulateMint={() => simulateMint("MONTHLY_ANCHOR")}
+        onSimulateMint={() => simulateMint()}
         onRefresh={refresh}
         isMinting={isMinting}
         isLoading={isLoading}
@@ -55,7 +55,7 @@ export function ProductShardLicensesView({ onApplySerial }: ProductShardLicenses
       ) : (
         <ShardLicensesEmptyState
           selectedSlug={selectedSlug}
-          onSimulateMint={() => simulateMint("MONTHLY_ANCHOR")}
+          onSimulateMint={() => simulateMint()}
           isMinting={isMinting}
           searchTerm={searchTerm}
         />

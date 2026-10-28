@@ -654,6 +654,10 @@ Route::middleware('auth:sanctum')->prefix('v1/developer')->group(function (): vo
     Route::delete('/products/{slug}/deals/{dealId}', [\App\Http\Controllers\Developer\ProductController::class, 'deleteDeal'])->name('api.developer.products.deals.destroy');
     Route::get('/products/{slug}/blueprint', [\App\Http\Controllers\Developer\ProductController::class, 'aiBlueprint'])->name('api.developer.products.blueprint');
     Route::get('/products/{slug}/licenses', [\App\Http\Controllers\Developer\DeveloperLicenseController::class, 'listProductLicenses'])->name('api.developer.products.licenses');
+    // Phase 4 item 2: Sanctum-authenticated simulated mint. The browser
+    // never touches the HMAC webhookIssue endpoint or the webhook
+    // secret; this endpoint mints directly to ProductLicenses + Serials.
+    Route::post('/products/{slug}/licenses/mint', [\App\Http\Controllers\Developer\DeveloperLicenseController::class, 'mintLicense'])->name('api.developer.products.licenses.mint');
     Route::delete('/products/{slug}/licenses/{licenseId}', [\App\Http\Controllers\Developer\DeveloperLicenseController::class, 'deleteLicense'])->name('api.developer.products.licenses.destroy');
     Route::post('/products/{slug}/licenses/{licenseId}/revoke', [\App\Http\Controllers\Developer\DeveloperLicenseController::class, 'revokeLicense'])->name('api.developer.products.licenses.revoke');
     Route::post('/ai/design-pricing', [\App\Http\Controllers\Developer\AiArchitectController::class, 'designPricing'])->name('api.developer.ai.design_pricing');

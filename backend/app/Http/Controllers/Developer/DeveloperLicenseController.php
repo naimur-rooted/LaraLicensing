@@ -6,8 +6,11 @@ namespace App\Http\Controllers\Developer;
 
 use App\Exceptions\AuthException;
 use App\Exceptions\NotFoundException;
+use App\Exceptions\ValidationException;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
+use App\Services\LicenseExpiry;
+use App\Support\LicenseShardSchema;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use PDO;
@@ -260,6 +263,180 @@ class DeveloperLicenseController extends Controller
             'IsSuccess' => true,
             'Message' => 'License revoked successfully.',
         ]);
+    }
+
+    /**
+     * Phase 4 item 2: Sanctum-authenticated simulated (test) licence mint.
+     *
+     * This replaces the frontend's previous call to the HMAC-gated
+     * webhookIssue endpoint, which now returns 401 without a gateway
+     * signature. The browser never holds, sends, or receives the
+     * product webhookSecret or ed25519 private key: auth is the
+     * developer's Sanctum Bearer token plus the product-owner check
+     * below, and the response carries only licence scalars (never the
+     * Product model, whose $hidden fields must stay hidden).
+     *
+     * Marker: ProductLicenses has NO simulated/test column (schema
+     * changes belong to another worker), so a minted test licence is
+     * marked by the existing simulated-issuance pattern — a
+     * transactionId starting with `tx_mock_` (generated here when the
+     * caller omits one) and, by default, the test customerEmail
+     * `developer-test@domain.local`. Callers that supply their own
+     * transactionId should keep the `tx_mock_` prefix or the row is
+     * not distinguishable from a gateway licence. `isSimulated` in
+     * the response is endpoint-derived, not a stored column.
+     *
+     * Replay choice (explicit, not ambiguous): NEW SERIAL PER CALL.
+     * Every POST mints a fresh serial, even with an identical body;
+     * mint is not idempotent. Each "Mint Test Serial" click therefore
+     * adds one row to the portal list, and callers that want dedup
+     * must check the list first. Expiry is derived from the deal's
+     * billingInterval via LicenseExpiry; seats from allowedMachineSeats.
+     */
+    public function mintLicense(Request $request, string $productSlug): JsonResponse
+    {
+        $userId = $this->resolveUserId($request);
+        if ($userId <= 0) {
+            throw AuthException::unauthorized('Authentication is required.');
+        }
+
+        $product = Product::with('deals')->where('productSlug', $productSlug)->first();
+        if (!$product || !(bool) ($product->isActive ?? false)) {
+            throw NotFoundException::notFound("Product '{$productSlug}' not found.");
+        }
+
+        $ownerId = (int) ($product->userId ?? $product->UserId ?? 0);
+        if ($ownerId !== $userId) {
+            throw AuthException::forbidden('You do not have permission to mint licenses for this product.');
+        }
+
+        $deal = $this->resolveMintDeal($product, trim((string) $request->input('dealCode', '')));
+        $email = strtolower(trim((string) $request->input('customerEmail', '')));
+        if ($email === '') {
+            $email = 'developer-test@domain.local';
+        } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            throw ValidationException::invalidInput('customerEmail must be a valid email address.');
+        }
+        $txId = trim((string) $request->input('transactionId', ''));
+        if ($txId === '') {
+            $txId = 'tx_mock_' . bin2hex(random_bytes(8));
+        }
+
+        $dealCode = (string) $deal->dealCode;
+        $seats = max(1, (int) $deal->allowedMachineSeats);
+        $expiresAt = LicenseExpiry::derive((string) $deal->billingInterval);
+        $serial = $this->insertMintedLicense($productSlug, $dealCode, $seats, $email, $txId, $expiresAt);
+        $this->insertMintedSerial($productSlug, $serial, $email);
+
+        return response()->json([
+            'IsSuccess' => true,
+            'Data' => [
+                'serialValue' => $serial,
+                'dealCode' => $dealCode,
+                'allowedSeats' => $seats,
+                'customerEmail' => $email,
+                'transactionId' => $txId,
+                'expiresAt' => $expiresAt,
+                'isSimulated' => true,
+            ],
+        ], 201);
+    }
+
+    /**
+     * Resolve the deal for a mint: an explicit dealCode must match an
+     * existing deal for this product (same rule as webhookIssue — no
+     * DEFAULT fallback); an omitted dealCode uses the product's first
+     * active deal, so the portal "Mint Test Serial" button works
+     * without the caller knowing a deal code.
+     */
+    private function resolveMintDeal(Product $product, string $dealCode)
+    {
+        $deals = $product->deals ?? collect();
+        if ($dealCode !== '') {
+            $deal = $deals->first(fn ($d) => strtoupper((string) $d->dealCode) === strtoupper($dealCode));
+            if (!$deal) {
+                throw ValidationException::invalidInput('dealCode must match an existing deal for this product.');
+            }
+
+            return $deal;
+        }
+
+        $deal = $deals->first(fn ($d) => (bool) ($d->isActive ?? false));
+        if (!$deal) {
+            throw ValidationException::invalidInput('Product has no active deal to mint a test license for.');
+        }
+
+        return $deal;
+    }
+
+    /**
+     * Insert one ProductLicenses row with a fresh random serial.
+     * Retries on the (negligible) serial collision; the serial is
+     * random per call, which is what makes mint non-idempotent.
+     */
+    private function insertMintedLicense(string $slug, string $dealCode, int $seats, string $email, string $txId, ?string $expiresAt): string
+    {
+        $pdo = $this->openMintShard($slug);
+        LicenseShardSchema::ensureProductLicenses($pdo);
+        $now = now()->toISOString();
+
+        for ($attempt = 0; $attempt < 3; $attempt++) {
+            $serial = strtoupper($slug) . '-TEST-' . strtoupper(bin2hex(random_bytes(8)));
+            $stmt = $pdo->prepare('INSERT OR IGNORE INTO ProductLicenses (serialValue, dealCode, allowedSeats, isActive, isRevoked, customerEmail, transactionId, expiresAt, createdAt) VALUES (:s, :d, :seats, 1, 0, :email, :tx, :exp, :dt)');
+            $stmt->execute([':s' => $serial, ':d' => $dealCode, ':seats' => $seats, ':email' => $email, ':tx' => $txId, ':exp' => $expiresAt, ':dt' => $now]);
+            if ($stmt->rowCount() === 1) {
+                return $serial;
+            }
+        }
+
+        throw ValidationException::invalidInput('Could not mint a unique test license serial.');
+    }
+
+    /**
+     * Dual-write the minted serial to Serials, mirroring the gateway
+     * dual-write in PaymentWebhookService, so verify/activate lookups
+     * that read Serials see test licences too. The repodb copy is
+     * written only if that shard file already exists (same rule as
+     * the gateway path); it is never created from scratch here.
+     */
+    private function insertMintedSerial(string $slug, string $serial, string $email): void
+    {
+        $now = now()->toDateTimeString();
+        $paths = [database_path("product_{$slug}.sqlite")];
+        $repodbPath = base_path("repodb/product_{$slug}.sqlite");
+        if (file_exists($repodbPath)) {
+            $paths[] = $repodbPath;
+        }
+
+        foreach ($paths as $path) {
+            $pdo = new PDO("sqlite:{$path}");
+            $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            $pdo->exec('CREATE TABLE IF NOT EXISTS Serials (
+                SerialId INTEGER PRIMARY KEY AUTOINCREMENT,
+                SerialValue VARCHAR(128) NOT NULL UNIQUE,
+                LicenseKey VARCHAR(128),
+                ProductSlug VARCHAR(64) NOT NULL,
+                CustomerEmail VARCHAR(128) NOT NULL,
+                IsRevoked INTEGER NOT NULL DEFAULT 0,
+                IssuedAt DATETIME,
+                CreatedAt DATETIME,
+                UpdatedAt DATETIME
+            );');
+            $stmt = $pdo->prepare('INSERT OR IGNORE INTO Serials (SerialValue, LicenseKey, ProductSlug, CustomerEmail, IsRevoked, IssuedAt, CreatedAt, UpdatedAt) VALUES (?, ?, ?, ?, 0, ?, ?, ?)');
+            $stmt->execute([$serial, $serial, $slug, $email, $now, $now, $now]);
+        }
+    }
+
+    private function openMintShard(string $slug): PDO
+    {
+        $path = database_path("product_{$slug}.sqlite");
+        if (!file_exists($path)) {
+            touch($path);
+        }
+        $pdo = new PDO("sqlite:{$path}");
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+        return $pdo;
     }
 
     /**

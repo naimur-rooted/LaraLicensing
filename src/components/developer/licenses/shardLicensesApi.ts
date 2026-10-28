@@ -29,16 +29,31 @@ export async function fetchProductLicenses(slug: string): Promise<ShardLicense[]
   }
 }
 
-export async function issueSimulatedLicense(slug: string, dealCode: string): Promise<void> {
-  await fetch(`${getApiBaseUrl()}/api/v1/products/${slug}/licenses/issue`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...authHeaders() },
-    body: JSON.stringify({
-      transactionId: `tx_mock_${Date.now()}`,
-      customerEmail: "developer-test@domain.local",
-      dealCode,
-    }),
-  });
+export async function issueSimulatedLicense(slug: string, dealCode?: string): Promise<void> {
+  // Phase 4 item 2: mint via the Sanctum developer endpoint, NOT the
+  // HMAC-gated gateway webhookIssue endpoint (which returns 401
+  // without a gateway signature). No secret is sent from the browser:
+  // auth is the Sanctum Bearer token already used above. dealCode is
+  // optional; omitted, the backend mints against the product's first
+  // active deal (the old hardcoded MONTHLY_ANCHOR matched no real deal).
+  const body: Record<string, string> = {
+    transactionId: `tx_mock_${Date.now()}`,
+    customerEmail: "developer-test@domain.local",
+  };
+  if (dealCode !== undefined && dealCode.length > 0) body.dealCode = dealCode;
+  try {
+    const res = await fetch(`${getApiBaseUrl()}/api/v1/developer/products/${slug}/licenses/mint`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({}));
+      alert(json?.Message ?? json?.error ?? `Failed to mint test license (${res.status})`);
+    }
+  } catch (err: unknown) {
+    alert(err instanceof Error ? err.message : "Failed to mint test license.");
+  }
 }
 
 export async function deleteProductLicenseShard(slug: string, licenseId: number): Promise<boolean> {

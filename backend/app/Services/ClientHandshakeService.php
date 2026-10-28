@@ -15,10 +15,17 @@ use PDO;
  */
 class ClientHandshakeService
 {
+    private readonly LicenseBackfillService $backfill;
+
     public function __construct(
         private readonly JwtTokenService $jwtService,
         private readonly RiskAssessmentService $riskService,
-    ) {}
+        ?LicenseBackfillService $backfill = null,
+    ) {
+        // Nullable for callers that construct this service by hand; the
+        // container injects the real service in normal use.
+        $this->backfill = $backfill ?? new LicenseBackfillService();
+    }
 
     /** Open or initialize shard SQLite PDO connection. */
     private function openShardPdo(string $productSlug): PDO
@@ -37,7 +44,7 @@ class ClientHandshakeService
             return ['isValid' => false, 'errorCode' => 'ProductNotFound', 'message' => "Product '{$productSlug}' not found."];
         }
         $pdo = $this->openShardPdo($productSlug);
-        $license = $this->findLicenseBySerial($pdo, $serial);
+        $license = $this->findOrPromoteLicense($pdo, $product, $serial);
         if (!$license) {
             return ['isValid' => false, 'errorCode' => 'LicenseNotFound', 'message' => 'License not found.'];
         }
@@ -53,7 +60,7 @@ class ClientHandshakeService
             return ['isValid' => false, 'errorCode' => 'ProductNotFound', 'message' => "Product '{$productSlug}' not found."];
         }
         $pdo = $this->openShardPdo($productSlug);
-        $license = $this->findLicenseBySerial($pdo, $serial);
+        $license = $this->findOrPromoteLicense($pdo, $product, $serial);
         if (!$license) {
             return ['isValid' => false, 'errorCode' => 'LicenseNotFound', 'message' => 'License not found.'];
         }
@@ -153,6 +160,32 @@ class ClientHandshakeService
             'allowedSeats' => (int) $license['allowedSeats'], 'activeSeats' => $activeSeats, 'expiresAt' => $license['expiresAt'] ?? null,
             'offlineToken' => $token, 'ed25519PublicKey' => (string) $product->ed25519PublicKey,
         ];
+    }
+
+    /**
+     * Phase 4 item 1, just-in-time auto-promote (verify/activate only).
+     * If the serial already has a ProductLicenses row, return it. Else, if
+     * it exists in Serials for THIS product, copy it into ProductLicenses
+     * (same derivation as the backfill routine, idempotent) and return the
+     * new row — so expiry/revoked checks below still run against the
+     * promoted row. If it is in NEITHER table, return null: the caller
+     * returns LicenseNotFound 404 and NO row is created anywhere, NO seat
+     * is bound. Verify stays read-only apart from this Serials ->
+     * ProductLicenses repair; only activate binds a seat.
+     * Deactivate/heartbeat deliberately do NOT promote (out of scope).
+     */
+    private function findOrPromoteLicense(PDO $pdo, Product $product, string $serial): ?array
+    {
+        $license = $this->findLicenseBySerial($pdo, $serial);
+        if ($license !== null) {
+            return $license;
+        }
+        $serialRow = $this->backfill->findSerial($pdo, $serial);
+        if ($serialRow === null) {
+            return null;
+        }
+
+        return $this->backfill->promoteSerial($pdo, $product, $serialRow);
     }
 
     /** Find license row by serial value. */
