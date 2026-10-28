@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Developer;
 
+use App\Exceptions\AuthException;
+use App\Exceptions\NotFoundException;
 use App\Http\Controllers\Controller;
+use App\Models\Product;
 use App\Services\ClientHandshakeService;
 use App\Services\FraudAlertService;
 use App\Services\ResellerWholesaleService;
@@ -33,12 +36,23 @@ class AdvancedLicensingController extends Controller
             $inputs['slug'], $inputs['serial'], $inputs['hwid'], $inputs['ip'],
             $inputs['hostname'], $inputs['countryCode'], $inputs['countryName']
         );
-        // Seat-limit status is now consistent with activate(): 409 in both
-        // paths. Previously /v1/verify returned 409 but
-        // /v1/products/{slug}/verify returned 403 for the same error.
-        $status = $result['isValid'] ? 200 : (($result['errorCode'] ?? '') === 'SeatLimitExceeded' ? 409 : 403);
+        // Decision 2A/3A: verify is read-only. Unknown serial is 404,
+        // seat-limit is 409, revoked/expired and other failures are 403.
+        $status = $this->verifyStatus($result);
 
         return $this->envelopeResponse($result, $status, $result['message'] ?? 'Verification decision produced.', $request);
+    }
+
+    private function verifyStatus(array $result): int
+    {
+        if ($result['isValid']) {
+            return 200;
+        }
+        if (($result['errorCode'] ?? '') === 'LicenseNotFound') {
+            return 404;
+        }
+
+        return ($result['errorCode'] ?? '') === 'SeatLimitExceeded' ? 409 : 403;
     }
 
     /** Activate license on a hardware device seat with 409 limit enforcement. */
@@ -50,7 +64,7 @@ class AdvancedLicensingController extends Controller
         }
         $result = $this->handshakeService->activate($inputs['slug'], $inputs['serial'], $inputs['hwid'], $inputs['ip'], $inputs['hostname']);
         if (!$result['isValid']) {
-            $code = ($result['errorCode'] ?? '') === 'SeatLimitExceeded' ? 409 : 403;
+            $code = ($result['errorCode'] ?? '') === 'LicenseNotFound' ? 404 : (($result['errorCode'] ?? '') === 'SeatLimitExceeded' ? 409 : 403);
             return $this->envelopeResponse($result, $code, $result['message'] ?? 'Activation failed.', $request);
         }
 
@@ -188,8 +202,28 @@ class AdvancedLicensingController extends Controller
     }
 
     /** Get fraud and anomaly audit alerts for a product. */
-    public function securityEvents(string $productSlug): JsonResponse
+    // Phase 3: security endpoints are owner-only. The route group also
+    // requires Sanctum; a direct controller call must still not leak
+    // another developer's security events or quarantine their licences.
+    private function requireProductOwner(string $productSlug, Request $request): void
     {
+        $product = Product::where('productSlug', $productSlug)->first();
+        if (!$product) {
+            throw NotFoundException::notFound('Product not found.');
+        }
+        $userId = (int) ($request->user()?->UserId ?? auth()->id() ?? 0);
+        $ownerId = (int) ($product->userId ?? $product->UserId ?? 0);
+        if ($userId <= 0) {
+            throw AuthException::unauthorized('Authentication is required.');
+        }
+        if ($ownerId !== $userId) {
+            throw AuthException::forbidden('You do not have permission to access this product.');
+        }
+    }
+
+    public function securityEvents(string $productSlug, Request $request): JsonResponse
+    {
+        $this->requireProductOwner($productSlug, $request);
         $data = $this->fraudService->getSecurityEvents($productSlug);
 
         return response()->json(['IsSuccess' => true, 'Data' => $data]);
@@ -198,6 +232,7 @@ class AdvancedLicensingController extends Controller
     /** 1-click quarantine a suspicious license. */
     public function quarantine(string $productSlug, Request $request): JsonResponse
     {
+        $this->requireProductOwner($productSlug, $request);
         $serial = strtoupper(trim((string) $request->input('serialValue', '')));
         $reason = (string) $request->input('reason', 'Suspicious activity');
         $res = $this->fraudService->quarantineLicense($productSlug, $serial, $reason);
@@ -208,6 +243,7 @@ class AdvancedLicensingController extends Controller
     /** Unbind a specific machine hardware fingerprint from a license. */
     public function unbindHardware(string $productSlug, Request $request): JsonResponse
     {
+        $this->requireProductOwner($productSlug, $request);
         $serial = strtoupper(trim((string) $request->input('serialValue', '')));
         $hwid = strtoupper(trim((string) $request->input('hardwareDigest', '')));
         $res = $this->fraudService->unbindHardware($productSlug, $serial, $hwid);

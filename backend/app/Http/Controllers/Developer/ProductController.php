@@ -133,24 +133,47 @@ class ProductController extends Controller
         return response()->json(['IsSuccess' => true, 'Data' => ['BlueprintMarkdown' => $blueprint, 'ProductSlug' => $slug]]);
     }
 
+    // Decision 1A: webhookIssue is HMAC-signed, no unsigned fallback.
+    // Contract: header X-Webhook-Signature (or X-Signature) must be
+    // hex HMAC-SHA256 of the raw request body, keyed by the product
+    // webhookSecret. Missing/empty secret or bad signature => 401.
+    // Callers must obtain the product webhookSecret from the product
+    // record; it is not returned in product serialization (see F3).
     public function webhookIssue(string $slug, Request $request): JsonResponse
     {
         $product = $this->productService->getProductBySlug($slug);
         if (!$product) {
             throw NotFoundException::notFound('Product not found.');
         }
+        $this->requireWebhookSignature($product, $request);
         [$txId, $email] = $this->validateWebhookInputs($request);
         $deal = $this->resolveWebhookDeal($product, $request);
-        $seats = (int) $deal->allowedMachineSeats;
-        $resolvedDeal = (string) $deal->dealCode;
-        $serialValue = strtoupper($product->productSlug . '-' . substr(md5($txId . $email), 0, 16));
-        $this->productService->recordShardLicense($product, $serialValue, $resolvedDeal, $seats);
-        $payload = $this->buildWebhookPayload($product, $serialValue, $email, $resolvedDeal);
-        return response()->json([
-            'IsSuccess' => true,
-            'Message' => 'License issued successfully via decoupled webhook.',
-            'Data' => $payload,
-        ]);
+        $serialValue = $this->mintWebhookSerial($product, $deal, $txId, $email);
+        $payload = $this->buildWebhookPayload($product, $serialValue, strtolower(trim($email)), (string) $deal->dealCode);
+        return response()->json(['IsSuccess' => true, 'Message' => 'License issued successfully via decoupled webhook.', 'Data' => $payload]);
+    }
+
+    private function mintWebhookSerial($product, $deal, string $txId, string $email): string
+    {
+        $emailNorm = strtolower(trim($email));
+        $serial = strtoupper($product->productSlug . '-' . substr(md5($txId . $emailNorm), 0, 16));
+        $expiry = \App\Services\LicenseExpiry::derive((string) $deal->billingInterval);
+        $this->productService->recordShardLicense($product, $serial, (string) $deal->dealCode, (int) $deal->allowedMachineSeats, $expiry, $emailNorm, $txId);
+
+        return $serial;
+    }
+
+    private function requireWebhookSignature($product, Request $request): void
+    {
+        $secret = (string) ($product->webhookSecret ?? '');
+        $sig = (string) ($request->header('X-Webhook-Signature') ?: $request->header('X-Signature') ?: '');
+        if ($secret === '' || $sig === '') {
+            throw AuthException::unauthorized('Webhook signature is required.');
+        }
+        $expected = hash_hmac('sha256', (string) $request->getContent(), $secret);
+        if (!hash_equals($expected, $sig)) {
+            throw AuthException::unauthorized('Webhook signature is invalid.');
+        }
     }
 
     /** @return array{0:string,1:string} */

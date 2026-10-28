@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Models\Product;
 use App\Support\AuditWriter;
+use App\Support\LicenseShardSchema;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -200,11 +201,53 @@ class PaymentWebhookService
         $this->ensureWebhookTableExists();
         $this->insertWebhookEventRow($gateway, $data, $serial, Carbon::now());
         $this->recordToProductShard($data['productSlug'], $serial, $data['customerEmail'], $data['dealCode']);
+        $this->dualWriteProductLicense($data, $serial);
         AuditWriter::write($request, 'WebhookIngested', 'WebhookEvents', $data['eventId'], [
             'Gateway' => $gateway,
             'ProductSlug' => $data['productSlug'],
             'SerialValue' => $serial,
         ]);
+    }
+
+    // Decision 2A step (a): gateway serials are written to BOTH
+    // Serials and ProductLicenses, idempotently, so the developer
+    // portal list (which reads ProductLicenses) shows them without
+    // verify having to auto-register them first.
+    private function dualWriteProductLicense(array $data, string $serial): void
+    {
+        $deal = $this->resolveDualWriteDeal($data['productSlug'], $data['dealCode']);
+        $seats = $deal ? (int) $deal->allowedMachineSeats : 1;
+        $expiry = $deal ? LicenseExpiry::derive((string) $deal->billingInterval) : null;
+        $this->writeProductLicenseRow($data['productSlug'], $serial, $data['dealCode'], $seats, $data['customerEmail'], $data['eventId'], $expiry);
+    }
+
+    private function resolveDualWriteDeal(string $slug, string $dealCode): mixed
+    {
+        $product = Product::with('deals')->where('productSlug', $slug)->first();
+        if (!$product) {
+            return null;
+        }
+
+        return $product->deals->where('dealCode', strtoupper($dealCode))->first();
+    }
+
+    private function writeProductLicenseRow(string $slug, string $serial, string $dealCode, int $seats, string $email, string $eventId, ?string $expiry): void
+    {
+        $path = database_path("product_{$slug}.sqlite");
+        if (!file_exists($path)) {
+            touch($path);
+        }
+        $pdo = new PDO("sqlite:{$path}");
+        LicenseShardSchema::ensureProductLicenses($pdo);
+        $this->insertDualWriteRow($pdo, $serial, $dealCode, $seats, $email, $eventId, $expiry);
+    }
+
+    private function insertDualWriteRow(PDO $pdo, string $serial, string $dealCode, int $seats, string $email, string $eventId, ?string $expiry): void
+    {
+        $ins = $pdo->prepare('INSERT OR IGNORE INTO ProductLicenses (serialValue, dealCode, allowedSeats, isActive, isRevoked, customerEmail, transactionId, expiresAt, createdAt) VALUES (:s, :d, :seats, 1, 0, :email, :tx, :exp, :dt)');
+        $ins->execute([':s' => $serial, ':d' => $dealCode, ':seats' => max(1, $seats), ':email' => $email, ':tx' => $eventId, ':exp' => $expiry, ':dt' => Carbon::now()->toISOString()]);
+        $upd = $pdo->prepare('UPDATE ProductLicenses SET expiresAt = COALESCE(expiresAt, :exp), customerEmail = COALESCE(customerEmail, :email), transactionId = COALESCE(transactionId, :tx) WHERE serialValue = :s');
+        $upd->execute([':exp' => $expiry, ':email' => $email, ':tx' => $eventId, ':s' => $serial]);
     }
 
     private function insertWebhookEventRow(string $gateway, array $data, string $serial, Carbon $now): void

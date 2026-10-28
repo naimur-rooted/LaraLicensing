@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Developer;
 
+use App\Exceptions\AuthException;
 use App\Exceptions\InternalException;
 use App\Exceptions\NotFoundException;
 use App\Exceptions\ValidationException;
@@ -25,12 +26,30 @@ class AiArchitectController extends Controller
         private readonly ProductService $productService
     ) {}
 
+    // Phase 3: AiArchitect endpoints are Sanctum-authenticated, but
+    // ownership was not checked — any developer could apply deals to
+    // another developer's product. Owner-only for existing products.
+    private function requireOwner($product, Request $request): void
+    {
+        $userId = (int) ($request->user()?->UserId ?? auth()->id() ?? 0);
+        $ownerId = (int) ($product->userId ?? $product->UserId ?? 0);
+        if ($userId <= 0) {
+            throw AuthException::unauthorized('Authentication is required.');
+        }
+        if ($ownerId !== $userId) {
+            throw AuthException::forbidden('You do not have permission to access this product.');
+        }
+    }
+
     /** Generate AI pricing proposal grounded in product metadata and user intent. */
     public function designPricing(Request $request): JsonResponse
     {
         $slug = trim((string) $request->input('productSlug', ''));
         $userPrompt = trim((string) $request->input('userPrompt', 'Design an optimal high-converting decoy pricing model for this software.'));
         $product = $this->resolveProductForPricing($slug, $request);
+        if ($product->exists) {
+            $this->requireOwner($product, $request);
+        }
 
         try {
             $proposal = $this->aiArchitectService->designPricingStrategy($product, $userPrompt);
@@ -66,6 +85,7 @@ class AiArchitectController extends Controller
         if (!$product) {
             throw NotFoundException::notFound('Product not found.');
         }
+        $this->requireOwner($product, $request);
 
         $deals = $request->input('deals', []);
         if (!is_array($deals) || empty($deals)) {
@@ -92,6 +112,7 @@ class AiArchitectController extends Controller
         if (!$product) {
             throw NotFoundException::notFound('Product not found.');
         }
+        $this->requireOwner($product, $request);
 
         $framework = trim((string) $request->input('framework', 'universal-agent'));
         $notes = trim((string) $request->input('notes', ''));

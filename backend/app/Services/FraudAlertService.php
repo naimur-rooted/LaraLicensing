@@ -94,13 +94,39 @@ class FraudAlertService
         $pdo = new PDO("sqlite:{$shardPath}");
         $this->ensureSecurityTables($pdo);
 
-        $del = $pdo->prepare('DELETE FROM HardwareBindings WHERE hardwareDigest = :hwid');
-        $del->execute([':hwid' => $hardwareDigest]);
+        // Phase 3: scoped by serial, not hardwareDigest alone.
+        // Previously this deleted the hardware binding for every
+        // licence in the shard that shared the same device.
+        $licenseId = $this->licenseIdForSerial($pdo, $serialValue);
+        if ($licenseId !== null) {
+            $del = $pdo->prepare('DELETE FROM HardwareBindings WHERE licenseId = :lid AND hardwareDigest = :hwid');
+            $del->execute([':lid' => $licenseId, ':hwid' => $hardwareDigest]);
+            $this->releaseMachineBinding($pdo, $licenseId, $hardwareDigest);
+        }
 
         return [
             'isSuccess' => true,
             'message' => "Hardware digest '{$hardwareDigest}' successfully released.",
         ];
+    }
+
+    private function licenseIdForSerial(PDO $pdo, string $serialValue): ?int
+    {
+        $stmt = $pdo->prepare('SELECT id FROM ProductLicenses WHERE serialValue = :s LIMIT 1');
+        $stmt->execute([':s' => $serialValue]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $row ? (int) $row['id'] : null;
+    }
+
+    private function releaseMachineBinding(PDO $pdo, int $licenseId, string $hardwareDigest): void
+    {
+        $check = $pdo->query("SELECT name FROM sqlite_master WHERE type='table' AND name='MachineBindings'")->fetch();
+        if (!$check) {
+            return;
+        }
+        $upd = $pdo->prepare('UPDATE MachineBindings SET ReleasedAt = :now WHERE LicenseId = :lid AND FingerprintHash = :hwid AND ReleasedAt IS NULL');
+        $upd->execute([':now' => Carbon::now()->toISOString(), ':lid' => $licenseId, ':hwid' => $hardwareDigest]);
     }
 
     private function ensureSecurityTables(PDO $pdo): void

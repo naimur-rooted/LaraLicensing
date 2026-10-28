@@ -693,14 +693,21 @@ Route::post('/v1/products/{slug}/heartbeat', [\App\Http\Controllers\Developer\Ad
     ->name('api.products.heartbeat');
 
 // Reseller Wholesale Quotas & Custom Offers Endpoints
-Route::prefix('v1/reseller-wholesale/{resellerSlug}')->group(function (): void {
+// Phase 3: previously unauthenticated. Sanctum is now required; a
+// reseller-to-developer ownership mapping does not exist in the
+// Resellers table, so finer ownership policy cannot be enforced
+// without a schema/policy decision (logged as remaining).
+Route::middleware('auth:sanctum')->prefix('v1/reseller-wholesale/{resellerSlug}')->group(function (): void {
     Route::get('/overview', [\App\Http\Controllers\Developer\AdvancedLicensingController::class, 'resellerOverview'])->name('api.reseller_wholesale.overview');
     Route::post('/quota', [\App\Http\Controllers\Developer\AdvancedLicensingController::class, 'allocateQuota'])->name('api.reseller_wholesale.quota');
     Route::post('/offers', [\App\Http\Controllers\Developer\AdvancedLicensingController::class, 'createResellerOffer'])->name('api.reseller_wholesale.offers');
 });
 
 // Fraud Alerts, Impossible Travel & 1-Click Quarantine Endpoints
-Route::prefix('v1/security/{productSlug}')->group(function (): void {
+// Phase 3: previously unauthenticated. Sanctum is now required and
+// the controller enforces product-owner access (see
+// AdvancedLicensingController::requireProductOwner).
+Route::middleware('auth:sanctum')->prefix('v1/security/{productSlug}')->group(function (): void {
     Route::get('/events', [\App\Http\Controllers\Developer\AdvancedLicensingController::class, 'securityEvents'])->name('api.security.events');
     Route::post('/quarantine', [\App\Http\Controllers\Developer\AdvancedLicensingController::class, 'quarantine'])->name('api.security.quarantine');
     Route::post('/unbind-hardware', [\App\Http\Controllers\Developer\AdvancedLicensingController::class, 'unbindHardware'])->name('api.security.unbind_hardware');

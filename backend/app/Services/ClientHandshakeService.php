@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Models\Product;
 use App\Models\ProductDeal;
+use App\Support\LicenseShardSchema;
 use Illuminate\Support\Carbon;
 use PDO;
 
@@ -28,7 +29,7 @@ class ClientHandshakeService
         return new PDO("sqlite:{$shardPath}");
     }
 
-    /** Verify client license and mint periodic Ed25519 offline token. */
+    /** Verify client license, read-only: no auto-register, no seat binding. */
     public function verifyClient(string $productSlug, string $serial, string $hwid, string $ip, string $h = 'Client PC', ?string $cc = null, ?string $cn = null): array
     {
         $product = $this->resolveActiveProduct($productSlug);
@@ -36,18 +37,54 @@ class ClientHandshakeService
             return ['isValid' => false, 'errorCode' => 'ProductNotFound', 'message' => "Product '{$productSlug}' not found."];
         }
         $pdo = $this->openShardPdo($productSlug);
-        $license = $this->findOrRegisterLicense($pdo, $serial, $product);
+        $license = $this->findLicenseBySerial($pdo, $serial);
+        if (!$license) {
+            return ['isValid' => false, 'errorCode' => 'LicenseNotFound', 'message' => 'License not found.'];
+        }
+
+        return $this->verifyExistingLicense($pdo, $product, $license, $serial, $hwid, $ip, $cc, $cn);
+    }
+
+    /** Activate license on a hardware device seat, lookup only, no auto-register. */
+    public function activate(string $productSlug, string $serial, string $hwid, string $ip, string $h = 'Client PC'): array
+    {
+        $product = $this->resolveActiveProduct($productSlug);
+        if (!$product) {
+            return ['isValid' => false, 'errorCode' => 'ProductNotFound', 'message' => "Product '{$productSlug}' not found."];
+        }
+        $pdo = $this->openShardPdo($productSlug);
+        $license = $this->findLicenseBySerial($pdo, $serial);
+        if (!$license) {
+            return ['isValid' => false, 'errorCode' => 'LicenseNotFound', 'message' => 'License not found.'];
+        }
         if (!$license['isActive'] || $license['isRevoked']) {
             return ['isValid' => false, 'errorCode' => 'LicenseRevoked', 'message' => 'License revoked/suspended.'];
         }
+        if (LicenseExpiry::isExpired($license['expiresAt'] ?? null)) {
+            return ['isValid' => false, 'errorCode' => 'LicenseExpired', 'message' => 'License has expired.'];
+        }
 
-        return $this->processVerification($pdo, $product, $license, $serial, $hwid, $ip, $h, $cc, $cn);
+        return $this->processVerification($pdo, $product, $license, $serial, $hwid, $ip, $h, null, null);
     }
 
-    /** Activate license on a hardware device seat. */
-    public function activate(string $productSlug, string $serial, string $hwid, string $ip, string $h = 'Client PC'): array
+    private function verifyExistingLicense(PDO $pdo, Product $product, array $license, string $serial, string $hwid, string $ip, ?string $cc, ?string $cn): array
     {
-        return $this->verifyClient($productSlug, $serial, $hwid, $ip, $h);
+        if (!$license['isActive'] || $license['isRevoked']) {
+            return ['isValid' => false, 'errorCode' => 'LicenseRevoked', 'message' => 'License revoked/suspended.'];
+        }
+        if (LicenseExpiry::isExpired($license['expiresAt'] ?? null)) {
+            return ['isValid' => false, 'errorCode' => 'LicenseExpired', 'message' => 'License has expired.'];
+        }
+        $risk = $this->riskService->evaluateAttempt($serial, $ip, $hwid);
+        if (!$risk['isPermitted']) {
+            $this->logSecurityEvent($pdo, $serial, $ip, $hwid, $risk['reasons']);
+
+            return ['isValid' => false, 'errorCode' => 'SecurityRiskDetected', 'message' => 'Anomaly detected.', 'reasons' => $risk['reasons']];
+        }
+        $bound = $this->findActiveMachineBinding($pdo, (int) $license['id'], $hwid) !== null;
+        $count = $this->countActiveMachineBindings($pdo, (int) $license['id']);
+
+        return $this->buildVerificationResult($product, $license, $serial, $hwid, $count, $bound);
     }
 
     /** Deactivate license and release hardware binding seat. */
@@ -104,16 +141,17 @@ class ClientHandshakeService
     }
 
     /** Build successful verification and activation payload. */
-    private function buildVerificationResult(Product $product, array $license, string $serial, string $hwid, int $activeSeats): array
+    private function buildVerificationResult(Product $product, array $license, string $serial, string $hwid, int $activeSeats, bool $isActivated = true): array
     {
         $product = $this->ensureProductEd25519Keys($product);
         $days = (int) $product->checkIntervalDays;
         $token = $this->jwtService->issueEd25519Token($serial, $hwid, (string) $license['dealCode'], (int) $license['allowedSeats'], (string) $product->ed25519PrivateKey);
 
         return [
-            'isValid' => true, 'isActivated' => true, 'serialValue' => $serial, 'productSlug' => (string) $product->productSlug,
+            'isValid' => true, 'isActivated' => $isActivated, 'serialValue' => $serial, 'productSlug' => (string) $product->productSlug,
             'dealCode' => (string) $license['dealCode'], 'checkIntervalDays' => $days, 'nextCheckBefore' => Carbon::now()->addDays($days)->toISOString(),
-            'allowedSeats' => (int) $license['allowedSeats'], 'activeSeats' => $activeSeats, 'offlineToken' => $token, 'ed25519PublicKey' => (string) $product->ed25519PublicKey,
+            'allowedSeats' => (int) $license['allowedSeats'], 'activeSeats' => $activeSeats, 'expiresAt' => $license['expiresAt'] ?? null,
+            'offlineToken' => $token, 'ed25519PublicKey' => (string) $product->ed25519PublicKey,
         ];
     }
 
@@ -195,13 +233,13 @@ class ClientHandshakeService
                 $insHb->execute([':lid' => $licenseId, ':hwid' => $normalizedHwid, ':h' => $hostname, ':dt' => $now, ':ip' => $clientIp, ':cc' => $countryCode, ':cn' => $countryName]);
             }
 
-            $activeCount = max($this->countActiveMachineBindings($pdo, $licenseId), $this->countActiveHardwareBindings($pdo, $licenseId));
+            $activeCount = $this->countActiveMachineBindings($pdo, $licenseId);
 
             return ['isBound' => true, 'activeCount' => $activeCount];
         }
 
         // Step C: New Binding Gate
-        $activeCount = max($this->countActiveMachineBindings($pdo, $licenseId), $this->countActiveHardwareBindings($pdo, $licenseId));
+        $activeCount = $this->countActiveMachineBindings($pdo, $licenseId);
         if ($activeCount >= $maxSeats) {
             return $this->seatLimitPayload($pdo, $licenseId, $maxSeats, $activeCount);
         }
@@ -284,28 +322,10 @@ class ClientHandshakeService
         $ins->execute([':lid' => $licenseId, ':hwid' => $hwid, ':h' => $hostname, ':dt' => $now, ':ip' => $clientIp, ':cc' => $countryCode, ':cn' => $countryName]);
     }
 
-    /** Find or auto-register license row. */
-    private function findOrRegisterLicense(PDO $pdo, string $serial, Product $product): array
-    {
-        $stmt = $pdo->prepare('SELECT * FROM ProductLicenses WHERE serialValue = :serial LIMIT 1');
-        $stmt->execute([':serial' => $serial]);
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        return $row ?: $this->insertNewProductLicense($pdo, $serial, $product);
-    }
-
-    /** Insert new license record into ProductLicenses. */
-    private function insertNewProductLicense(PDO $pdo, string $serial, Product $product): array
-    {
-        $deal = $product->deals->first();
-        $seats = $deal ? (int) $deal->allowedMachineSeats : 1;
-        $dealCode = $deal ? $deal->dealCode : 'DEFAULT';
-        $ins = $pdo->prepare('INSERT INTO ProductLicenses (serialValue, dealCode, allowedSeats, isActive, isRevoked, createdAt) VALUES (:s, :d, :seats, 1, 0, :dt)');
-        $ins->execute([':s' => $serial, ':d' => $dealCode, ':seats' => $seats, ':dt' => Carbon::now()->toISOString()]);
-
-        return ['id' => (int) $pdo->lastInsertId(), 'serialValue' => $serial, 'dealCode' => $dealCode, 'allowedSeats' => $seats, 'isActive' => 1, 'isRevoked' => 0];
-    }
-
+    // Decision 2A: verify/activate no longer auto-register unknown
+    // serials. Licences are created only by webhookIssue / gateway
+    // dual-write (ProductService::recordShardLicense and
+    // PaymentWebhookService::recordEvent), never by verify/activate.
     /** Ensure Product has valid Ed25519 signing keys. */
     public function ensureProductEd25519Keys(Product $product): Product
     {
@@ -354,6 +374,7 @@ class ClientHandshakeService
             isRevoked INTEGER DEFAULT 0,
             createdAt TEXT NOT NULL
         );');
+        LicenseShardSchema::ensureProductLicenses($pdo);
     }
 
     /** Create MachineBindings table in shard. */

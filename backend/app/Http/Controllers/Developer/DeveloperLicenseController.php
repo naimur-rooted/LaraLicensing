@@ -64,6 +64,8 @@ class DeveloperLicenseController extends Controller
             $data = [];
             foreach ($licenses as $lic) {
                 $licenseId = (int) $lic['id'];
+                $expiresAt = $this->licenseExpiresAt($pdo, $licenseId);
+                $activeSeats = $this->countMachineSeats($pdo, $licenseId);
 
                 $bStmt = $pdo->prepare('SELECT hostname, hardwareDigest, boundAt FROM HardwareBindings WHERE licenseId = :lid ORDER BY id DESC');
                 $bStmt->execute([':lid' => $licenseId]);
@@ -85,8 +87,9 @@ class DeveloperLicenseController extends Controller
                     'serialValue' => (string) $lic['serialValue'],
                     'dealCode' => (string) $lic['dealCode'],
                     'allowedSeats' => (int) $lic['allowedSeats'],
-                    'activeSeats' => count($boundMachines),
+                    'activeSeats' => $activeSeats,
                     'isActive' => $isActive,
+                    'expiresAt' => $expiresAt,
                     'createdAt' => (string) $lic['createdAt'],
                     'boundMachines' => $boundMachines,
                 ];
@@ -103,6 +106,33 @@ class DeveloperLicenseController extends Controller
                 'Message' => 'Failed to read product license shard: ' . $e->getMessage(),
             ], 500);
         }
+    }
+
+    private function licenseExpiresAt(PDO $pdo, int $licenseId): ?string
+    {
+        $cols = $pdo->query('PRAGMA table_info(ProductLicenses)')->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($cols as $col) {
+            if (($col['name'] ?? '') === 'expiresAt') {
+                $stmt = $pdo->prepare('SELECT expiresAt FROM ProductLicenses WHERE id = :lid LIMIT 1');
+                $stmt->execute([':lid' => $licenseId]);
+
+                return (string) ($stmt->fetch(PDO::FETCH_ASSOC)['expiresAt'] ?? '') ?: null;
+            }
+        }
+
+        return null;
+    }
+
+    private function countMachineSeats(PDO $pdo, int $licenseId): int
+    {
+        $check = $pdo->query("SELECT name FROM sqlite_master WHERE type='table' AND name='MachineBindings'")->fetch();
+        if (!$check) {
+            return 0;
+        }
+        $stmt = $pdo->prepare('SELECT COUNT(*) as cnt FROM MachineBindings WHERE LicenseId = :lid AND ReleasedAt IS NULL');
+        $stmt->execute([':lid' => $licenseId]);
+
+        return (int) ($stmt->fetch(PDO::FETCH_ASSOC)['cnt'] ?? 0);
     }
 
     /**

@@ -114,6 +114,20 @@ class PaymentWebhookTest extends TestCase
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         $this->assertNotEmpty($row, 'Product shard must record the serial in Serials table.');
 
+        // Decision 2A: gateway dual-write to ProductLicenses in the
+        // database_path shard, with deal, seats, email, event id, expiry.
+        $portalShard = database_path('product_' . self::PRODUCT_SLUG . '.sqlite');
+        $this->assertFileExists($portalShard);
+        $portalPdo = new PDO("sqlite:{$portalShard}");
+        $licStmt = $portalPdo->prepare('SELECT * FROM ProductLicenses WHERE serialValue = ?');
+        $licStmt->execute([$serial]);
+        $lic = $licStmt->fetch(PDO::FETCH_ASSOC);
+        $this->assertNotEmpty($lic, 'Gateway serial must also appear in ProductLicenses for the portal.');
+        $this->assertSame('PILOT_ANNUAL', $lic['dealCode']);
+        $this->assertSame('stripe_buyer@example.com', $lic['customerEmail']);
+        $this->assertSame($eventId, $lic['transactionId']);
+        $this->assertNotEmpty($lic['expiresAt'], 'Yearly deal must derive a non-null expiry.');
+
         // Verify Idempotent Deduplication on Replay
         $replayResponse = $this->call(
             'POST',
@@ -133,6 +147,9 @@ class PaymentWebhookTest extends TestCase
         $this->assertTrue($replayResponse->json('Status.IsSuccess'));
         $this->assertSame($serial, $replayResponse->json('Results.0.SerialValue'), 'Replay must return original serial.');
         $this->assertTrue((bool) $replayResponse->json('Results.0.IsReplayed'), 'Replay must indicate IsReplayed === true.');
+        $countStmt = $portalPdo->prepare('SELECT COUNT(*) FROM ProductLicenses WHERE serialValue = ?');
+        $countStmt->execute([$serial]);
+        $this->assertSame(1, (int) $countStmt->fetchColumn(), 'Replay must not duplicate the ProductLicenses row.');
     }
 
     public function test_lemonsqueezy_valid_signature_issues_license(): void
@@ -367,5 +384,15 @@ class PaymentWebhookTest extends TestCase
             'checkIntervalDays' => 7,
         ]);
         Product::query()->where('productSlug', self::PRODUCT_SLUG)->update(['webhookSecret' => self::SECRET]);
+        // Decision 2A/3A: gateway dual-write derives expiry from the deal,
+        // so the test product needs the deals the webhooks reference.
+        $product = Product::query()->where('productSlug', self::PRODUCT_SLUG)->firstOrFail();
+        foreach ([
+            ['dealName' => 'Pilot Annual', 'dealCode' => 'PILOT_ANNUAL', 'billingInterval' => 'yearly', 'priceCents' => 9900, 'allowedMachineSeats' => 3],
+            ['dealName' => 'LS Lifetime', 'dealCode' => 'LS_LIFETIME', 'billingInterval' => 'lifetime', 'priceCents' => 19900, 'allowedMachineSeats' => 1],
+            ['dealName' => 'Woo Starter', 'dealCode' => 'WOO_STARTER', 'billingInterval' => 'monthly', 'priceCents' => 1900, 'allowedMachineSeats' => 1],
+        ] as $deal) {
+            $productService->createDeal($product, $deal);
+        }
     }
 }

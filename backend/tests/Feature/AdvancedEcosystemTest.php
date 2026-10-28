@@ -8,6 +8,8 @@ use App\Http\Controllers\Developer\AdvancedLicensingController;
 
 use App\Models\Product;
 use App\Models\Reseller;
+use App\Services\LicenseExpiry;
+use App\Services\ProductService;
 use Tests\TestCase;
 
 /**
@@ -47,12 +49,24 @@ class AdvancedEcosystemTest extends TestCase
         );
     }
 
+    private function seedIssuedLicense(Product $product, string $serial): void
+    {
+        // Decision 2A: pre-seed as an issued licence; verify/activate
+        // no longer auto-register. Fresh shard per test for isolation.
+        @unlink(database_path("product_{$product->productSlug}.sqlite"));
+        app(ProductService::class)->recordShardLicense(
+            $product, $serial, 'ELM_1M_SINGLE', 1, LicenseExpiry::derive('monthly')
+        );
+    }
+
     public function test_client_license_handshake_and_offline_token_generation(): void
     {
         $product = Product::first();
         $this->assertNotNull($product);
+        $this->seedIssuedLicense($product, 'ELM-DEMO-VALID-001');
 
-        $response = $this->postJson("/api/v1/products/{$product->productSlug}/verify", [
+        // Decision 2A: binding happens on activate, not on verify.
+        $response = $this->postJson("/api/v1/products/{$product->productSlug}/activate", [
             'serialValue' => 'ELM-DEMO-VALID-001',
             'hardwareDigest' => 'HWID_WORKSTATION_ALPHA',
             'hostname' => 'Office PC',
@@ -65,22 +79,28 @@ class AdvancedEcosystemTest extends TestCase
             ->assertJsonPath('Data.activeSeats', 1);
 
         $this->assertNotEmpty($response->json('Data.offlineToken'));
+
+        // Verify after activate is read-only and still valid.
+        $this->postJson("/api/v1/products/{$product->productSlug}/verify", [
+            'serialValue' => 'ELM-DEMO-VALID-001',
+            'hardwareDigest' => 'HWID_WORKSTATION_ALPHA',
+        ])->assertStatus(200)->assertJsonPath('Data.isValid', true)->assertJsonPath('Data.activeSeats', 1);
     }
 
     public function test_hardware_seat_locking_prevents_overflow(): void
     {
         $product = Product::first();
         $this->assertNotNull($product);
+        $this->seedIssuedLicense($product, 'ELM-SEAT-TEST-001');
 
-        // First device binding (seat 1 of 1)
-        $this->postJson("/api/v1/products/{$product->productSlug}/verify", [
+        // First device binding (seat 1 of 1) via activate.
+        $this->postJson("/api/v1/products/{$product->productSlug}/activate", [
             'serialValue' => 'ELM-SEAT-TEST-001',
             'hardwareDigest' => 'HWID_FIRST_MACHINE',
         ])->assertStatus(200);
 
-        // Second device attempt on 1-seat license -> 409 SeatLimitExceeded,
-        // now consistent with activate() (previously 403 on this path).
-        $response = $this->postJson("/api/v1/products/{$product->productSlug}/verify", [
+        // Second device attempt on 1-seat license -> 409 SeatLimitExceeded.
+        $response = $this->postJson("/api/v1/products/{$product->productSlug}/activate", [
             'serialValue' => 'ELM-SEAT-TEST-001',
             'hardwareDigest' => 'HWID_SECOND_MACHINE',
         ]);
@@ -88,18 +108,27 @@ class AdvancedEcosystemTest extends TestCase
         $response->assertStatus(409)
             ->assertJsonPath('IsSuccess', false)
             ->assertJsonPath('Data.errorCode', 'SeatLimitExceeded');
+
+        // Read-only verify does not enforce seat binding.
+        $this->postJson("/api/v1/products/{$product->productSlug}/verify", [
+            'serialValue' => 'ELM-SEAT-TEST-001',
+            'hardwareDigest' => 'HWID_SECOND_MACHINE',
+        ])->assertStatus(200)->assertJsonPath('Data.isValid', true);
     }
 
     public function test_reseller_wholesale_quota_allocation_and_overview(): void
     {
+        // Phase 3: reseller-wholesale now requires Sanctum auth.
+        $user = new \App\Models\User();
+        $user->UserId = 1;
         // Allocate wholesale quota
-        $this->postJson('/api/v1/reseller-wholesale/sohel-reseller/quota', [
+        $this->actingAs($user, 'sanctum')->postJson('/api/v1/reseller-wholesale/sohel-reseller/quota', [
             'tierCode' => 'ESSENTIAL',
             'count' => 200,
         ])->assertStatus(201);
 
         // Create custom offer
-        $this->postJson('/api/v1/reseller-wholesale/sohel-reseller/offers', [
+        $this->actingAs($user, 'sanctum')->postJson('/api/v1/reseller-wholesale/sohel-reseller/offers', [
             'offerName' => 'Agency Special 3-Pack',
             'retailPriceCents' => 4900,
             'durationDays' => 365,
@@ -108,7 +137,7 @@ class AdvancedEcosystemTest extends TestCase
         ])->assertStatus(201);
 
         // Fetch overview
-        $response = $this->getJson('/api/v1/reseller-wholesale/sohel-reseller/overview');
+        $response = $this->actingAs($user, 'sanctum')->getJson('/api/v1/reseller-wholesale/sohel-reseller/overview');
         if ($response->status() !== 200) {
             dump($response->json());
         }
@@ -121,9 +150,21 @@ class AdvancedEcosystemTest extends TestCase
     {
         $product = Product::first();
         $this->assertNotNull($product);
+        $owner = new \App\Models\User();
+        $owner->UserId = (int) ($product->userId ?? $product->UserId ?? 1);
+
+        // Phase 3: security endpoints require Sanctum + product owner.
+        $this->postJson("/api/v1/security/{$product->productSlug}/quarantine", [
+            'serialValue' => 'ELM-SUSPICIOUS-SERIAL-99',
+        ])->assertStatus(401);
+        $other = new \App\Models\User();
+        $other->UserId = 99999;
+        $this->actingAs($other, 'sanctum')->postJson("/api/v1/security/{$product->productSlug}/quarantine", [
+            'serialValue' => 'ELM-SUSPICIOUS-SERIAL-99',
+        ])->assertStatus(403);
 
         // Quarantine license
-        $qRes = $this->postJson("/api/v1/security/{$product->productSlug}/quarantine", [
+        $qRes = $this->actingAs($owner, 'sanctum')->postJson("/api/v1/security/{$product->productSlug}/quarantine", [
             'serialValue' => 'ELM-SUSPICIOUS-SERIAL-99',
             'reason' => 'Impossible travel velocity detected',
         ]);

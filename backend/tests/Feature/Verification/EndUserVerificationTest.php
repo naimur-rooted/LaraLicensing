@@ -6,6 +6,8 @@ namespace Tests\Feature\Verification;
 
 use App\Models\Product;
 use App\Services\JwtTokenService;
+use App\Services\LicenseExpiry;
+use App\Services\ProductService;
 use Database\Seeders\ProductSeeder;
 use PDO;
 use Tests\TestCase;
@@ -32,6 +34,25 @@ class EndUserVerificationTest extends TestCase
         $this->product = Product::firstOrFail();
         $this->shardPath = database_path("product_{$this->product->productSlug}.sqlite");
         @unlink($this->shardPath);
+        $this->seedIssuedLicense();
+    }
+
+    // Decision 2A: fixtures are pre-seeded as issued licences.
+    // Verify/activate must not auto-register an unknown serial.
+    private function seedIssuedLicense(): void
+    {
+        app(ProductService::class)->recordShardLicense(
+            $this->product, self::SERIAL, 'ELM_1M_SINGLE', 1,
+            LicenseExpiry::derive('monthly')
+        );
+    }
+
+    private function seedExpiredLicense(): void
+    {
+        $past = now()->subDay()->toISOString();
+        app(ProductService::class)->recordShardLicense(
+            $this->product, 'LARA-TEST-EXPIRED-01', 'ELM_1M_SINGLE', 1, $past
+        );
     }
 
     protected function tearDown(): void
@@ -158,5 +179,58 @@ class EndUserVerificationTest extends TestCase
         ]);
         $res->assertStatus(200)->assertJsonPath('Status.IsSuccess', true)->assertJsonPath('Results.0.isValid', true);
         $this->assertNotEmpty($res->json('Results.0.offlineToken'));
+    }
+
+    public function test_verify_does_not_bind_and_unknown_serial_is_not_found(): void
+    {
+        $res = $this->postJson('/api/v1/verify', [
+            'productSlug' => $this->product->productSlug, 'serialValue' => self::SERIAL,
+            'hardwareDigest' => self::HWID_A,
+        ]);
+        $res->assertStatus(200);
+        $pdo = new PDO("sqlite:{$this->shardPath}");
+        $count = (int) $pdo->query('SELECT COUNT(*) FROM MachineBindings WHERE ReleasedAt IS NULL')->fetchColumn();
+        $this->assertSame(0, $count, 'Bare verify must create no binding.');
+        $unknown = $this->postJson('/api/v1/verify', [
+            'productSlug' => $this->product->productSlug, 'serialValue' => 'LARA-UNKNOWN-000',
+            'hardwareDigest' => self::HWID_A,
+        ]);
+        $unknown->assertStatus(404)->assertJsonPath('Attributes.Error.ErrorCode', 'LicenseNotFound');
+        $row = $pdo->query("SELECT * FROM ProductLicenses WHERE serialValue = 'LARA-UNKNOWN-000'")->fetch(PDO::FETCH_ASSOC);
+        $this->assertFalse($row, 'Verify must not auto-register unknown serials.');
+    }
+
+    public function test_activate_unknown_serial_is_not_found_and_expired_is_rejected(): void
+    {
+        $unknown = $this->postJson('/api/v1/activate', [
+            'productSlug' => $this->product->productSlug, 'serialValue' => 'LARA-UNKNOWN-000',
+            'hardwareDigest' => self::HWID_A,
+        ]);
+        $unknown->assertStatus(404)->assertJsonPath('Attributes.Error.ErrorCode', 'LicenseNotFound');
+        $this->seedExpiredLicense();
+        $expired = $this->postJson('/api/v1/activate', [
+            'productSlug' => $this->product->productSlug, 'serialValue' => 'LARA-TEST-EXPIRED-01',
+            'hardwareDigest' => self::HWID_A,
+        ]);
+        $expired->assertStatus(403)->assertJsonPath('Attributes.Error.ErrorCode', 'LicenseExpired');
+        $expiredVerify = $this->postJson('/api/v1/verify', [
+            'productSlug' => $this->product->productSlug, 'serialValue' => 'LARA-TEST-EXPIRED-01',
+            'hardwareDigest' => self::HWID_A,
+        ]);
+        $expiredVerify->assertStatus(403)->assertJsonPath('Attributes.Error.ErrorCode', 'LicenseExpired');
+    }
+
+    public function test_license_expiry_derivation_for_each_interval(): void
+    {
+        $base = now();
+        $this->assertEquals($base->copy()->addDay()->toISOString(), LicenseExpiry::derive('daily', $base));
+        $this->assertEquals($base->copy()->addWeek()->toISOString(), LicenseExpiry::derive('weekly', $base));
+        $this->assertEquals($base->copy()->addMonth()->toISOString(), LicenseExpiry::derive('monthly', $base));
+        $this->assertEquals($base->copy()->addMonths(3)->toISOString(), LicenseExpiry::derive('quarterly', $base));
+        $this->assertEquals($base->copy()->addYear()->toISOString(), LicenseExpiry::derive('yearly', $base));
+        $this->assertEquals($base->copy()->addYears(2)->toISOString(), LicenseExpiry::derive('biennial', $base));
+        $this->assertNull(LicenseExpiry::derive('lifetime', $base));
+        $this->assertFalse(LicenseExpiry::isExpired(null));
+        $this->assertTrue(LicenseExpiry::isExpired(now()->subDay()->toISOString()));
     }
 }

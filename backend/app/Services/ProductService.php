@@ -7,7 +7,9 @@ namespace App\Services;
 use App\Exceptions\ValidationException;
 use App\Models\Product;
 use App\Models\ProductDeal;
+use App\Support\LicenseShardSchema;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use PDO;
 
@@ -44,12 +46,43 @@ class ProductService
         if (Product::query()->where('productSlug', $slug)->exists()) {
             throw ValidationException::invalidInput('productSlug already exists.');
         }
+        // Orphan hazard (Phase 3): previously Product::create ran before
+        // deal provisioning, so one invalid nested deal left a product
+        // row with partial deals. Validate all nested deals first, then
+        // create product + deals in one transaction, then provision shard.
+        $this->validateNestedDeals($attributes['deals'] ?? []);
         $keyPair = $this->generateKeyPair();
-        $product = Product::create($this->buildProductPayload($userId, $slug, $attributes, $keyPair));
+        $product = DB::connection('root')->transaction(function () use ($userId, $slug, $attributes, $keyPair) {
+            $created = Product::create($this->buildProductPayload($userId, $slug, $attributes, $keyPair));
+            $this->provisionProductDeals($created, $attributes['deals'] ?? []);
+
+            return $created;
+        });
         $this->provisionProductShard($slug);
-        $this->provisionProductDeals($product, $attributes['deals'] ?? []);
 
         return $product->load('deals');
+    }
+
+    private function validateNestedDeals(mixed $deals): void
+    {
+        if (empty($deals)) {
+            return;
+        }
+        if (!is_array($deals)) {
+            throw ValidationException::invalidInput('deals must be an array.');
+        }
+        $seen = [];
+        $probe = new Product(['ProductId' => -1]);
+        foreach ($deals as $deal) {
+            if (!is_array($deal)) {
+                throw ValidationException::invalidInput('Each deal must be an object.');
+            }
+            $validated = $this->validateDealAttributes($probe, $deal);
+            if (in_array($validated['dealCode'], $seen, true)) {
+                throw ValidationException::invalidInput('dealCode already exists for this product.');
+            }
+            $seen[] = $validated['dealCode'];
+        }
     }
 
     private function buildProductPayload(int $userId, string $slug, array $attrs, array $keyPair): array
@@ -158,6 +191,7 @@ class ProductService
             isRevoked INTEGER DEFAULT 0,
             createdAt TEXT NOT NULL
         );');
+        LicenseShardSchema::ensureProductLicenses($pdo);
         $pdo->exec('CREATE TABLE IF NOT EXISTS HardwareBindings (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             licenseId INTEGER NOT NULL,
@@ -172,33 +206,50 @@ class ProductService
     }
 
     /** Record an issued serial license into the isolated product SQLite shard. */
-    public function recordShardLicense(Product $product, string $serial, string $dealCode, int $allowedSeats): void
+    public function recordShardLicense(Product $product, string $serial, string $dealCode, int $allowedSeats, ?string $expiresAt = null, ?string $customerEmail = null, ?string $transactionId = null): void
     {
         $this->provisionProductShard($product->productSlug);
-        $shardPath = database_path("product_{$product->productSlug}.sqlite");
-        $pdo = new PDO("sqlite:{$shardPath}");
+        $pdo = $this->openShardPdo($product->productSlug);
+        LicenseShardSchema::ensureProductLicenses($pdo);
+        $this->insertShardLicense($pdo, $serial, $dealCode, $allowedSeats, $expiresAt, $customerEmail, $transactionId);
+    }
+
+    private function openShardPdo(string $slug): PDO
+    {
+        $pdo = new PDO('sqlite:' . database_path("product_{$slug}.sqlite"));
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
+        return $pdo;
+    }
+
+    private function insertShardLicense(PDO $pdo, string $serial, string $dealCode, int $seats, ?string $expiresAt, ?string $email, ?string $txId): void
+    {
         $check = $pdo->prepare('SELECT id FROM ProductLicenses WHERE serialValue = :s LIMIT 1');
         $check->execute([':s' => $serial]);
-        if (!$check->fetch()) {
-            try {
-                $ins = $pdo->prepare('INSERT OR IGNORE INTO ProductLicenses (serialValue, dealCode, allowedSeats, isActive, isRevoked, createdAt) VALUES (:s, :d, :seats, 1, 0, :dt)');
-                $ins->execute([
-                    ':s' => $serial,
-                    ':d' => $dealCode,
-                    ':seats' => max(1, $allowedSeats),
-                    ':dt' => now()->toISOString(),
-                ]);
-            } catch (\PDOException $e) {
-                // Concurrent replay racing the check above: a UNIQUE
-                // violation means the serial already exists, which is
-                // idempotent success, not a 500. Re-throw anything else.
-                if (!str_contains((string) $e->getMessage(), 'UNIQUE') && (int) $e->getCode() !== 23000) {
-                    throw $e;
-                }
+        if ($check->fetch()) {
+            $this->fillShardLicenseMeta($pdo, $serial, $expiresAt, $email, $txId);
+
+            return;
+        }
+        try {
+            $this->doInsertShardLicense($pdo, $serial, $dealCode, $seats, $expiresAt, $email, $txId);
+        } catch (\PDOException $e) {
+            if (!str_contains((string) $e->getMessage(), 'UNIQUE') && (int) $e->getCode() !== 23000) {
+                throw $e;
             }
         }
+    }
+
+    private function doInsertShardLicense(PDO $pdo, string $serial, string $dealCode, int $seats, ?string $expiresAt, ?string $email, ?string $txId): void
+    {
+        $ins = $pdo->prepare('INSERT OR IGNORE INTO ProductLicenses (serialValue, dealCode, allowedSeats, isActive, isRevoked, customerEmail, transactionId, expiresAt, createdAt) VALUES (:s, :d, :seats, 1, 0, :email, :tx, :exp, :dt)');
+        $ins->execute([':s' => $serial, ':d' => $dealCode, ':seats' => max(1, $seats), ':email' => $email, ':tx' => $txId, ':exp' => $expiresAt, ':dt' => now()->toISOString()]);
+    }
+
+    private function fillShardLicenseMeta(PDO $pdo, string $serial, ?string $expiresAt, ?string $email, ?string $txId): void
+    {
+        $upd = $pdo->prepare('UPDATE ProductLicenses SET expiresAt = COALESCE(expiresAt, :exp), customerEmail = COALESCE(customerEmail, :email), transactionId = COALESCE(transactionId, :tx) WHERE serialValue = :s');
+        $upd->execute([':exp' => $expiresAt, ':email' => $email, ':tx' => $txId, ':s' => $serial]);
     }
 
     private const ALLOWED_BILLING_INTERVALS = [
@@ -234,15 +285,29 @@ class ProductService
     /** @return array{priceCents:int,allowedMachineSeats:int} */
     private function validateDealNumbers(array $attributes): array
     {
+        // Phase 3 cents refinement: previously 19.99 was silently cast
+        // to 19. priceCents and seats must be integers, not floats.
         $priceRaw = $attributes['priceCents'] ?? 0;
-        if (!is_numeric($priceRaw) || (int) $priceRaw < 0) {
+        if (!$this->isIntegerValue($priceRaw) || (int) $priceRaw < 0) {
             throw ValidationException::invalidInput('priceCents must be a non-negative integer.');
         }
         $seatsRaw = $attributes['allowedMachineSeats'] ?? 1;
-        if (!is_numeric($seatsRaw) || (int) $seatsRaw < 1) {
+        if (!$this->isIntegerValue($seatsRaw) || (int) $seatsRaw < 1) {
             throw ValidationException::invalidInput('allowedMachineSeats must be at least 1.');
         }
         return ['priceCents' => (int) $priceRaw, 'allowedMachineSeats' => (int) $seatsRaw];
+    }
+
+    private function isIntegerValue(mixed $value): bool
+    {
+        if (is_int($value)) {
+            return true;
+        }
+        if (is_string($value)) {
+            return (bool) preg_match('/^-?\d+$/', trim($value));
+        }
+
+        return false;
     }
 
     private function assertDealCodeUnique(Product $product, string $dealCode, ?int $excludeDealId): void
