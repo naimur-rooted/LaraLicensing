@@ -88,3 +88,12 @@ Purpose: log confusion instead of blocking overnight work. User will analyse lat
 - Found: 27 failures in full Pest suite are Postgres connection refused (no Postgres on 127.0.0.1:5432) plus 3 pre-existing architecture tests (function-length cap with 3 untouched violations, endpoint inventory with pre-existing AiArchitect routes, TraceRedactor token-shape case).
 - Approach used: fixed only the violations phase 2 introduced (cap helpers, controller references), did not add baseline entries, did not hide failures, and did not claim full-suite pass.
 - Needed later: a Postgres test environment for the Seed/Admin/Auth/Reseller suites, plus fixes for the 3 pre-existing architecture failures, plus investigation of AdvancedEcosystem/DeveloperPortal test-order flakiness.
+
+## 16 (resolved in Phase 3). webhookIssue HMAC gating is a breaking-change decision
+- Resolved: user decided 1A on 2026-10-28 08:21 +06. webhookIssue now requires HMAC-SHA256 (X-Webhook-Signature / X-Signature) keyed by product webhookSecret, 401 on missing/bad signature, no unsigned fallback. All 7 existing webhookIssue test calls were updated to sign in the same batch, plus unsigned/bad-signature tests. Original entry above is kept unchanged.
+
+## 17 (resolved in Phase 3). Verify read-only split is a client-migration decision
+- Resolved: user decided 2A on 2026-10-28 08:21 +06, with gateway dual-write first. Gateway serials now dual-write to Serials AND ProductLicenses (deal, seats, email, event id, expiry, idempotent on replay). Verify is read-only (unknown => LicenseNotFound 404, no auto-register, no binding); activate is bind-only. EndUserVerificationTest, AdvancedEcosystemTest and DeveloperPortalTest were updated in the same batches (pre-seeded fixtures, bare verify creates no binding). Original entry above is kept unchanged.
+
+## 18 (resolved in Phase 3). License expiry is a schema gap, not just a code fix
+- Resolved: user decided 3A on 2026-10-28 08:21 +06. ProductLicenses gained expiresAt (plus customerEmail, transactionId) via LicenseShardSchema with CREATE for new shards and ALTER for old shards. Derivation: daily +1d, weekly +7d, monthly +1mo, quarterly +3mo, yearly +1y, biennial +2y, lifetime null. Verify and activate reject expired licences with LicenseExpired 403. Tests cover every interval, lifetime null, and expired rejection. Original entry above is kept unchanged.
