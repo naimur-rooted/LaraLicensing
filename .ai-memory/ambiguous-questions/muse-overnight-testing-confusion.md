@@ -97,3 +97,14 @@ Purpose: log confusion instead of blocking overnight work. User will analyse lat
 
 ## 18 (resolved in Phase 3). License expiry is a schema gap, not just a code fix
 - Resolved: user decided 3A on 2026-10-28 08:21 +06. ProductLicenses gained expiresAt (plus customerEmail, transactionId) via LicenseShardSchema with CREATE for new shards and ALTER for old shards. Derivation: daily +1d, weekly +7d, monthly +1mo, quarterly +3mo, yearly +1y, biennial +2y, lifetime null. Verify and activate reject expired licences with LicenseExpired 403. Tests cover every interval, lifetime null, and expired rejection. Original entry above is kept unchanged.
+
+## 21. Phase 4 backfill + JIT — implemented, with logged fallbacks
+- Implemented: LicenseBackfillService + lara:licenses:backfill command + JIT promotion in verify/activate only. Unknown keys still 404 with no row created. Revoked keys promote as revoked, not active. repodb/ is not a live read path; backfill defaults to database_path/, --include-repodb optional.
+- Remaining: deactivate/heartbeat do not JIT-promote (out of scope); fallback keys (DEFAULT deal, null expiry) are logged per key but have no admin UI surfacing.
+
+## 22. Phase 4 Sanctum mint — implemented, secret not exposed
+- Implemented: POST /api/v1/developer/products/{productSlug}/licenses/mint in the Sanctum developer group, owner-checked, writes directly to ProductLicenses + Serials, new serial per call, response isSimulated true (endpoint-derived, not a stored column).
+- Remaining: no stored simulated marker column — tx_mock_ pattern is the marker; a caller supplying a non-tx_mock_ transactionId is indistinguishable from a gateway licence. Mint checks deal existence only, not isActive. Both are follow-up schema/policy decisions, deliberately not assumed.
+
+## 23. Phase 4 coordinator refactor — function-length cap restored
+- Worker backfill service initially introduced 3 new FunctionBodyLineCap violations (doPromote, backfillShard, derive). Coordinator refactored into helpers with no baseline additions; after refactor the test fails only on the 3 pre-existing violations, same as Phase 3.
