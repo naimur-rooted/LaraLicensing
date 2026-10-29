@@ -654,6 +654,8 @@ Route::middleware('auth:sanctum')->prefix('v1/developer')->group(function (): vo
     Route::put('/products/{slug}/deals/{dealId}', [\App\Http\Controllers\Developer\ProductController::class, 'updateDeal'])->name('api.developer.products.deals.update');
     Route::delete('/products/{slug}/deals/{dealId}', [\App\Http\Controllers\Developer\ProductController::class, 'deleteDeal'])->name('api.developer.products.deals.destroy');
     Route::get('/products/{slug}/blueprint', [\App\Http\Controllers\Developer\ProductController::class, 'aiBlueprint'])->name('api.developer.products.blueprint');
+    Route::post('/products/{slug}/releases/manifest', [\App\Http\Controllers\Developer\TamperManifestController::class, 'store'])->name('api.developer.products.manifest.store');
+    Route::get('/products/{slug}/releases/manifest', [\App\Http\Controllers\Developer\TamperManifestController::class, 'list'])->name('api.developer.products.manifest.index');
     Route::get('/products/{slug}/licenses', [\App\Http\Controllers\Developer\DeveloperLicenseController::class, 'listProductLicenses'])->name('api.developer.products.licenses');
     // Phase 4 item 2: Sanctum-authenticated simulated mint. The browser
     // never touches the HMAC webhookIssue endpoint or the webhook
@@ -696,6 +698,7 @@ Route::post('/v1/products/{slug}/deactivate', [\App\Http\Controllers\Developer\A
     ->name('api.products.deactivate');
 Route::post('/v1/products/{slug}/heartbeat', [\App\Http\Controllers\Developer\AdvancedLicensingController::class, 'heartbeat'])
     ->name('api.products.heartbeat');
+Route::post('/v1/products/{slug}/tamper-verify', [\App\Http\Controllers\Developer\TamperManifestController::class, 'verify'])->name('api.products.tamper_verify');
 
 // Reseller Wholesale Quotas & Custom Offers Endpoints
 // Phase 3: previously unauthenticated. Sanctum is now required; a

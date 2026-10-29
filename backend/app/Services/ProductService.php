@@ -476,6 +476,12 @@ Integrate LaraLicensing into this application adhering strictly to the contract 
    - Read the machine GUID / hardware digest.
    - Send verification POST request with `{"serialValue": "...", "hardwareDigest": "..."}`.
    - Cache the signed Ed25519 JWT offline token locally. Verify signature offline on startup without hitting the network every time.
+
+6. Tamper Manifest & Fail-Closed Boot Check:
+   - The developer signs a release manifest for this product, with Ed25519, covering every licence-critical file by SHA256.
+   - At boot, and before any premium feature unlock, verify the manifest signature with the Public Key above, then re-hash your own files and compare.
+   - On any mismatch, missing manifest, bad signature, or version below the manifest minVersion, FAIL CLOSED: disable premium features, do not fall back to assuming valid, and report a tamper event to the tamper-verify endpoint.
+   - Never ship the product private key, webhook secret, or licence private key in client code. Only the public key may be embedded.
 MARKDOWN;
     }
 
