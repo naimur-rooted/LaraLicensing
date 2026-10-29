@@ -5,6 +5,7 @@ import { Plus } from "lucide-react";
 
 import { PageActions } from "../../components/shell/AppShell";
 import { PageHeader } from "../../components/shell/PageHeader";
+import { ResellerIssueLicenseDialog } from "../../components/reseller/ResellerIssueLicenseDialog";
 import { EmptyState } from "../../components/ui/empty-state";
 import { RoutePending, RouteErrorState } from "../../components/shell/RouteFallbacks";
 import { DataTable, type LaraColumn, type SortState } from "../../components/ui/data-table";
@@ -88,6 +89,7 @@ function ResellerLicensesPage() {
       "Users.Me returned an empty envelope; server invariant break per AC-API-USR-001",
     );
   }
+  const [isIssueDialogOpen, setIsIssueDialogOpen] = React.useState(false);
   const isMismatch = me.RoleName === "Reseller" && me.ResellerId !== resellerId;
 
   return (
@@ -101,14 +103,14 @@ function ResellerLicensesPage() {
       />
       {!isMismatch && (
         <PageActions>
-          <Link
-            to="/admin/licenses/new"
-            search={{ resellerId }}
-            className="focus-ring inline-flex h-9 items-center gap-2 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          <button
+            type="button"
+            onClick={() => setIsIssueDialogOpen(true)}
+            className="focus-ring inline-flex h-9 items-center gap-2 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer"
           >
             <Plus className="size-4" />
             Issue license
-          </Link>
+          </button>
         </PageActions>
       )}
       {isMismatch ? (
@@ -117,6 +119,7 @@ function ResellerLicensesPage() {
         <>
           <ResellerCustomerRequestsCard resellerId={resellerId} />
           <LicensesTable resellerId={resellerId} />
+          <ResellerIssueLicenseDialog isOpen={isIssueDialogOpen} onOpenChange={setIsIssueDialogOpen} resellerId={resellerId} />
         </>
       )}
     </>

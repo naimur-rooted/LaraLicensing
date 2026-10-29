@@ -356,6 +356,7 @@ class ProductService
         }
 
         $deal->update($this->buildUpdateDealAttributes($deal, $attributes));
+        $this->syncShardLicensesWithDeal($product, $deal);
 
         return $deal;
     }
@@ -411,6 +412,31 @@ class ProductService
         ];
     }
 
+
+    /** Synchronize existing shard licenses when deal seats or perks are modified. */
+    private function syncShardLicensesWithDeal(Product $product, ProductDeal $deal): void
+    {
+        $path = database_path("product_{$product->productSlug}.sqlite");
+        if (!file_exists($path)) {
+            return;
+        }
+        try {
+            $pdo = new \PDO("sqlite:{$path}");
+            LicenseShardSchema::ensureProductLicenses($pdo);
+            $stmt = $pdo->prepare('UPDATE ProductLicenses SET allowedSeats = :seats WHERE dealCode = :dealCode');
+            $stmt->execute([
+                ':seats' => max(1, (int) $deal->allowedMachineSeats),
+                ':dealCode' => (string) $deal->dealCode,
+            ]);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('deal.sync_shard_failed', [
+                'Product' => $product->productSlug,
+                'Deal' => $deal->dealCode,
+                'Error' => $e->getMessage(),
+            ]);
+        }
+    }
+
     /** Delete a deal for a product. */
     public function deleteDeal(Product $product, int $dealId): bool
     {
@@ -422,7 +448,9 @@ class ProductService
     /** Generate AI-Ready Markdown Integration Blueprint. */
     public function generateAiBlueprint(Product $product): string
     {
+        $activateUrl = url("/api/v1/products/{$product->productSlug}/activate");
         $verifyUrl = url("/api/v1/products/{$product->productSlug}/verify");
+        $deactivateUrl = url("/api/v1/products/{$product->productSlug}/deactivate");
         $dealsUrl = url("/api/v1/products/{$product->productSlug}/deals");
         $dealsSummary = $product->deals && $product->deals->isNotEmpty()
             ? $product->deals->map(function ($d) {
@@ -431,7 +459,8 @@ class ProductService
                     ? (is_array($d->features) ? $d->features : (json_decode($d->features, true) ?: []))
                     : [];
                 $featuresFormatted = !empty($features) ? ' | Features: ' . implode(', ', $features) : '';
-                return "- {$d->dealName} ({$d->dealCode}): {$priceFormatted} / {$d->billingInterval} ({$d->allowedMachineSeats} seat(s)){$featuresFormatted}";
+                $decoyTag = !empty($d->isDecoyTarget) ? ' [★ BEST VALUE / RECOMMENDED TARGET]' : '';
+                return "- {$d->dealName} ({$d->dealCode}): {$priceFormatted} / {$d->billingInterval} ({$d->allowedMachineSeats} seat(s)){$decoyTag}{$featuresFormatted}";
             })->implode("\n")
             : '- No pricing deals configured yet. Add a deal to this product, then regenerate the blueprint.';
 
@@ -442,7 +471,9 @@ Integrate LaraLicensing into this application adhering strictly to the contract 
 ## 1. Product Identity & Cryptographic Contract
 - Product Name: {$product->productName}
 - Product Slug: {$product->productSlug}
+- Activation Endpoint (POST): {$activateUrl}
 - Verification Endpoint (POST): {$verifyUrl}
+- Deactivation Endpoint (POST): {$deactivateUrl}
 - Live Deals Endpoint (GET): {$dealsUrl}
 - Public Key (Ed25519): {$product->ed25519PublicKey}
 - Cadence: Re-verify every {$product->checkIntervalDays} days
@@ -457,6 +488,7 @@ Integrate LaraLicensing into this application adhering strictly to the contract 
    - When the software starts without an active license, it MUST NOT render a bare license key text box alone.
    - It MUST render a dual-section UI:
      * Top Section: Display the 3 configured pricing deals as cards showing Deal Name, formatted Price (\$xx.xx / interval), allowed PC seats, and feature perks.
+       - Decoy Target / Recommended Badge (DYNAMIC): Parse "isDecoyTarget" (boolean) from each deal in the live deals JSON. If true, dynamically display a "★ BEST VALUE / RECOMMENDED" badge and highlighted border. Never hardcode which deal is best value; evaluate isDecoyTarget dynamically.
      * Bottom Section: "Already have a license key?" input box + "Activate License" button.
 
 2. Zero Dummy Fallback Mandate (CRITICAL):
@@ -472,10 +504,12 @@ Integrate LaraLicensing into this application adhering strictly to the contract 
    - DO NOT open the raw API URL (.../deals) in the user's web browser.
    - When "Buy Plan" is clicked, display a purchase instruction modal (e.g., "To activate this package, contact vendor or visit vendor checkout") or open the vendor's actual checkout URL.
 
-5. Hardware Fingerprinting & Offline Token:
+5. Hardware Seat Activation & Offline Token:
    - Read the machine GUID / hardware digest.
-   - Send verification POST request with `{"serialValue": "...", "hardwareDigest": "..."}`.
-   - Cache the signed Ed25519 JWT offline token locally. Verify signature offline on startup without hitting the network every time.
+   - On initial activation ("Activate License"), send POST to Activation Endpoint ({$activateUrl}) with `{"licenseKey": "...", "hardwareDigest": "...", "hostname": "..."}` to bind the machine seat and increment active seats from 0 to 1.
+   - Handle 409 Conflict gracefully if all allowed seats are exhausted.
+   - Cache the returned signed Ed25519 JWT offline token locally.
+   - On subsequent startups or background cadence ({$product->checkIntervalDays} days), send POST to Verification Endpoint ({$verifyUrl}) or verify offline token signature without consuming extra seats.
 
 6. Tamper Manifest & Fail-Closed Boot Check:
    - The developer signs a release manifest for this product, with Ed25519, covering every licence-critical file by SHA256.

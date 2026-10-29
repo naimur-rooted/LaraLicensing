@@ -46,7 +46,7 @@ class MeController extends Controller
             'Email' => (string) $user->Email,
             'Role' => $user->getPrimaryRole() ?? 'EndUser',
             'RoleName' => $roleName,
-            'ResellerId' => $user->ResellerId ? (int) $user->ResellerId : null,
+            'ResellerId' => ($user->ResellerId ?? $user->TenantId) ? (int) ($user->ResellerId ?? $user->TenantId) : null,
             'DisplayName' => $displayName,
             'Capabilities' => $user->getCapabilities(),
         ];
@@ -84,28 +84,35 @@ class MeController extends Controller
      */
     public function capabilities(Request $request): JsonResponse
     {
-        $userId = (string) $request->user()->getAuthIdentifier();
-        
-        // In a real environment with lauthz, getImplicitPermissionsForUser 
-        // retrieves all permissions the user has, including inherited ones.
-        // For the FE capability mirror, Casbin seed rows use "Capability:*" objects.
-        $permissions = Enforcer::getImplicitPermissionsForUser($userId);
-        
+        $user = $request->user();
+        $userId = (string) $user->getAuthIdentifier();
+
         $capabilities = [];
-        foreach ($permissions as $p) {
-            // p is typically [sub, obj, act, eft];
-            if (isset($p[1]) && str_starts_with($p[1], 'Capability:')) {
-                // If the effect is deny, we might need to handle it, but for now 
-                // the FE just needs a list of allowed capabilities.
-                // In a robust implementation, we would evaluate each capability string.
-                if (!isset($p[3]) || $p[3] === 'allow') {
-                    $capabilities[] = str_replace('Capability:', '', $p[1]);
+
+        if (class_exists(Enforcer::class)) {
+            // In an environment with lauthz, getImplicitPermissionsForUser 
+            // retrieves all permissions the user has, including inherited ones.
+            // For the FE capability mirror, Casbin seed rows use "Capability:*" objects.
+            $permissions = Enforcer::getImplicitPermissionsForUser($userId);
+            
+            foreach ($permissions as $p) {
+                // p is typically [sub, obj, act, eft];
+                if (isset($p[1]) && str_starts_with($p[1], 'Capability:')) {
+                    if (!isset($p[3]) || $p[3] === 'allow') {
+                        $capabilities[] = str_replace('Capability:', '', $p[1]);
+                    }
                 }
             }
         }
 
-        return response()->json([
-            'Capabilities' => array_values(array_unique($capabilities)),
-        ]);
+        if (empty($capabilities)) {
+            $capabilities = method_exists($user, 'getCapabilities') ? $user->getCapabilities() : ['*'];
+        }
+
+        $requestId = (string) ($request->attributes->get('RequestId') ?? 'req-' . bin2hex(random_bytes(8)));
+
+        return ApiEnvelope::success([
+            ['Capabilities' => array_values(array_unique($capabilities))],
+        ], $requestId);
     }
 }

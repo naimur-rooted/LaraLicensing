@@ -3,10 +3,7 @@ import { Receipt, Download, CreditCard, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function BillingInvoicesCard() {
-  const invoices = [
-    { id: "INV-2026-081", date: "Oct 01, 2026", amount: "$49.90", status: "Paid", plan: "Pro Tier (Annual)" },
-    { id: "INV-2025-019", date: "Oct 01, 2025", amount: "$49.90", status: "Paid", plan: "Pro Tier (Annual)" },
-  ];
+  const invoices: { id: string; date: string; amount: string; status: string; plan: string }[] = [];
 
   return (
     <div className="rounded-xl border border-border/80 bg-card/80 p-5 shadow-xs space-y-4">
@@ -19,7 +16,11 @@ export function BillingInvoicesCard() {
       </div>
 
       <div className="divide-y divide-border/60">
-        {invoices.map((inv) => (
+        {invoices.length === 0 ? (
+          <div className="py-6 text-center text-xs text-muted-foreground">
+            No invoices or billing statements recorded yet.
+          </div>
+        ) : invoices.map((inv) => (
           <div key={inv.id} className="py-2.5 flex items-center justify-between text-xs">
             <div className="flex items-center gap-3">
               <CreditCard className="size-4 text-muted-foreground" />

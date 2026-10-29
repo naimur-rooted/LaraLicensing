@@ -276,7 +276,8 @@ export function DeveloperProductsDashboard({ onOpenPlanModal }: DeveloperProduct
                 d.features && d.features.length > 0
                   ? ` | Features: ${d.features.join(", ")}`
                   : "";
-              return `- ${d.dealName} (${d.dealCode}): $${price} / ${d.billingInterval} (${d.allowedMachineSeats} seat(s))${features}`;
+              const decoyTag = d.isDecoyTarget ? " [★ BEST VALUE / RECOMMENDED TARGET]" : "";
+              return `- ${d.dealName} (${d.dealCode}): $${price} / ${d.billingInterval} (${d.allowedMachineSeats} seat(s))${decoyTag}${features}`;
             })
             .join("\n")
         : "- Standard Plan (STD): $49.00 / yearly (1 seat)";
@@ -287,7 +288,9 @@ Integrate LaraLicensing into this application adhering strictly to the contract 
 ## 1. Product Identity & Cryptographic Contract
 - Product Name: ${p.productName}
 - Product Slug: ${p.productSlug}
+- Activation Endpoint (POST): ${getApiBaseUrl()}/api/v1/products/${p.productSlug}/activate
 - Verification Endpoint (POST): ${getApiBaseUrl()}/api/v1/products/${p.productSlug}/verify
+- Deactivation Endpoint (POST): ${getApiBaseUrl()}/api/v1/products/${p.productSlug}/deactivate
 - Live Deals Endpoint (GET): ${getApiBaseUrl()}/api/v1/products/${p.productSlug}/deals
 - Public Key (Ed25519): ${p.ed25519PublicKey || "AUTO_GENERATED"}
 - Cadence: Re-verify every ${p.checkIntervalDays} days
@@ -301,7 +304,8 @@ ${dealsList}
 1. Dual-Section Storefront & Activation Dialog:
    - When the software starts without an active license, it MUST NOT render a bare license key text box alone.
    - It MUST render a dual-section UI:
-     * Top Section: Display the 3 configured pricing deals as cards showing Deal Name, formatted Price ($xx.xx / interval), allowed PC seats, and feature perks.
+     * Top Section: Display the configured pricing deals as cards showing Deal Name, formatted Price ($xx.xx / interval), allowed PC seats, and feature perks.
+       - Decoy Target / Recommended Badge (DYNAMIC): Parse "isDecoyTarget" boolean from deals JSON. If true, dynamically display a "★ BEST VALUE / RECOMMENDED" badge and highlighted border. Never hardcode which deal is best value; evaluate isDecoyTarget dynamically.
      * Bottom Section: "Already have a license key?" input box + "Activate License" button.
 
 2. Zero Dummy Fallback Mandate (CRITICAL):
@@ -317,10 +321,12 @@ ${dealsList}
    - DO NOT open the raw API URL (.../deals) in the user's web browser.
    - When "Buy Plan" is clicked, display a purchase instruction modal (e.g., "To activate this package, contact vendor or visit vendor checkout") or open the vendor's actual checkout URL.
 
-5. Hardware Fingerprinting & Offline Token:
+5. Hardware Seat Activation & Offline Token:
    - Read the machine GUID / hardware digest.
-   - Send verification POST request with {"serialValue": "...", "hardwareDigest": "..."}.
-   - Cache the signed Ed25519 JWT offline token locally. Verify signature offline on startup without hitting the network every time.`;
+   - On initial activation ("Activate License"), send POST to Activation Endpoint (${getApiBaseUrl()}/api/v1/products/${p.productSlug}/activate) with {"licenseKey": "...", "hardwareDigest": "...", "hostname": "..."} to bind the machine seat and increment active seats from 0 to 1.
+   - Handle 409 Conflict gracefully if all allowed seats are occupied.
+   - Cache the returned signed Ed25519 JWT offline token locally.
+   - For background cadence checks (every ${p.checkIntervalDays} days), call Verification Endpoint (${getApiBaseUrl()}/api/v1/products/${p.productSlug}/verify) to verify status without consuming extra seats.`;
   };
 
   const handleProductCreated = (newProduct: DeveloperProductItem) => {

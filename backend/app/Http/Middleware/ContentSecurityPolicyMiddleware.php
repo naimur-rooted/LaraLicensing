@@ -36,7 +36,7 @@ final class ContentSecurityPolicyMiddleware
 
         // JSON API responses are not documents; a CSP on them is noise and
         // would not be enforced by the browser anyway.
-        if ($request->is('Api/*', 'App/*')) {
+        if ($request->is('Api/*', 'App/*', 'checkout/*', 'checkout')) {
             return $response;
         }
 

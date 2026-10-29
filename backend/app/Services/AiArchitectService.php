@@ -73,9 +73,14 @@ class AiArchitectService
             throw InternalException::fatal('GEMINI_API_KEY is not configured in backend/.env');
         }
 
+        $activateUrl = url("/api/v1/products/{$product->productSlug}/activate");
         $verifyUrl = url("/api/v1/products/{$product->productSlug}/verify");
+        $deactivateUrl = url("/api/v1/products/{$product->productSlug}/deactivate");
         $dealsUrl = url("/api/v1/products/{$product->productSlug}/deals");
-        $dealsList = $product->deals ? $product->deals->map(fn($d) => "- {$d->dealName} ({$d->dealCode}): seats={$d->allowedMachineSeats}, features=" . json_encode($d->features ?? []))->implode("\n") : 'None';
+        $dealsList = $product->deals ? $product->deals->map(function ($d) {
+            $decoyTag = !empty($d->isDecoyTarget) ? ' [DECOY TARGET / BEST VALUE / RECOMMENDED]' : '';
+            return "- {$d->dealName} ({$d->dealCode}): seats={$d->allowedMachineSeats}, isDecoyTarget=" . (!empty($d->isDecoyTarget) ? 'true' : 'false') . "{$decoyTag}, features=" . json_encode($d->features ?? []);
+        })->implode("\n") : 'None';
 
         $prompt = <<<PROMPT
 You are the Principal Lead Licensing & Cryptographic Systems Engineer for LaraLicensing.
@@ -86,7 +91,9 @@ PRODUCT DETAILS:
 - Slug: {$product->productSlug}
 - Category: {$product->category}
 - Description: {$product->description}
+- Activation Endpoint (POST): {$activateUrl}
 - Verification Endpoint (POST): {$verifyUrl}
+- Deactivation Endpoint (POST): {$deactivateUrl}
 - Live Deals Endpoint (GET): {$dealsUrl}
 - Public Key (Ed25519): {$product->ed25519PublicKey}
 - Cadence Check Interval: Every {$product->checkIntervalDays} days
@@ -102,17 +109,27 @@ ARCHITECTURAL MANDATES (ZERO-HALLUCINATION):
    - For Desktop (Python/C#/Electron/Java): hash machine GUID or MAC.
    - For Chrome Extension: generate or retrieve a persistent client UUID stored in chrome.storage.local.
    - For WordPress: hash site home_url() and server hostname.
-3. Offline Caching & Ed25519 Verification:
-   - Store offline JWT token locally.
-   - On startup, check if offline token exists and is valid. If network is offline, allow access if token is within {$product->checkIntervalDays} days.
-4. Feature Gating:
-   - Provide a clean helper method e.g. `hasFeature(featureName)` or `canAccess(module)`.
-5. Dual-Section Storefront & Activation Dialog:
-   - For any UI-facing framework (Java Swing, Python PyQt/Tkinter, C# WPF/WinForms, Electron, React/Web):
-     When the software starts without an active license, it MUST NOT render a bare license key text box alone.
-     It MUST render a dual-section UI:
+3. Offline Caching & Active Ed25519 Cryptographic Verification:
+   - The Public Key (Ed25519) provided MUST be actively used in code to verify the token signature before trusting any offline cached entitlement.
+   - Do NOT leave the public key as an unused dead constant.
+   - For Java (Java 15+): Use `java.security.KeyFactory.getInstance("Ed25519")` or standard signature verifier, or implement an Ed25519 verify helper.
+   - Store offline token/payload locally (e.g., Preferences, registry, or local file).
+   - On startup, if offline, verify signature and check that timestamp is within {$product->checkIntervalDays} days.
+
+4. Feature Gating & Response Parsing (CRITICAL):
+   - The `activate()` / `verify()` method MUST actively parse the server JSON response.
+   - Extract the `"features"` array and save active features to local storage (e.g. `active_features`).
+   - The `hasFeature(featureName)` or `canAccess(module)` helper MUST accurately check against these parsed and stored features, NEVER returning hardcoded false or operating on unpopulated storage.
+
+5. Dual-Section Storefront & Activation UI:
+   - For all desktop/client applications (including Java, Python, C#, Electron, Web):
+     When software starts without an active license, provide a Dual-Section UI (or interactive CLI menu if terminal-only):
      * Top Section: Display the configured pricing deals as cards showing Deal Name, formatted Price (\$priceCents / 100.0 / interval), allowed PC seats, and feature perks.
+       - Decoy Target / Recommended Badge (DYNAMIC): Parse "isDecoyTarget" (boolean) from each deal object in the live JSON response. If true, dynamically render a prominent "★ BEST VALUE / RECOMMENDED" badge and highlighted border/accent (e.g., green/blue border and badge). When false, render standard neutral styling. This MUST update dynamically whenever the Live Deals Endpoint returns updated decoy flags.
      * Bottom Section: "Already have a license key?" input box + "Activate License" button.
+       - Hardware Registration on Activation (CRITICAL): When the user clicks "Activate License", the client MUST send a POST request to {$activateUrl} containing `{"licenseKey": "...", "hardwareDigest": "...", "hostname": "..."}`. This registers the machine hardware seat in the licensing database (incrementing active seats from 0 to 1). If the response code is 409 (SeatLimitExceeded), show an error indicating that allowed machine seats have been reached. Upon 200 OK, save the returned `offlineToken` locally and transition to the protected app.
+       - Read-Only Routine Cadence Check: The {$verifyUrl} endpoint is used ONLY for routine background cadence checks (e.g. every {$product->checkIntervalDays} days) to check if the license was revoked or expired, WITHOUT consuming additional seats.
+     * For Java: If UI is requested or default Desktop, include a complete Swing JFrame Dual-Section storefront and activation dialog.
 6. Zero Dummy Fallback Mandate (CRITICAL):
    - You MUST NOT hardcode invented dummy prices (\$29, \$290, \$490, etc.) in catch blocks or fallbacks.
    - Prices and features MUST strictly reflect the provided deals list above or be parsed from the Live Deals Endpoint: {$dealsUrl}.

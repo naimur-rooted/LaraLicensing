@@ -68,6 +68,10 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
         ]);
 
+        $middleware->validateCsrfTokens(except: [
+            'checkout/*',
+        ]);
+
 
         // Global middleware registered in Plan 06 steps 7-9.
         $middleware->append(\Illuminate\Http\Middleware\HandleCors::class);

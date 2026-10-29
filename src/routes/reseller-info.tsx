@@ -1,8 +1,20 @@
-import React from "react";
+import React, { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Store, ShieldCheck, Tag, Cpu, ArrowRight, CheckCircle2, History } from "lucide-react";
+import {
+  Store,
+  ShieldCheck,
+  Tag,
+  Cpu,
+  ArrowRight,
+  History,
+  UserPlus,
+  LogIn,
+  CheckCircle2,
+} from "lucide-react";
 import { LicenseSpringHeader } from "@/components/landing/LicenseSpringHeader";
 import { LicenseSpringFooter } from "@/components/landing/LicenseSpringFooter";
+import { ResellerApplicationModal } from "@/components/reseller/ResellerApplicationModal";
+import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/reseller-info")({
   head: () => ({
@@ -19,11 +31,13 @@ export const Route = createFileRoute("/reseller-info")({
 });
 
 function ResellerInfoPage() {
+  const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
+
   const capabilities = [
     {
       icon: Tag,
       title: "Branded Vanity Prefix Minting",
-      desc: "Resellers can register exclusive branded prefixes (e.g. `ALIM-V1-XXXX-XXXX`), minting customized serial numbers tailored to their regional marketing campaigns.",
+      desc: "Resellers can register exclusive branded prefixes (e.g. `APAC-PRO-XXXX`), minting customized serial numbers tailored to their regional marketing campaigns.",
     },
     {
       icon: History,
@@ -51,21 +65,35 @@ function ResellerInfoPage() {
           <div className="text-center max-w-3xl mx-auto space-y-4">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-semibold tracking-wide uppercase">
               <Store className="size-4" />
-              <span>Wholesale Distribution</span>
+              <span>Wholesale Partner Program</span>
             </div>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-foreground" style={{ fontFamily: "var(--font-display)" }}>
+            <h1
+              className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-foreground"
+              style={{ fontFamily: "var(--font-display)" }}
+            >
               Scale your software sales with authorized resellers
             </h1>
             <p className="text-base sm:text-lg text-muted-foreground leading-relaxed">
-              Enable distributors, affiliates, and agency partners to mint branded licenses, manage their client quotas, and troubleshoot hardware bindings without giving them administrative access.
+              Enable regional distributors, agencies, and wholesale affiliates to mint branded licenses, manage their client quotas, and troubleshoot hardware bindings with complete tenant isolation.
             </p>
-            <div className="pt-2">
+
+            {/* Standard Dual Action Buttons */}
+            <div className="pt-4 flex flex-wrap items-center justify-center gap-4">
+              <Button
+                size="lg"
+                onClick={() => setIsApplyModalOpen(true)}
+                className="h-12 px-7 rounded-full font-bold shadow-md gap-2"
+              >
+                <UserPlus className="size-4" />
+                <span>Apply to Become a Reseller</span>
+              </Button>
+
               <Link
                 to="/login"
-                className="inline-flex h-11 items-center gap-2 rounded-full bg-primary px-6 text-sm font-semibold text-primary-foreground shadow-md hover:bg-primary/90 transition-colors"
+                className="inline-flex h-12 items-center gap-2 rounded-full border border-border/80 bg-card/80 px-6 text-sm font-semibold text-foreground hover:bg-muted/80 transition-colors shadow-2xs"
               >
-                <span>Access Reseller Hub</span>
-                <ArrowRight className="size-4" />
+                <LogIn className="size-4 text-muted-foreground" />
+                <span>Already a Partner? Sign In</span>
               </Link>
             </div>
           </div>
@@ -74,18 +102,28 @@ function ResellerInfoPage() {
             {capabilities.map((c, idx) => {
               const Icon = c.icon;
               return (
-                <div key={idx} className="rounded-2xl border border-border/80 bg-card p-8 shadow-xs space-y-3">
+                <div
+                  key={idx}
+                  className="rounded-2xl border border-border/80 bg-card p-8 shadow-xs space-y-3"
+                >
                   <div className="size-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
                     <Icon className="size-5" />
                   </div>
                   <h2 className="text-xl font-bold text-foreground">{c.title}</h2>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{c.desc}</p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {c.desc}
+                  </p>
                 </div>
               );
             })}
           </div>
         </div>
       </main>
+
+      <ResellerApplicationModal
+        isOpen={isApplyModalOpen}
+        onOpenChange={setIsApplyModalOpen}
+      />
 
       <LicenseSpringFooter />
     </div>

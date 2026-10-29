@@ -2,11 +2,33 @@ import React from "react";
 import { Database, Zap, Monitor, Activity } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
+import { useEffect, useState } from "react";
+import { getApiBaseUrl } from "@/lib/lara-api-client";
+import { getLaraAccessToken } from "@/lib/lara-api-session";
+
 interface BillingUsageMetersProps {
   currentTier: string;
 }
 
 export function BillingUsageMeters({ currentTier }: BillingUsageMetersProps) {
+  const [allocatedProducts, setAllocatedProducts] = useState<number>(0);
+  const [dailyRequests, setDailyRequests] = useState<number>(0);
+
+  useEffect(() => {
+    fetch(`${getApiBaseUrl()}/api/v1/developer/products`, {
+      headers: {
+        Authorization: `Bearer ${getLaraAccessToken()}`,
+        Accept: "application/json",
+      },
+    })
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.IsSuccess && Array.isArray(json.Data)) {
+          setAllocatedProducts(json.Data.length);
+        }
+      })
+      .catch(() => setAllocatedProducts(0));
+  }, []);
   const isFree = currentTier.includes("Free") || currentTier.includes("Starter");
   const maxProducts = isFree ? 1 : currentTier.includes("Essential") ? 3 : currentTier.includes("Pro") ? 15 : 50;
   const maxRequests = isFree ? 100 : currentTier.includes("Essential") ? 200 : currentTier.includes("Pro") ? 1000 : 5000;
@@ -29,9 +51,9 @@ export function BillingUsageMeters({ currentTier }: BillingUsageMetersProps) {
               <Database className="size-3.5 text-primary" />
               Product Shards Allocated
             </span>
-            <span className="font-mono text-foreground font-semibold">1 of {maxProducts}</span>
+            <span className="font-mono text-foreground font-semibold">{allocatedProducts} of {maxProducts}</span>
           </div>
-          <Progress value={(1 / maxProducts) * 100} className="h-2" />
+          <Progress value={(allocatedProducts / maxProducts) * 100} className="h-2" />
         </div>
 
         <div className="space-y-1.5">
@@ -40,9 +62,9 @@ export function BillingUsageMeters({ currentTier }: BillingUsageMetersProps) {
               <Zap className="size-3.5 text-amber-500" />
               Daily Verification Quota
             </span>
-            <span className="font-mono text-foreground font-semibold">12 / {maxRequests} req</span>
+            <span className="font-mono text-foreground font-semibold">{dailyRequests} / {maxRequests} req</span>
           </div>
-          <Progress value={(12 / maxRequests) * 100} className="h-2" />
+          <Progress value={(dailyRequests / maxRequests) * 100} className="h-2" />
         </div>
 
         <div className="flex justify-between items-center pt-2 border-t border-border/40 text-xs">

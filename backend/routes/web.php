@@ -22,6 +22,10 @@ use Inertia\Inertia;
 // `admin.overview` produced a 403 dead end right after login.
 Route::get('/', fn () => redirect('/portal'));
 
+// Testing Sandbox Payment Gateway Checkout routes
+Route::get('/checkout/{slug}', [\App\Http\Controllers\SandboxCheckoutController::class, 'showCheckout'])->name('sandbox.checkout');
+Route::post('/checkout/{slug}/process', [\App\Http\Controllers\SandboxCheckoutController::class, 'processPayment'])->name('sandbox.checkout.process');
+
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/portal', function (Request $request) {
         $user = $request->user();

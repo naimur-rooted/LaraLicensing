@@ -44,19 +44,28 @@ final class RateLimitAuthMiddleware
         if ($max <= 0 || $decay <= 0) {
             return $next($request);
         }
-        foreach ($this->keys($request, $bucket) as $key) {
-            if (RateLimiter::tooManyAttempts($key, $max)) {
-                $retryAfter = RateLimiter::availableIn($key);
-                Log::info('auth.rate_limit.blocked', ['Bucket' => $bucket, 'Key' => $key, 'RetryAfter' => $retryAfter]);
-                throw RateLimitException::rateLimited(
-                    'Too many attempts. Try again later.',
-                    [['Field' => 'Bucket', 'Rule' => 'RateLimited', 'Value' => $bucket]],
-                    headers: ['Retry-After' => (string) $retryAfter],
-                );
+        try {
+            foreach ($this->keys($request, $bucket) as $key) {
+                if (RateLimiter::tooManyAttempts($key, $max)) {
+                    $retryAfter = RateLimiter::availableIn($key);
+                    Log::info('auth.rate_limit.blocked', ['Bucket' => $bucket, 'Key' => $key, 'RetryAfter' => $retryAfter]);
+                    throw RateLimitException::rateLimited(
+                        'Too many attempts. Try again later.',
+                        [['Field' => 'Bucket', 'Rule' => 'RateLimited', 'Value' => $bucket]],
+                        headers: ['Retry-After' => (string) $retryAfter],
+                    );
+                }
+                RateLimiter::hit($key, $decay);
             }
-            RateLimiter::hit($key, $decay);
-        }
 
+        } catch (RateLimitException $e) {
+            throw $e;
+        } catch (\Throwable $e) {
+            Log::warning('auth.rate_limit.store_unavailable', [
+                'Bucket' => $bucket,
+                'Error' => $e->getMessage(),
+            ]);
+        }
         return $next($request);
     }
 

@@ -224,7 +224,7 @@ class ProductController extends Controller
         return response()->json([
             'IsSuccess' => true,
             'Data' => $this->formatPublicDeals($product),
-        ]);
+        ], 200, [], JSON_UNESCAPED_SLASHES);
     }
 
     private function formatPublicDeals($product): array
@@ -235,7 +235,11 @@ class ProductController extends Controller
             'category' => $product->category,
             'description' => $product->description,
             'checkIntervalDays' => $product->checkIntervalDays,
-            'deals' => $product->deals->where('isActive', true)->values(),
+            'deals' => $product->deals->where('isActive', true)->values()->map(function ($d) use ($product) {
+                $a = $d->toArray();
+                $a['checkoutUrl'] = url('/checkout/' . $product->productSlug . '?deal=' . $d->dealCode);
+                return $a;
+            }),
         ];
     }
 }

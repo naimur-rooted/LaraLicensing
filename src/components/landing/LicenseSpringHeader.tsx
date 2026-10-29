@@ -290,6 +290,10 @@ export function LicenseSpringHeader() {
           <Link to="/licensing-models" onClick={closeMenu} className="px-3.5 py-2 rounded-lg hover:text-foreground hover:bg-muted/40 transition-colors cursor-pointer">
             Models
           </Link>
+          <Link to="/reseller-info" onClick={closeMenu} className="px-3.5 py-2 rounded-lg hover:text-foreground hover:bg-muted/40 transition-colors cursor-pointer font-medium text-primary flex items-center gap-1.5">
+            <Store className="size-3.5" />
+            <span>Resellers</span>
+          </Link>
         </nav>
 
         {/* Right Action Buttons */}

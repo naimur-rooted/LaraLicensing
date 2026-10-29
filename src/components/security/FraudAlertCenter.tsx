@@ -31,38 +31,7 @@ export interface SecurityEventItem {
 }
 
 export function FraudAlertCenter() {
-  const [events, setEvents] = useState<SecurityEventItem[]>([
-    {
-      id: 1,
-      serialValue: "ELM-DEMO-991823",
-      clientIp: "185.220.101.42 (Tor Exit / Netherlands)",
-      hardwareDigest: "HWID_99A8F12B_DRIFTED",
-      reasons: ["IP geographic or subnet divergence detected", "Hardware signature partial drift detected"],
-      createdAt: new Date(Date.now() - 1000 * 60 * 14).toISOString(),
-      severity: "HIGH",
-      isQuarantined: false,
-    },
-    {
-      id: 2,
-      serialValue: "ELM-PRO-482910",
-      clientIp: "103.114.98.12 (Dhaka, Bangladesh)",
-      hardwareDigest: "HWID_33B7C99D",
-      reasons: ["Impossible travel velocity: 4,500 km in 8 minutes"],
-      createdAt: new Date(Date.now() - 1000 * 60 * 62).toISOString(),
-      severity: "HIGH",
-      isQuarantined: true,
-    },
-    {
-      id: 3,
-      serialValue: "ELM-AGENCY-109283",
-      clientIp: "82.165.197.1 (Berlin, Germany)",
-      hardwareDigest: "HWID_11C4D22E",
-      reasons: ["Concurrent verification on non-floating single seat"],
-      createdAt: new Date(Date.now() - 1000 * 60 * 180).toISOString(),
-      severity: "MEDIUM",
-      isQuarantined: false,
-    },
-  ]);
+  const [events, setEvents] = useState<SecurityEventItem[]>([]);
 
   const [quarantineSuccess, setQuarantineSuccess] = useState<string | null>(null);
 
