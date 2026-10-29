@@ -46,6 +46,17 @@ return Application::configure(basePath: dirname(__DIR__))
             ->dailyAt('03:15')
             ->withoutOverlapping(3600)
             ->runInBackground();
+        // Fraud Phase 3. Heartbeat cull every 15 minutes, auto-quarantine hourly.
+        // This registers the schedule in code only. The host must still run
+        // artisan schedule:run every minute for these jobs to actually run.
+        $schedule->command('lara:heartbeats:cull')
+            ->everyFifteenMinutes()
+            ->withoutOverlapping(600)
+            ->runInBackground();
+        $schedule->command('lara:fraud:auto-quarantine')
+            ->hourly()
+            ->withoutOverlapping(3600)
+            ->runInBackground();
 
     })
     ->withMiddleware(function (Middleware $middleware) {

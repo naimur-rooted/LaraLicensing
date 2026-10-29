@@ -18,16 +18,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use PDO;
 
-/**
- * Signed release manifests and tamper verification.
- *
- * A developer signs a release manifest with the product Ed25519 key.
- * A client verifies the manifest signature and its own file hashes
- * against that manifest, and must fail closed on any mismatch.
- * A tamper report is logged for developer review only; it never
- * auto-revokes a licence, because a client report alone is not
- * proof against a spoofed report.
- */
+/** Signed release manifests and tamper verification. Tamper reports never auto-revoke. */
 final class TamperManifestController extends Controller
 {
     public function __construct(private readonly TamperManifestService $manifestService, private readonly LicenceGateService $gate = new LicenceGateService())
@@ -61,6 +52,13 @@ final class TamperManifestController extends Controller
         $mismatches = $checked['isValid'] ? $this->manifestService->verifySubmittedFiles($manifest['files'] ?? [], (array) $request->input('files', [])) : [];
         $isValid = $checked['isValid'] && $mismatches === [];
         $reason = $isValid ? null : ($checked['reason'] ?? 'FileHashMismatch');
+        if ($isValid) {
+            $minVersionReason = $this->manifestService->checkMinVersion($productSlug, (string) ($manifest['releaseVersion'] ?? ''));
+            if ($minVersionReason !== null) {
+                $isValid = false;
+                $reason = $minVersionReason;
+            }
+        }
         if ($isValid === false) {
             $this->logTamperEvent($productSlug, (string) $request->input('serialValue', ''), (string) $request->ip(), (string) $request->input('hardwareDigest', ''), $reason, $mismatches);
         }

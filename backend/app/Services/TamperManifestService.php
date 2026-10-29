@@ -61,18 +61,26 @@ final class TamperManifestService
         return $this->canonicalizer->fileMismatches($manifest, $byPath);
     }
 
+    /** Check a submitted releaseVersion against the latest manifest minVersion floor. */
+    public function checkMinVersion(string $productSlug, string $releaseVersion): ?string
+    {
+        $latest = ReleaseManifest::query()->where('productSlug', $productSlug)->orderByDesc('ReleaseManifestId')->first();
+        if ($latest === null || trim((string) $latest->minVersion) === '') {
+            return null;
+        }
+        if (version_compare(ltrim(trim($releaseVersion), 'vV'), ltrim(trim((string) $latest->minVersion), 'vV'), '<')) {
+            return 'VersionBelowMinimum';
+        }
+
+        return null;
+    }
+
     /** Public manifest array a client can verify offline with the product public key. */
     public function toPublicArray(ReleaseManifest $model): array
     {
         $files = json_decode((string) $model->filesJson, true) ?: [];
 
         return ['productSlug' => (string) $model->productSlug, 'releaseVersion' => (string) $model->releaseVersion, 'minVersion' => $model->minVersion, 'files' => $files, 'manifestSha256' => (string) $model->manifestSha256, 'signature' => (string) $model->signature, 'kid' => (string) $model->kid, 'alg' => 'ed25519'];
-    }
-
-    /** @param array<string, mixed> $data */
-    public function canonicalJson(array $data): string
-    {
-        return $this->canonicalizer->canonicalJson($data);
     }
 
     private function manifestPayload(string $slug, string $version, ?string $minVersion, array $files): array
