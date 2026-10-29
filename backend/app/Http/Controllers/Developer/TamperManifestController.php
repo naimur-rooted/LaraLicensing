@@ -10,6 +10,7 @@ use App\Exceptions\ValidationException;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\ReleaseManifest;
+use App\Services\LicenceGateService;
 use App\Services\TamperManifestService;
 use App\Support\ApiEnvelope;
 use Illuminate\Http\JsonResponse;
@@ -29,7 +30,7 @@ use PDO;
  */
 final class TamperManifestController extends Controller
 {
-    public function __construct(private readonly TamperManifestService $manifestService)
+    public function __construct(private readonly TamperManifestService $manifestService, private readonly LicenceGateService $gate = new LicenceGateService())
     {
     }
 
@@ -64,8 +65,11 @@ final class TamperManifestController extends Controller
             $this->logTamperEvent($productSlug, (string) $request->input('serialValue', ''), (string) $request->ip(), (string) $request->input('hardwareDigest', ''), $reason, $mismatches);
         }
 
+        $serial = (string) $request->input('serialValue', '');
+        $licenceStatus = $serial !== '' ? $this->gate->check($productSlug, strtoupper($serial))['status'] : null;
+
         return ApiEnvelope::success(
-            results: ['isValid' => $isValid, 'reason' => $reason, 'mismatches' => $mismatches, 'failClosed' => $isValid === false],
+            results: ['isValid' => $isValid, 'reason' => $reason, 'mismatches' => $mismatches, 'failClosed' => $isValid === false, 'licenceStatus' => $licenceStatus],
             requestId: (string) ($request->headers->get('X-Request-Id') ?? ''),
         );
     }

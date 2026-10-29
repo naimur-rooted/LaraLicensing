@@ -719,6 +719,7 @@ Route::middleware('auth:sanctum')->prefix('v1/security/{productSlug}')->group(fu
     Route::get('/events', [\App\Http\Controllers\Developer\AdvancedLicensingController::class, 'securityEvents'])->name('api.security.events');
     Route::post('/quarantine', [\App\Http\Controllers\Developer\AdvancedLicensingController::class, 'quarantine'])->name('api.security.quarantine');
     Route::post('/unbind-hardware', [\App\Http\Controllers\Developer\AdvancedLicensingController::class, 'unbindHardware'])->name('api.security.unbind_hardware');
+    Route::get('/fraud-score', [\App\Http\Controllers\Developer\FraudScoreController::class, 'score'])->name('api.security.fraud_score');
 });
 
 // Reseller Portal Domain Services & API Endpoints
