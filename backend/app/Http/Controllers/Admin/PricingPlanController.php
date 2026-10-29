@@ -8,6 +8,8 @@ use App\Exceptions\NotFoundException;
 use App\Exceptions\ValidationException;
 use App\Http\Controllers\Controller;
 use App\Models\PricingPlan;
+use App\Models\PricingPlanPriceVersion;
+use App\Services\PricingPlanPriceVersionService;
 use App\Support\ApiEnvelope;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -45,10 +47,22 @@ final class PricingPlanController extends Controller
         );
     }
 
+    public function versions(Request $request, int $PricingPlanId): JsonResponse
+    {
+        $plan = $this->findOrFail($PricingPlanId);
+        $versions = PricingPlanPriceVersion::query()->where('PricingPlanId', (int) $plan->getKey())->orderByDesc('versionNumber')->get();
+
+        return ApiEnvelope::success(
+            results: ['Items' => $versions->all()],
+            requestId: (string) ($request->headers->get('X-Request-Id') ?? ''),
+        );
+    }
+
     public function store(Request $request): JsonResponse
     {
         $data = $this->validatePlan($request->all(), null);
         $plan = PricingPlan::create($data);
+        (new PricingPlanPriceVersionService())->ensureInitialVersion($plan);
 
         return ApiEnvelope::success(
             results: ['Item' => $plan],
@@ -61,10 +75,10 @@ final class PricingPlanController extends Controller
     {
         $plan = $this->findOrFail($PricingPlanId);
         $data = $this->validatePlan($request->all(), $plan);
-        $plan->update($data);
+        $plan = (new PricingPlanPriceVersionService())->applyPriceChange($request, $plan, $data, $request->all());
 
         return ApiEnvelope::success(
-            results: ['Item' => $plan->fresh()],
+            results: ['Item' => $plan],
             requestId: (string) ($request->headers->get('X-Request-Id') ?? ''),
         );
     }

@@ -100,6 +100,7 @@ Route::middleware(['auth:sanctum', 'session.active', 'require.role:Admin|SuperAd
         Route::get('/PricingPlans', [PricingPlanController::class, 'index'])->name('pricing_plans.index');
         Route::post('/PricingPlans', [PricingPlanController::class, 'store'])->name('pricing_plans.store');
         Route::get('/PricingPlans/{PricingPlanId}', [PricingPlanController::class, 'show'])->where('PricingPlanId', '[0-9]+')->name('pricing_plans.show');
+        Route::get('/PricingPlans/{PricingPlanId}/Versions', [PricingPlanController::class, 'versions'])->where('PricingPlanId', '[0-9]+')->name('pricing_plans.versions');
         Route::patch('/PricingPlans/{PricingPlanId}', [PricingPlanController::class, 'update'])->where('PricingPlanId', '[0-9]+')->name('pricing_plans.update');
         Route::delete('/PricingPlans/{PricingPlanId}', [PricingPlanController::class, 'destroy'])->where('PricingPlanId', '[0-9]+')->name('pricing_plans.destroy');
 
