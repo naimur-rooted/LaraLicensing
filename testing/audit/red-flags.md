@@ -55,6 +55,11 @@ Status: PRELIMINARY. Only RF-01 is verified in code at this stage (2026-10-30, b
 - Frontend typecheck at 7404ea8 (local tsc, tsgo unavailable): exactly 44 `error TS` lines, matching the previous baseline, log testing/audit/frontend-tsc-7404ea8.log. None of the 44 are in fraud code; they are in preview-fixtures stubs, reseller route params, portal role comparisons, and related files as before. This is a baseline, not a pass.
 - Fraud dry-runs at 7404ea8 (no data changed): `lara:heartbeats:cull --dry-run` would cull 2 stale bindings in product_testapp-e2e-20261028.sqlite and 0 in product_lead-pilot-pro.sqlite, total 2, dryRun=yes. `lara:fraud:auto-quarantine --dry-run` quarantines 0 in both shards. Schedule list shows cull every 15 minutes and auto-quarantine hourly, as registered in code; host schedule:run every minute is still not proved on a host. No live cull or live quarantine was run.
 
+## RF-08: Fresh Postgres root migrate still fails at BackupSnapshots (VERIFIED 2026-10-30, NOT FIXED HERE)
+
+- Created local role/database lara/lara_root (Postgres 16, cluster now online, previously down with no lara database). Default `migrate` reports "Nothing to migrate" because migrations live under `database/migrations/root` and `shard`.
+- `migrate --database=root --path=database/migrations/root` succeeded through 2026_07_20_000003, then failed at 2026_07_20_000004_create_root_backup_snapshots_table with SQLSTATE[42601], syntax error near $1, CHECK ("Retention" $1 'policy'). The JSONB `?` operator was bound as a query parameter. Later root migrations never ran, so the root schema is incomplete. This confirms the previously recorded bug is still present at 7404ea8. Migration code was not changed in this testing run; fixing it is a separate fix batch.
+
 ## Pending verification (not yet red flags, not yet cleared)
 
 - P-01: Remote commit 7404ea8 cross-shard serial lookup and machine seat binding. Pulled, not tested. User reports of serial lookup failure and generic seat-login errors may or may not be fixed by it. Needs reproduction cases.
