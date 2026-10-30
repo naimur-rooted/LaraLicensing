@@ -16,6 +16,7 @@ final class QuotasLicensesSeeder extends Seeder
 {
     private const CONN_ROOT = 'root';
     private const CONN_SHARD = 'shard';
+    private const LICENSE_CATEGORY_ID = 3;
 
     public function run(): void
     {
@@ -52,9 +53,9 @@ final class QuotasLicensesSeeder extends Seeder
         for ($i = 1; $i <= 120; $i++) {
             $key = sprintf("%s-E2E-TEST-%04d", $prefix, $i);
             DB::connection(self::CONN_SHARD)->statement(
-                'INSERT INTO "Licenses" ("LicenseKey","PrefixValue","ResellerId","IssuedByUserId","TierName","EnvironmentName","Status")
-                 VALUES (?,?,?,1,\'Tier1\',\'Production\',\'Active\') ON CONFLICT DO NOTHING',
-                [$key, $prefix, $resellerId]
+                'INSERT INTO "Licenses" ("LicenseKey","PrefixValue","ResellerId","IssuedByUserId","TierName","EnvironmentName","Status","LicenseCategoryId")
+                 VALUES (?,?,?,1,\'Tier1\',\'Production\',\'Active\',?) ON CONFLICT DO NOTHING',
+                [$key, $prefix, $resellerId, self::LICENSE_CATEGORY_ID]
             );
         }
     }
@@ -62,10 +63,12 @@ final class QuotasLicensesSeeder extends Seeder
     private function seedQuotaRequests(int $resellerId): void
     {
         for ($i = 1; $i <= 24; $i++) {
+            $requestId = substr(hash('md5', "quota-{$resellerId}-{$i}"), 0, 26);
+            $idempotencyKey = hash('md5', "quota-{$resellerId}-{$i}");
             DB::connection(self::CONN_SHARD)->statement(
-                'INSERT INTO "QuotaRequests" ("ResellerId","LicenseCategoryId","LicenseTierId","RequestedDelta","Status","Justification")
-                 VALUES (?,3,1,100,1,\'Scaling for growth\') ON CONFLICT DO NOTHING',
-                [$resellerId]
+                'INSERT INTO "QuotaRequests" ("ResellerId","LicenseCategoryId","LicenseTierId","RequestedDelta","Status","Justification","SubmittedByUserId","RequestId","IdempotencyKey")
+                 VALUES (?,3,1,100,1,\'Scaling for growth\',1,?,?) ON CONFLICT DO NOTHING',
+                [$resellerId, $requestId, $idempotencyKey]
             );
         }
     }

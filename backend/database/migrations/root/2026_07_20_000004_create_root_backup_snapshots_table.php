@@ -99,7 +99,7 @@ return new class extends Migration
 
     private function createSnapshotsTable(): void
     {
-        DB::connection(self::CONN)->statement('
+        DB::connection(self::CONN)->unprepared('
             CREATE TABLE IF NOT EXISTS "BackupSnapshots" (
                 "BackupSnapshotId" UUID                   PRIMARY KEY,
                 "Label"            VARCHAR(80)            NOT NULL,

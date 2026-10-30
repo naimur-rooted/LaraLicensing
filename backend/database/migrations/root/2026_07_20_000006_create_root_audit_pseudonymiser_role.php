@@ -84,10 +84,13 @@ return new class extends Migration
 
     private function createPseudonymiserRole(): void
     {
+        // The migrating app role may lack CREATEROLE; skip role creation
+        // then, since the grants below are already role-guarded.
         DB::connection(self::CONN)->statement(<<<SQL
             DO $$
             BEGIN
-                IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'audit_pseudonymiser') THEN
+                IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'audit_pseudonymiser')
+                    AND EXISTS (SELECT 1 FROM pg_roles WHERE rolname = current_user AND rolcreaterole) THEN
                     CREATE ROLE audit_pseudonymiser NOLOGIN NOINHERIT;
                 END IF;
             END

@@ -159,7 +159,7 @@ return new class extends Migration
                     SELECT 1 FROM pg_policies
                     WHERE schemaname='public' AND tablename='CasbinRules'
                       AND policyname='CasbinRulesReadableByAuthenticated'
-                ) THEN
+                ) AND EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
                     EXECUTE 'CREATE POLICY "CasbinRulesReadableByAuthenticated" ON "CasbinRules" FOR SELECT TO authenticated USING (true)';
                 END IF;
             END

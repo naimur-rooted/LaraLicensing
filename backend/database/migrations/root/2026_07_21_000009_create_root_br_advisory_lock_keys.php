@@ -84,7 +84,7 @@ return new class extends Migration
             DO $$
             BEGIN
                 IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'BrLockKind') THEN
-                    EXECUTE 'CREATE TYPE "BrLockKind" AS ENUM ({$members})';
+                    EXECUTE \$enum\$CREATE TYPE "BrLockKind" AS ENUM ({$members})\$enum\$;
                 END IF;
             END
             $$;
@@ -98,7 +98,7 @@ return new class extends Migration
             DO $$
             BEGIN
                 IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'BrLockScope') THEN
-                    EXECUTE 'CREATE TYPE "BrLockScope" AS ENUM ({$members})';
+                    EXECUTE \$enum\$CREATE TYPE "BrLockScope" AS ENUM ({$members})\$enum\$;
                 END IF;
             END
             $$;
@@ -145,7 +145,7 @@ return new class extends Migration
                     SELECT 1 FROM pg_policies
                     WHERE schemaname='public' AND tablename='BrAdvisoryLockKeys'
                       AND policyname='BrAdvisoryLockKeysReadable'
-                ) THEN
+                ) AND EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
                     EXECUTE 'CREATE POLICY "BrAdvisoryLockKeysReadable" ON "BrAdvisoryLockKeys" FOR SELECT TO authenticated USING (true)';
                 END IF;
             END

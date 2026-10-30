@@ -69,7 +69,7 @@ return new class extends Migration
             DO $$
             BEGIN
                 IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'FeatureFlagValue') THEN
-                    EXECUTE 'CREATE TYPE "FeatureFlagValue" AS ENUM ({$members})';
+                    EXECUTE \$enum\$CREATE TYPE "FeatureFlagValue" AS ENUM ({$members})\$enum\$;
                 END IF;
             END
             $$;
@@ -109,7 +109,7 @@ return new class extends Migration
                     SELECT 1 FROM pg_policies
                     WHERE schemaname='public' AND tablename='FeatureFlags'
                       AND policyname='FeatureFlagsReadable'
-                ) THEN
+                ) AND EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
                     EXECUTE 'CREATE POLICY "FeatureFlagsReadable" ON "FeatureFlags" FOR SELECT TO authenticated USING (true)';
                 END IF;
             END

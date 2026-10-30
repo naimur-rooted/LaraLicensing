@@ -138,7 +138,7 @@ final class ResellerPortalArchitectureTest extends TestCase
 
         // Insert binding
         $now = gmdate('Y-m-d H:i:s');
-        $bindingId = \Illuminate\Support\Facades\DB::connection('shard')->table('MachineBindings')->insertGetId([
+        \Illuminate\Support\Facades\DB::connection('shard')->table('MachineBindings')->insert([
             'LicenseId' => $licenseId,
             'FingerprintHash' => 'f1b1c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b899',
             'IpAddress' => '10.0.0.5',
@@ -146,6 +146,11 @@ final class ResellerPortalArchitectureTest extends TestCase
             'FirstSeenAt' => $now,
             'LastSeenAt' => $now,
         ]);
+        $bindingRow = \Illuminate\Support\Facades\DB::connection('shard')->table('MachineBindings')
+            ->where('LicenseId', $licenseId)
+            ->where('FingerprintHash', 'f1b1c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b899')
+            ->first();
+        $bindingId = (int) $bindingRow->MachineBindingId;
 
         // Inspect bindings
         $bindingsResponse = $this->withHeaders(['Accept' => 'application/json'])
