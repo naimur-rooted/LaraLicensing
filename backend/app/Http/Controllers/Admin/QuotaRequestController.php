@@ -266,6 +266,16 @@ final class QuotaRequestController
         $row->DecidedByUserId = $actorId;
         $row->DecidedAt = Carbon::now();
         $row->save();
+        // Dual-write to Root, inside the shard transaction: a failure here
+        // rolls the shard approve back, so an approve never lands on one
+        // store only. Root is what the gauge and issuance actually read.
+        // The root row is matched by (Reseller, Category, Tier) only, the
+        // same tuple issuance uses, not by PeriodStart, which issuance
+        // ignores. Root and shard can still drift if the process dies
+        // between the root commit and the shard commit; lara:quotas:backfill
+        // repairs that window by raising Root to the shard total.
+        $this->mirrorQuotaToRoot($resellerId, (int) $row->LicenseCategoryId, (int) $row->LicenseTierId, $p['ApprovedDelta'], $p['PeriodStart'], $p['PeriodEnd']);
+        $this->mirrorLedgerToRoot($resellerId, (int) $row->LicenseCategoryId, (int) $row->LicenseTierId, $this->tierNameByOrdinal((int) $row->LicenseTierId), $p['ApprovedDelta'], $this->requestId($request));
         Log::info('quota_request.approved', [
             'quotaRequestId' => (int) $row->QuotaRequestId,
             'resellerId' => $resellerId,
@@ -345,6 +355,35 @@ final class QuotaRequestController
         $q->PeriodStart = $periodStart;
         $q->PeriodEnd = $periodEnd;
         $q->save();
+    }
+
+    private function mirrorQuotaToRoot(int $resellerId, int $categoryId, int $tierId, int $delta, Carbon $periodStart, ?Carbon $periodEnd): void
+    {
+        $row = DB::connection('root')->table('ResellerQuotas')
+            ->where('ResellerId', $resellerId)
+            ->where('LicenseCategoryId', $categoryId)
+            ->where('LicenseTierId', $tierId)
+            ->orderBy('Id')->first();
+        if ($row !== null) {
+            DB::connection('root')->table('ResellerQuotas')->where('Id', (int) $row->Id)->increment('LicensesGranted', $delta);
+
+            return;
+        }
+        DB::connection('root')->table('ResellerQuotas')->insert([
+            'ResellerId' => $resellerId, 'LicenseCategoryId' => $categoryId, 'LicenseTierId' => $tierId,
+            'LicensesGranted' => $delta, 'LicensesConsumed' => 0, 'PeriodStart' => $periodStart, 'PeriodEnd' => $periodEnd,
+            'CreatedAt' => Carbon::now(), 'UpdatedAt' => Carbon::now(),
+        ]);
+    }
+
+    private function mirrorLedgerToRoot(int $resellerId, int $categoryId, int $tierId, string $tierName, int $delta, string $requestId): void
+    {
+        DB::connection('root')->table('ResellerQuotaLedger')->insert([
+            'ResellerId' => $resellerId, 'LicenseCategoryId' => $categoryId, 'LicenseTierId' => $tierId, 'TierName' => $tierName,
+            'Delta' => $delta, 'Action' => self::LEDGER_ACTION_ADJUSTED, 'LedgerAction' => self::LEDGER_ACTION_ADJUSTED,
+            'ReferenceId' => substr($requestId, 0, 64), 'LicenseId' => null,
+            'OccurredAt' => Carbon::now(), 'CreatedAt' => Carbon::now(), 'UpdatedAt' => Carbon::now(),
+        ]);
     }
 
     private function insertAdjustLedger(int $resellerId, int $tierId, int $quotaRequestId, int $delta, int $actorId, string $requestId): void
