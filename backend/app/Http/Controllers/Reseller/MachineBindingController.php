@@ -52,101 +52,79 @@ final class MachineBindingController
 
     private const LOG_CLEAR_COOLDOWN = 'reseller.binding.clear_cooldown';
 
-    public function index(Request $request, string $licenseKey): JsonResponse
+    public function index(Request $request, string $licenseKey): JsonResponse
+    {
+        $license = $this->requireOwnedLicense($request, $licenseKey);
+        $conn = $this->resolveConnection();
+        $rows = DB::connection($conn)
+            ->table('MachineBindings')
+            ->where('LicenseId', (int) $license->LicenseId)
+            ->orderByDesc('MachineBindingId')
+            ->get();
+        $fallback = $rows->isEmpty() ? $this->productShardResults($licenseKey, $license) : null;
+        if ($fallback !== null) {
+            return ApiEnvelope::success($fallback, $this->requestId($request));
+        }
+        $results = $rows->map(fn ($r): array => $this->projectMachine($r))->all();
+
+        return ApiEnvelope::success($results, $this->requestId($request));
+    }
+
+    /** @return list<array>|null */
+    private function productShardResults(string $licenseKey, License $license): ?array
+    {
+        $productShards = glob(database_path('product_*.sqlite')) ?: [];
+        foreach ($productShards as $shardPath) {
+            try {
+                $mapped = $this->findProductShardBindings($shardPath, $licenseKey, $license);
+            } catch (Throwable) {
+                continue;
+            }
+            if ($mapped !== null) {
+                return $mapped;
+            }
+        }
+
+        return null;
+    }
+
+    /** @return list<array>|null */
+    private function findProductShardBindings(string $shardPath, string $licenseKey, License $license): ?array
+    {
+        $pdo = new \PDO('sqlite:' . $shardPath);
+        $licStmt = $pdo->prepare('SELECT id FROM ProductLicenses WHERE serialValue = :s LIMIT 1');
+        $licStmt->execute([':s' => $licenseKey]);
+        $licRow = $licStmt->fetch(\PDO::FETCH_ASSOC);
+        if ($licRow === false) {
+            return null;
+        }
+        $mbStmt = $pdo->prepare('SELECT * FROM MachineBindings WHERE LicenseId = :lid ORDER BY MachineBindingId DESC');
+        $mbStmt->execute([':lid' => $licRow['id']]);
+        $mbRows = $mbStmt->fetchAll(\PDO::FETCH_ASSOC);
+        if (empty($mbRows)) {
+            return null;
+        }
+        $mapped = array_map(fn ($r): object => $this->mapProductShardRow($r, $license), $mbRows);
+        $results = array_map(fn ($r): array => $this->projectMachine($r), $mapped);
+
+        return $results;
+    }
+
+    private function mapProductShardRow(array $r, License $license): object
+    {
+        return (object) [
+            'MachineBindingId' => (int) $r['MachineBindingId'],
+            'LicenseId' => (int) $license->LicenseId,
+            'FingerprintHash' => (string) ($r['FingerprintHash'] ?? ''),
+            'IpAddress' => (string) ($r['ClientIp'] ?? $r['IpAddress'] ?? '127.0.0.1'),
+            'Hostname' => (string) ($r['Hostname'] ?? 'Workstation'),
+            'FirstSeenAt' => (string) ($r['FirstSeenAt'] ?? ''),
+            'LastSeenAt' => (string) ($r['LastSeenAt'] ?? ''),
+            'ReleasedAt' => $r['ReleasedAt'] ?? null,
+            'RebindCooldownUntil' => $r['RebindCooldownUntil'] ?? null,
+        ];
+    }
 
-    {
-
-        $license = $this->requireOwnedLicense($request, $licenseKey);
-
-        $conn = $this->resolveConnection();
-
-        $rows = DB::connection($conn)
-
-            ->table('MachineBindings')
-
-            ->where('LicenseId', (int) $license->LicenseId)
-
-            ->orderByDesc('MachineBindingId')
-
-            ->get();
-
-        // Also check downstream product shards where the license was activated
-
-        if ($rows->isEmpty()) {
-
-            $productShards = glob(database_path('product_*.sqlite')) ?: [];
-
-            foreach ($productShards as $shardPath) {
-
-                try {
-
-                    $pdo = new \PDO('sqlite:' . $shardPath);
-
-                    $licStmt = $pdo->prepare('SELECT id FROM ProductLicenses WHERE serialValue = :s LIMIT 1');
-
-                    $licStmt->execute([':s' => $licenseKey]);
-
-                    $licRow = $licStmt->fetch(\PDO::FETCH_ASSOC);
-
-                    if ($licRow) {
-
-                        $mbStmt = $pdo->prepare('SELECT * FROM MachineBindings WHERE LicenseId = :lid ORDER BY MachineBindingId DESC');
-
-                        $mbStmt->execute([':lid' => $licRow['id']]);
-
-                        $mbRows = $mbStmt->fetchAll(\PDO::FETCH_ASSOC);
-
-                        if (!empty($mbRows)) {
-
-                            $mapped = array_map(function ($r) use ($license) {
-
-                                return (object) [
-
-                                    'MachineBindingId' => (int) $r['MachineBindingId'],
-
-                                    'LicenseId' => (int) $license->LicenseId,
-
-                                    'FingerprintHash' => (string) ($r['FingerprintHash'] ?? ''),
-
-                                    'IpAddress' => (string) ($r['ClientIp'] ?? $r['IpAddress'] ?? '127.0.0.1'),
-
-                                    'Hostname' => (string) ($r['Hostname'] ?? 'Workstation'),
-
-                                    'FirstSeenAt' => (string) ($r['FirstSeenAt'] ?? ''),
-
-                                    'LastSeenAt' => (string) ($r['LastSeenAt'] ?? ''),
-
-                                    'ReleasedAt' => $r['ReleasedAt'] ?? null,
-
-                                    'RebindCooldownUntil' => $r['RebindCooldownUntil'] ?? null,
-
-                                ];
-
-                            }, $mbRows);
-
-                            $results = array_map(fn ($r): array => $this->projectMachine($r), $mapped);
-
-                            return ApiEnvelope::success($results, $this->requestId($request));
-
-                        }
-
-                    }
-
-                } catch (\Throwable) {
-
-                    continue;
-
-                }
-
-            }
-
-        }
-
-        $results = $rows->map(fn ($r): array => $this->projectMachine($r))->all();
-
-        return ApiEnvelope::success($results, $this->requestId($request));
-
-    }
 
     public function release(Request $request, string $licenseKey, string $bindingId): JsonResponse
 

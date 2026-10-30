@@ -128,20 +128,26 @@ final class DeveloperRegisterController
                 'SessionId' => $session->SessionId,
                 'ExpiresAt' => $session->ExpiresAt->toIso8601String(),
                 'Token' => $token,
-                'Subscription' => [
-                    'PlanCode' => $plan,
-                    'PlanName' => $meta['planName'],
-                    'BillingInterval' => $interval,
-                    'MaxProducts' => $meta['maxProducts'],
-                    'DailyQuota' => $meta['dailyQuota'],
-                    'HourlyQuota' => $meta['hourlyQuota'],
-                    'MaxMachineSeats' => $meta['seats'],
-                    'Status' => 'active',
-                ],
+                'Subscription' => $this->subscriptionPayload($plan, $meta, $interval),
             ]],
             requestId: $requestId,
             httpCode: 201,
             message: 'Created',
         );
     }
+
+    private function subscriptionPayload(string $plan, array $meta, string $interval): array
+    {
+        return [
+            'PlanCode' => $plan,
+            'PlanName' => $meta['planName'],
+            'BillingInterval' => $interval,
+            'MaxProducts' => $meta['maxProducts'],
+            'DailyQuota' => $meta['dailyQuota'],
+            'HourlyQuota' => $meta['hourlyQuota'],
+            'MaxMachineSeats' => $meta['seats'],
+            'Status' => 'active',
+        ];
+    }
+
 }

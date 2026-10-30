@@ -38,26 +38,12 @@ final class RateLimitAuthMiddleware
 {
     public function handle(Request $request, Closure $next, string $bucket): Response
     {
-        $config = (array) config('lara.auth_rate_limits.' . $bucket, []);
-        $max = (int) ($config['max_attempts'] ?? 0);
-        $decay = (int) ($config['decay_seconds'] ?? 0);
+        [$max, $decay] = $this->rateLimitConfig($bucket);
         if ($max <= 0 || $decay <= 0) {
             return $next($request);
         }
         try {
-            foreach ($this->keys($request, $bucket) as $key) {
-                if (RateLimiter::tooManyAttempts($key, $max)) {
-                    $retryAfter = RateLimiter::availableIn($key);
-                    Log::info('auth.rate_limit.blocked', ['Bucket' => $bucket, 'Key' => $key, 'RetryAfter' => $retryAfter]);
-                    throw RateLimitException::rateLimited(
-                        'Too many attempts. Try again later.',
-                        [['Field' => 'Bucket', 'Rule' => 'RateLimited', 'Value' => $bucket]],
-                        headers: ['Retry-After' => (string) $retryAfter],
-                    );
-                }
-                RateLimiter::hit($key, $decay);
-            }
-
+            $this->checkKeys($request, $bucket, $max, $decay);
         } catch (RateLimitException $e) {
             throw $e;
         } catch (\Throwable $e) {
@@ -66,10 +52,34 @@ final class RateLimitAuthMiddleware
                 'Error' => $e->getMessage(),
             ]);
         }
+
         return $next($request);
     }
 
-    /** @return array<int,string> */
+    /** @return array{0:int,1:int} */
+    private function rateLimitConfig(string $bucket): array
+    {
+        $config = (array) config('lara.auth_rate_limits.' . $bucket, []);
+
+        return [(int) ($config['max_attempts'] ?? 0), (int) ($config['decay_seconds'] ?? 0)];
+    }
+
+    private function checkKeys(Request $request, string $bucket, int $max, int $decay): void
+    {
+        foreach ($this->keys($request, $bucket) as $key) {
+            if (RateLimiter::tooManyAttempts($key, $max)) {
+                $retryAfter = RateLimiter::availableIn($key);
+                Log::info('auth.rate_limit.blocked', ['Bucket' => $bucket, 'Key' => $key, 'RetryAfter' => $retryAfter]);
+                throw RateLimitException::rateLimited(
+                    'Too many attempts. Try again later.',
+                    [['Field' => 'Bucket', 'Rule' => 'RateLimited', 'Value' => $bucket]],
+                    headers: ['Retry-After' => (string) $retryAfter],
+                );
+            }
+            RateLimiter::hit($key, $decay);
+        }
+    }
+
     private function keys(Request $request, string $bucket): array
     {
         $ip = (string) ($request->ip() ?? '0.0.0.0');

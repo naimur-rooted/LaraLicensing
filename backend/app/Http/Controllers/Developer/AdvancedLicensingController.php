@@ -106,37 +106,10 @@ class AdvancedLicensingController extends Controller
     /** Extract standardized client handshake inputs from request. */
     private function extractClientInputs(Request $request, ?string $slug): array
     {
-        $resolvedSlug = (string) ($slug ?: $request->route('slug') ?: $request->input('productSlug') ?: '');
-        if ($resolvedSlug === '') {
-            throw \App\Exceptions\ValidationException::validationFailed('Product slug is required.');
-        }
-
-        $serial = strtoupper(trim((string) (
-            $request->input('serialValue')
-            ?: $request->input('serial')
-            ?: $request->input('license_key')
-            ?: $request->input('licenseKey')
-            ?: $request->input('key')
-            ?: ''
-        )));
-
-        $hwid = strtolower(trim((string) (
-            $request->input('hardwareDigest')
-            ?: $request->input('hwid')
-            ?: $request->input('machine_id')
-            ?: $request->input('machineId')
-            ?: $request->input('machineGuid')
-            ?: $request->input('fingerprintHash')
-            ?: ''
-        )));
-
-        $hostname = (string) (
-            $request->input('hostname')
-            ?: $request->input('machineName')
-            ?: $request->input('computerName')
-            ?: 'Client Device'
-        );
-
+        $resolvedSlug = $this->resolveSlug($request, $slug);
+        $serial = strtoupper(trim($this->pickInput($request, ['serialValue', 'serial', 'license_key', 'licenseKey', 'key'])));
+        $hwid = strtolower(trim($this->pickInput($request, ['hardwareDigest', 'hwid', 'machine_id', 'machineId', 'machineGuid', 'fingerprintHash'])));
+        $hostname = $this->pickInput($request, ['hostname', 'machineName', 'computerName']) ?: 'Client Device';
         $cc = strtoupper(trim((string) ($request->header('CF-IPCountry') ?: $request->input('countryCode') ?: '')));
 
         return [
@@ -150,7 +123,29 @@ class AdvancedLicensingController extends Controller
         ];
     }
 
-    /** Return 422 envelope response for invalid input parameters. */
+    private function resolveSlug(Request $request, ?string $slug): string
+    {
+        $resolvedSlug = (string) ($slug ?: $request->route('slug') ?: $request->input('productSlug') ?: '');
+        if ($resolvedSlug === '') {
+            throw \App\Exceptions\ValidationException::validationFailed('Product slug is required.');
+        }
+
+        return $resolvedSlug;
+    }
+
+    /** @param list<string> $keys */
+    private function pickInput(Request $request, array $keys): string
+    {
+        foreach ($keys as $key) {
+            $raw = $request->input($key);
+            if ($raw) {
+                return (string) $raw;
+            }
+        }
+
+        return '';
+    }
+
     private function invalidInputResponse(Request $request): JsonResponse
     {
         $err = ['isValid' => false, 'isSuccess' => false, 'errorCode' => 'InvalidInput', 'message' => 'serialValue and hardwareDigest required.'];

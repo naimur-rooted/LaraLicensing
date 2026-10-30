@@ -97,7 +97,7 @@ class SandboxCheckoutController extends Controller
             'success' => true,
             'message' => 'Payment processed successfully in Sandbox test mode.',
             'licenseKey' => $serial,
-            'productName' => $product->productName,
+            'productName' => $product->ProductName,
             'productSlug' => $product->productSlug,
             'dealName' => $deal->dealName,
             'dealCode' => $deal->dealCode,
@@ -176,7 +176,7 @@ HTML;
     {
         $dealsJson = json_encode($deals);
         $selectedCode = $selectedDeal ? $selectedDeal->dealCode : '';
-        $productTitle = htmlspecialchars($product->productName);
+        $productTitle = htmlspecialchars((string) $product->ProductName);
         $productSlug = htmlspecialchars($product->productSlug);
 
         return <<<HTML

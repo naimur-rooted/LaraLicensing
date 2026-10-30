@@ -311,54 +311,62 @@ class ClientHandshakeService
     }
 
     /** Bind or refresh machine seat in MachineBindings and HardwareBindings. */
-    private function bindMachineSeat(PDO $pdo, int $licenseId, string $hwid, string $hostname, int $maxSeats, string $clientIp, string $countryCode, string $countryName): array
-    {
-        $normalizedHwid = strtolower(trim($hwid));
+    private function bindMachineSeat(PDO $pdo, int $licenseId, string $hwid, string $hostname, int $maxSeats, string $clientIp, string $countryCode, string $countryName): array
+    {
+        $normalizedHwid = strtolower(trim($hwid));
+        $existing = $this->findExistingBindings($pdo, $licenseId, $normalizedHwid);
+        if ($existing['hb'] || $existing['mb']) {
+            $now = Carbon::now()->toISOString();
+            $this->refreshMachineBinding($pdo, $existing['mb'], $licenseId, $normalizedHwid, $hostname, $clientIp, $countryCode, $countryName, $now);
+            $this->refreshHardwareBinding($pdo, $existing['hb'], $licenseId, $normalizedHwid, $hostname, $clientIp, $countryCode, $countryName, $now);
+            $activeCount = $this->countActiveMachineBindings($pdo, $licenseId);
+
+            return ['isBound' => true, 'activeCount' => $activeCount];
+        }
+        $activeCount = $this->countActiveMachineBindings($pdo, $licenseId);
+        if ($activeCount >= $maxSeats) {
+            return $this->seatLimitPayload($pdo, $licenseId, $maxSeats, $activeCount);
+        }
+        $this->insertMachineBinding($pdo, $licenseId, $normalizedHwid, $hostname, $clientIp, $countryCode, $countryName);
+
+        return ['isBound' => true, 'activeCount' => $activeCount + 1];
+    }
+
+    /** @return array{hb:array|false,mb:array|false} */
+    private function findExistingBindings(PDO $pdo, int $licenseId, string $normalizedHwid): array
+    {
+        $stmtHb = $pdo->prepare('SELECT * FROM HardwareBindings WHERE licenseId = :lid AND LOWER(hardwareDigest) = :hwid LIMIT 1');
+        $stmtHb->execute([':lid' => $licenseId, ':hwid' => $normalizedHwid]);
+        $existingHb = $stmtHb->fetch(PDO::FETCH_ASSOC);
+        $stmtMb = $pdo->prepare('SELECT * FROM MachineBindings WHERE LicenseId = :lid AND LOWER(FingerprintHash) = :hwid AND ReleasedAt IS NULL LIMIT 1');
+        $stmtMb->execute([':lid' => $licenseId, ':hwid' => $normalizedHwid]);
+        $existingMb = $stmtMb->fetch(PDO::FETCH_ASSOC);
+
+        return ['hb' => $existingHb, 'mb' => $existingMb];
+    }
+
+    private function refreshMachineBinding(PDO $pdo, array|false $existingMb, int $licenseId, string $normalizedHwid, string $hostname, string $clientIp, string $countryCode, string $countryName, string $now): void
+    {
+        if ($existingMb) {
+            $updMb = $pdo->prepare('UPDATE MachineBindings SET LastSeenAt = :dt, Hostname = :h, ClientIp = :ip, CountryCode = :cc, CountryName = :cn, UpdatedAt = :dt WHERE MachineBindingId = :id');
+            $updMb->execute([':dt' => $now, ':h' => $hostname, ':ip' => $clientIp, ':cc' => $countryCode, ':cn' => $countryName, ':id' => $existingMb['MachineBindingId']]);
+        } else {
+            $insMb = $pdo->prepare('INSERT INTO MachineBindings (LicenseId, FingerprintHash, Hostname, ClientIp, CountryCode, CountryName, FirstSeenAt, LastSeenAt, ReleasedAt, RebindCooldownUntil, CreatedAt, UpdatedAt) VALUES (:lid, :hwid, :h, :ip, :cc, :cn, :dt, :dt, NULL, NULL, :dt, :dt)');
+            $insMb->execute([':lid' => $licenseId, ':hwid' => $normalizedHwid, ':h' => $hostname, ':ip' => $clientIp, ':cc' => $countryCode, ':cn' => $countryName, ':dt' => $now]);
+        }
+    }
+
+    private function refreshHardwareBinding(PDO $pdo, array|false $existingHb, int $licenseId, string $normalizedHwid, string $hostname, string $clientIp, string $countryCode, string $countryName, string $now): void
+    {
+        if ($existingHb) {
+            $updHb = $pdo->prepare('UPDATE HardwareBindings SET lastSeenAt = :dt, hostname = :h, clientIp = :ip, countryCode = :cc, countryName = :cn WHERE id = :id');
+            $updHb->execute([':dt' => $now, ':h' => $hostname, ':ip' => $clientIp, ':cc' => $countryCode, ':cn' => $countryName, ':id' => $existingHb['id']]);
+        } else {
+            $insHb = $pdo->prepare('INSERT INTO HardwareBindings (licenseId, hardwareDigest, hostname, boundAt, lastSeenAt, clientIp, countryCode, countryName) VALUES (:lid, :hwid, :h, :dt, :dt, :ip, :cc, :cn)');
+            $insHb->execute([':lid' => $licenseId, ':hwid' => $normalizedHwid, ':h' => $hostname, ':dt' => $now, ':ip' => $clientIp, ':cc' => $countryCode, ':cn' => $countryName]);
+        }
+    }
 
-        // Step A: Check Existing Binding in HardwareBindings or MachineBindings
-        $stmtHb = $pdo->prepare('SELECT * FROM HardwareBindings WHERE licenseId = :lid AND LOWER(hardwareDigest) = :hwid LIMIT 1');
-        $stmtHb->execute([':lid' => $licenseId, ':hwid' => $normalizedHwid]);
-        $existingHb = $stmtHb->fetch(PDO::FETCH_ASSOC);
-
-        $stmtMb = $pdo->prepare('SELECT * FROM MachineBindings WHERE LicenseId = :lid AND LOWER(FingerprintHash) = :hwid AND ReleasedAt IS NULL LIMIT 1');
-        $stmtMb->execute([':lid' => $licenseId, ':hwid' => $normalizedHwid]);
-        $existingMb = $stmtMb->fetch(PDO::FETCH_ASSOC);
-
-        // Step B: Idempotent Hit
-        if ($existingHb || $existingMb) {
-            $now = Carbon::now()->toISOString();
-
-            if ($existingMb) {
-                $updMb = $pdo->prepare('UPDATE MachineBindings SET LastSeenAt = :dt, Hostname = :h, ClientIp = :ip, CountryCode = :cc, CountryName = :cn, UpdatedAt = :dt WHERE MachineBindingId = :id');
-                $updMb->execute([':dt' => $now, ':h' => $hostname, ':ip' => $clientIp, ':cc' => $countryCode, ':cn' => $countryName, ':id' => $existingMb['MachineBindingId']]);
-            } else {
-                $insMb = $pdo->prepare('INSERT INTO MachineBindings (LicenseId, FingerprintHash, Hostname, ClientIp, CountryCode, CountryName, FirstSeenAt, LastSeenAt, ReleasedAt, RebindCooldownUntil, CreatedAt, UpdatedAt) VALUES (:lid, :hwid, :h, :ip, :cc, :cn, :dt, :dt, NULL, NULL, :dt, :dt)');
-                $insMb->execute([':lid' => $licenseId, ':hwid' => $normalizedHwid, ':h' => $hostname, ':ip' => $clientIp, ':cc' => $countryCode, ':cn' => $countryName, ':dt' => $now]);
-            }
-
-            if ($existingHb) {
-                $updHb = $pdo->prepare('UPDATE HardwareBindings SET lastSeenAt = :dt, hostname = :h, clientIp = :ip, countryCode = :cc, countryName = :cn WHERE id = :id');
-                $updHb->execute([':dt' => $now, ':h' => $hostname, ':ip' => $clientIp, ':cc' => $countryCode, ':cn' => $countryName, ':id' => $existingHb['id']]);
-            } else {
-                $insHb = $pdo->prepare('INSERT INTO HardwareBindings (licenseId, hardwareDigest, hostname, boundAt, lastSeenAt, clientIp, countryCode, countryName) VALUES (:lid, :hwid, :h, :dt, :dt, :ip, :cc, :cn)');
-                $insHb->execute([':lid' => $licenseId, ':hwid' => $normalizedHwid, ':h' => $hostname, ':dt' => $now, ':ip' => $clientIp, ':cc' => $countryCode, ':cn' => $countryName]);
-            }
-
-            $activeCount = $this->countActiveMachineBindings($pdo, $licenseId);
-
-            return ['isBound' => true, 'activeCount' => $activeCount];
-        }
-
-        // Step C: New Binding Gate
-        $activeCount = $this->countActiveMachineBindings($pdo, $licenseId);
-        if ($activeCount >= $maxSeats) {
-            return $this->seatLimitPayload($pdo, $licenseId, $maxSeats, $activeCount);
-        }
-
-        $this->insertMachineBinding($pdo, $licenseId, $normalizedHwid, $hostname, $clientIp, $countryCode, $countryName);
-
-        return ['isBound' => true, 'activeCount' => $activeCount + 1];
-    }
 
     /** Return payload for seat limit exceeded state. */
     private function seatLimitPayload(PDO $pdo, int $licenseId, int $maxSeats, int $activeCount): array
