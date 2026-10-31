@@ -156,6 +156,7 @@ final class LicenseController
         $license = $this->createLicenseRecord($request, $resellerId, $serialKey, $categoryId, $payload, $now);
         $this->createSerialRecord($license, $serialKey, $payload['EnvironmentName'], $now);
         $this->attachConsumptionLedger($resellerId, $categoryId, $tierId, $license, $payload['TierName'], $now);
+        $this->syncProductLicenseDualWrite($payload, $serialKey);
 
         return $license;
     }
@@ -340,7 +341,7 @@ final class LicenseController
     }
 
     /**
-     * @return array{PrefixValue:string, TierName:string, EnvironmentName:string, LicenseCategory:string, ExpiresAt:?string}
+     * @return array{PrefixValue:string, TierName:string, EnvironmentName:string, LicenseCategory:string, ProductSlug:?string, ExpiresAt:?string}
      */
     private function normalizeIssuePayload(LicenseIssueRequest $request): array
     {
@@ -351,8 +352,56 @@ final class LicenseController
             'TierName' => (string) ($v['TierName'] ?? 'Tier1'),
             'EnvironmentName' => (string) ($v['EnvironmentName'] ?? 'Production'),
             'LicenseCategory' => isset($v['LicenseCategory']) ? (string) $v['LicenseCategory'] : self::DEFAULT_CATEGORY_NAME,
+            'ProductSlug' => isset($v['ProductSlug']) && trim((string) $v['ProductSlug']) !== '' ? trim((string) $v['ProductSlug']) : null,
             'ExpiresAt' => isset($v['ExpiresAt']) ? (string) $v['ExpiresAt'] : null,
         ];
+    }
+
+    private function syncProductLicenseDualWrite(array $payload, string $serialKey): void
+    {
+        $slug = $payload['ProductSlug'] ?? null;
+        if ($slug === null) {
+            $firstProduct = DB::connection(self::CONN_ROOT)->table('Products')->where('isActive', true)->first();
+            $slug = $firstProduct ? (string) $firstProduct->productSlug : null;
+        }
+
+        if ($slug === null || trim($slug) === '') {
+            return;
+        }
+
+        $tierName = $payload['TierName'] ?? 'Starter';
+        $seats = match ($tierName) {
+            'Enterprise' => 10,
+            'Scale' => 5,
+            'Growth' => 3,
+            default => 1,
+        };
+
+        $path = database_path("product_{$slug}.sqlite");
+        if (!file_exists($path)) {
+            @touch($path);
+        }
+
+        try {
+            $pdo = new \PDO("sqlite:{$path}");
+            \App\Support\LicenseShardSchema::ensureProductLicenses($pdo);
+            $ins = $pdo->prepare('INSERT OR IGNORE INTO ProductLicenses (serialValue, dealCode, allowedSeats, isActive, isRevoked, customerEmail, transactionId, expiresAt, createdAt) VALUES (:s, :d, :seats, 1, 0, :email, :tx, :exp, :dt)');
+            $ins->execute([
+                ':s' => $serialKey,
+                ':d' => strtoupper($tierName),
+                ':seats' => max(1, $seats),
+                ':email' => 'reseller@demo.lara.test',
+                ':tx' => 'reseller_mint_' . bin2hex(random_bytes(6)),
+                ':exp' => $payload['ExpiresAt'] ?? null,
+                ':dt' => Carbon::now()->toISOString(),
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('reseller.license.dual_write_failed', [
+                'ProductSlug' => $slug,
+                'SerialKey' => $serialKey,
+                'Error' => $e->getMessage(),
+            ]);
+        }
     }
 
     private function resolveTierId(string $tierName): int

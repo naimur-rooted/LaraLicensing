@@ -1,7 +1,9 @@
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Sparkles, Loader2, KeyRound } from "lucide-react";
 import { toast } from "sonner";
+import { z } from "zod";
+import { requestLaraApi } from "@/lib/lara-api-client";
 
 import {
   Dialog,
@@ -24,6 +26,12 @@ import {
 import { issueResellerLicense, type LicenseCategoryName } from "@/lib/lara-reseller-mint";
 import { formatLaraApiError } from "@/lib/lara-api-error";
 
+const productItemSchema = z.object({
+  ProductId: z.number(),
+  productName: z.string(),
+  productSlug: z.string(),
+});
+
 export interface ResellerIssueLicenseDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
@@ -40,7 +48,19 @@ export function ResellerIssueLicenseDialog({
   const [category, setCategory] = useState<LicenseCategoryName>("Monthly");
   const [tier, setTier] = useState<"Starter" | "Growth" | "Scale" | "Enterprise">("Starter");
   const [environment, setEnvironment] = useState<"Production" | "Staging" | "Sandbox">("Production");
+  const [productSlug, setProductSlug] = useState<string>("hotel-reservation-system");
   const [mintedKey, setMintedKey] = useState<string | null>(null);
+
+  const { data: products = [] } = useQuery({
+    queryKey: ["LaraApi", "Reseller", "Products"],
+    queryFn: async () => {
+      try {
+        return await requestLaraApi("/Reseller/Products", productItemSchema);
+      } catch {
+        return [];
+      }
+    },
+  });
 
   const mintMutation = useMutation({
     mutationFn: () =>
@@ -49,6 +69,7 @@ export function ResellerIssueLicenseDialog({
         LicenseCategory: category,
         TierName: tier,
         EnvironmentName: environment,
+        ProductSlug: productSlug,
       }),
     onSuccess: (data) => {
       setMintedKey(data.LicenseKey);
@@ -103,6 +124,27 @@ export function ResellerIssueLicenseDialog({
           </div>
         ) : (
           <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label>Target Software Product</Label>
+              <Select value={productSlug} onValueChange={(v: string) => setProductSlug(v)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {products.map((p) => (
+                    <SelectItem key={p.ProductId} value={p.productSlug}>
+                      {p.productName} ({p.productSlug})
+                    </SelectItem>
+                  ))}
+                  {products.length === 0 ? (
+                    <SelectItem value="hotel-reservation-system">
+                      Hotel Reservation System (hotel-reservation-system)
+                    </SelectItem>
+                  ) : null}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="space-y-1.5">
               <Label htmlFor="reseller-prefix">Vanity Serial Prefix</Label>
               <Input

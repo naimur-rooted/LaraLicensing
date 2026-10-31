@@ -22,6 +22,7 @@ export function ResellerSerialMintingStudio({ resellerId }: ResellerSerialMintin
   const [category, setCategory] = useState<LicenseCategoryName>("Monthly");
   const [tier, setTier] = useState<"Starter" | "Growth" | "Scale" | "Enterprise">("Starter");
   const [environment, setEnvironment] = useState<"Production" | "Staging" | "Sandbox">("Production");
+  const [productSlug, setProductSlug] = useState<string>("hotel-reservation-system");
   const [mintedSerial, setMintedSerial] = useState<string | null>(null);
 
   const previewString = mintedSerial ?? formatSerialPreview(prefix, category, "V1");
@@ -34,6 +35,7 @@ export function ResellerSerialMintingStudio({ resellerId }: ResellerSerialMintin
         LicenseCategory: category,
         TierName: tier,
         EnvironmentName: environment,
+        ProductSlug: productSlug,
       }),
     onSuccess: (data) => {
       setMintedSerial(data.LicenseKey);
@@ -58,10 +60,12 @@ export function ResellerSerialMintingStudio({ resellerId }: ResellerSerialMintin
             category={category}
             tier={tier}
             environment={environment}
+            productSlug={productSlug}
             onPrefixChange={setPrefix}
             onCategoryChange={setCategory}
             onTierChange={setTier}
             onEnvironmentChange={setEnvironment}
+            onProductSlugChange={setProductSlug}
           />
           <div className="flex justify-end pt-2">
             <button

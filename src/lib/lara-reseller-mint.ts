@@ -27,6 +27,7 @@ export const licenseMintInputSchema = z.object({
     "Lifetime",
     "Standard Key",
   ]),
+  ProductSlug: z.string().optional(),
   ExpiresAt: z.string().nullable().optional(),
 });
 

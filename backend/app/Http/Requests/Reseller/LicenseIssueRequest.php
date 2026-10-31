@@ -33,6 +33,9 @@ final class LicenseIssueRequest extends FormRequest
         if ($this->has('LicenseCategory') === false && $this->has('licenseCategory') === true) {
             $merge['LicenseCategory'] = $this->input('licenseCategory');
         }
+        if ($this->has('ProductSlug') === false && $this->has('productSlug') === true) {
+            $merge['ProductSlug'] = $this->input('productSlug');
+        }
         if ($this->has('TierName') === false && isset($merge['TierName']) === false) {
             $merge['TierName'] = 'Tier1';
         }
@@ -54,6 +57,7 @@ final class LicenseIssueRequest extends FormRequest
             'TierName' => ['required', 'string'],
             'EnvironmentName' => ['required', 'string'],
             'LicenseCategory' => ['nullable', 'string'],
+            'ProductSlug' => ['nullable', 'string', 'max:64'],
             'ExpiresAt' => ['nullable', 'string'],
         ];
     }
