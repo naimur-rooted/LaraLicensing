@@ -128,7 +128,9 @@ async function seedUsers(): Promise<void> {
   await write<Record<string, string>>("auth", "credentials", {
     "admin@lara.local": "preview-admin",
     "reseller@lara.local": "preview-reseller",
-    "user@licensingportal.local": "preview-portal",
+    "user@licensingportal.local": "demo123",
+    "admin@demo.lara.test": "demo123",
+    "reseller@demo.lara.test": "demo123",
   });
 }
 

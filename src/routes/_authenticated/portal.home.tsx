@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { PlatformSubscriptionModal } from "@/components/developer/PlatformSubscriptionModal";
@@ -8,7 +8,7 @@ import { PortalSidebar } from "@/components/portal/PortalSidebar";
 import { PortalTabContent } from "@/components/portal/PortalTabContent";
 import type { PortalTabId } from "@/components/portal/portal-types";
 import { meQueryOptions } from "@/lib/lara-me";
-import { clearLaraSession } from "@/lib/lara-api-session";
+import { logoutFromLaraApi } from "@/lib/lara-auth";
 import { RuntimeModeFlipButton } from "@/components/shell/RuntimeModeFlipButton";
 
 export const Route = createFileRoute("/_authenticated/portal/home")({
@@ -37,9 +37,13 @@ function PortalHome() {
   const [currentPlanTier, setCurrentPlanTier] = useState("Pro Developer");
   const [isGlobalPlanModalOpen, setIsGlobalPlanModalOpen] = useState(false);
 
+  const queryClient = useQueryClient();
+
   const handleSignOut = () => {
-    clearLaraSession();
-    window.location.href = "/login";
+    void logoutFromLaraApi().finally(() => {
+      queryClient.clear();
+      window.location.href = "/login";
+    });
   };
 
   const handleTierSelect = (tierCode: string) => {

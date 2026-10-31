@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { Link, Outlet, useNavigate } from "@tanstack/react-router";
 import { Home, Menu, PanelLeft, ShieldCheck } from "lucide-react";
 
@@ -10,7 +11,7 @@ import { ProfileMenu } from "../shell/ProfileMenu";
 import { RoleChip } from "../shell/RoleChip";
 import { TopbarSearch } from "../shell/TopbarSearch";
 import { NotificationBell } from "../notifications/NotificationBell";
-import { clearLaraSession } from "../../lib/lara-api-session";
+import { logoutFromLaraApi } from "../../lib/lara-auth";
 import { useSidebarCollapsed } from "../../lib/lara-sidebar-collapsed";
 import { LaraShellRoleContext } from "../../lib/lara-shell-role";
 
@@ -36,11 +37,13 @@ export function AdminShell({ children }: { children?: React.ReactNode } = {}) {
 }
 
 function useAdminSignOut() {
-  const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   return () => {
-    clearLaraSession();
-    void navigate({ to: "/admin/login", replace: true });
+    void logoutFromLaraApi().finally(() => {
+      queryClient.clear();
+      window.location.href = "/admin/login";
+    });
   };
 }
 

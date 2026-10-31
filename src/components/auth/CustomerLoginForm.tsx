@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { FieldEmail, FieldPassword } from "./AuthFormFields";
 import { CaptchaField } from "./CaptchaField";
@@ -6,8 +7,10 @@ import { useLoginForm } from "./use-login-form";
 
 export function CustomerLoginForm(props: { redirectTo?: string }) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const form = useLoginForm({
     onSuccess: async () => {
+      await queryClient.resetQueries({ queryKey: ["LaraApi", "Users", "Me"] });
       if (props.redirectTo) window.location.href = props.redirectTo;
       else await navigate({ to: "/portal", replace: true });
     },

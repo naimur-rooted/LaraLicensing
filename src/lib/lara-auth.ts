@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { HttpMethodType, requestLaraApi } from "./lara-api-client";
-import { setLaraAccessToken, setLaraRefreshToken } from "./lara-api-session";
+import { clearLaraSession, setLaraAccessToken, setLaraRefreshToken } from "./lara-api-session";
 import { getRuntimeMode } from "./runtime-mode";
 import { read, write } from "./preview-store";
 import { ApiErrorCodeType, LaraApiError } from "./lara-api-error";
@@ -43,7 +43,7 @@ async function verifyPreviewLoginCredentials(
 ): Promise<LaraTokenResult> {
   const normalized = email.trim().toLowerCase();
   const creds = (await read<Record<string, string>>("auth", "credentials")) || {};
-  const expectedPassword = creds[normalized];
+  const expectedPassword = creds[normalized] ?? (normalized.endsWith("@demo.lara.test") ? "demo123" : undefined);
   if (!expectedPassword || expectedPassword !== password) {
     throw new LaraApiError(
       "Invalid email or password.",
@@ -58,6 +58,22 @@ async function verifyPreviewLoginCredentials(
   setLaraRefreshToken(refresh);
 
   return { AccessToken: access, RefreshToken: refresh, TokenType: "Bearer", ExpiresIn: 3600 };
+}
+
+export async function logoutFromLaraApi(): Promise<void> {
+  if (getRuntimeMode().Mode === "preview") {
+    clearLaraSession();
+    return;
+  }
+  try {
+    await requestLaraApi("/Api/Auth/Logout", z.any(), {
+      method: HttpMethodType.Post,
+    });
+  } catch {
+    // Session token may already be expired or invalid on the server
+  } finally {
+    clearLaraSession();
+  }
 }
 
 export async function loginToLaraApi(input: LaraLoginRequest): Promise<LaraTokenResult> {

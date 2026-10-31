@@ -33,8 +33,8 @@ export async function signInWithSeedIdentity(identityId: string): Promise<void> 
   try {
     const rows = await list<AdminUser>("admin-users");
     const emailMap: Record<string, string> = {
-      admin: "admin@lara.local",
-      reseller: "reseller@lara.local",
+      admin: "admin@demo.lara.test",
+      reseller: "reseller@demo.lara.test",
       portal: "user@licensingportal.local",
     };
     const targetEmail = emailMap[identity.id];

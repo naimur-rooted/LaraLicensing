@@ -42,9 +42,9 @@ export const VERSION_JSON_PATH = "/version.json";
 export const PACKAGE_VERSION: string = (packageJson as { version: string }).version;
 
 const COMPILE_TIME_DEFAULT: RuntimeConfig = Object.freeze({
-  Mode: "preview" as const,
-  ApiBaseUrl: null,
-  PreviewSeed: "default",
+  Mode: "production" as const,
+  ApiBaseUrl: "http://127.0.0.1:8000",
+  PreviewSeed: "empty",
 });
 
 const VALID_MODES: readonly RuntimeMode[] = ["preview", "dev", "production"];
@@ -241,14 +241,6 @@ function applyVersionJson(base: RuntimeConfig, remote: Result<VersionJson>): Run
 }
 
 function applyOverride(base: RuntimeConfig): RuntimeConfig {
-  const raw = safeLocalStorageGet(RUNTIME_OVERRIDE_KEY);
-  if (!raw) return base;
-  const parsed = parseOverride(raw);
-  if (parsed.ok && parsed.data.Version === PACKAGE_VERSION) {
-    return pickModeFields(parsed.data);
-  }
-  if (!parsed.ok) logRuntimeError("RUNTIME_OVERRIDE_INVALID", parsed.error);
-
   return base;
 }
 

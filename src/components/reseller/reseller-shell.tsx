@@ -1,11 +1,14 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { Link, Outlet, useNavigate } from "@tanstack/react-router";
 import { Building2 } from "lucide-react";
 
 import { AppShell } from "../shell/AppShell";
 import { CommandPalette } from "../shell/CommandPalette";
+import { PreviewDebugDrawerLazy } from "../shell/PreviewDebugDrawerLazy";
+import { RuntimeModeFlipButton } from "../shell/RuntimeModeFlipButton";
 import { ResellerSidebarNav } from "./ResellerSidebarNav";
 import { ResellerTopbar } from "./ResellerTopbar";
-import { clearLaraSession } from "../../lib/lara-api-session";
+import { logoutFromLaraApi } from "../../lib/lara-auth";
 import { LaraShellRoleContext } from "../../lib/lara-shell-role";
 
 export interface ResellerShellProps {
@@ -28,16 +31,20 @@ export function ResellerShell({ resellerId, children }: ResellerShellProps) {
         }
       />
       <CommandPalette />
+      <PreviewDebugDrawerLazy />
+      <RuntimeModeFlipButton />
     </LaraShellRoleContext.Provider>
   );
 }
 
 function useResellerSignOut() {
-  const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   return () => {
-    clearLaraSession();
-    void navigate({ to: "/login", replace: true });
+    void logoutFromLaraApi().finally(() => {
+      queryClient.clear();
+      window.location.href = "/login";
+    });
   };
 }
 

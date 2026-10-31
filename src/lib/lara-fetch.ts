@@ -87,6 +87,13 @@ export async function laraFetch<T>(
 
     return await requestLaraApi(path, schema, request);
   } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw error;
+    }
+    const isAborted = error instanceof Error && error.name === "AbortError";
+    if (isAborted) {
+      throw error;
+    }
     const laraError = error instanceof LaraApiError ? error : wrapNetworkFailure(error, path);
     // Plan 11 step 28: single capture point. Every failure that exits
     // `laraFetch` lands in the error store so the Global Error Modal

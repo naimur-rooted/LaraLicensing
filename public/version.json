@@ -1,8 +1,8 @@
 {
-  "AllowRuntimeToggle": true,
-  "ApiBaseUrl": null,
-  "Mode": "preview",
-  "PreviewSeed": "default",
-  "UpdatedAt": "2026-07-21T00:00:00Z",
+  "AllowRuntimeToggle": false,
+  "ApiBaseUrl": "http://127.0.0.1:8000",
+  "Mode": "production",
+  "PreviewSeed": "empty",
+  "UpdatedAt": "2026-10-30T18:24:00Z",
   "Version": "0.682.0"
 }

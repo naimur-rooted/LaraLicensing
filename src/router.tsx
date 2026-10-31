@@ -12,6 +12,7 @@ import {
   parseScenarioFromSearch,
 } from "./lib/preview-scenario";
 import { getRuntimeMode } from "./lib/runtime-mode";
+import { resetAll as resetPreviewStore } from "./lib/preview-store";
 
 // Kick off the runtime-mode resolve exactly once per client boot (INV-RM-08).
 // Guarded so SSR/prerender never fetches /version.json server-side (F-04).
@@ -21,6 +22,22 @@ import { getRuntimeMode } from "./lib/runtime-mode";
 // outside preview mode and idempotent across reloads. Failures surface
 // through `logRuntimeError` (INV-RM-11); we never swallow them.
 if (typeof window !== "undefined") {
+  // Purge any stale preview localStorage override or IndexedDB so app always talks directly to live API
+  try {
+    const overrideKey = "lara.runtime.override.v1";
+    if (window.localStorage.getItem(overrideKey)) {
+      window.localStorage.removeItem(overrideKey);
+      void resetPreviewStore();
+    }
+  } catch {
+  }
+
+  // Expose global store reset helper so users can wipe IndexedDB seed anytime from DevTools console
+  (window as unknown as { __resetPreviewStore?: () => Promise<void> }).__resetPreviewStore = async () => {
+    await resetPreviewStore();
+    window.location.reload();
+  };
+
   // Plan 17 Step 2: register preview handlers eagerly at module load
   // (idempotent; Map.set) so route loaders that fire before
   // `bootRuntimeConfig()` resolves still find a handler under
