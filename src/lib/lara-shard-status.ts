@@ -46,7 +46,7 @@ export async function fetchShardStatus(signal?: AbortSignal): Promise<ShardStatu
   }
   let checkedAt = "";
   let unreachableCount = 0;
-  const rows = await requestLaraApi("/Metrics/ShardStatus", shardStatusRowSchema, {
+  const rows = await requestLaraApi("/Admin/Metrics/ShardStatus", shardStatusRowSchema, {
     signal,
     onAttributes: (attributes) => {
       const rawCheckedAt = attributes.CheckedAt;

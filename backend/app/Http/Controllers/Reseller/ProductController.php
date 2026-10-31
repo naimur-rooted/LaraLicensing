@@ -41,6 +41,6 @@ final class ProductController
 
         $requestId = (string) $request->attributes->get('X-Request-Id', '');
 
-        return ApiEnvelope::success($products, $requestId);
+        return ApiEnvelope::success($products->toArray(), $requestId);
     }
 }

@@ -53,7 +53,7 @@ export const adminMetricsQueryOptions = queryOptions({
       };
     }
     let warnings: AdminMetricsWarning[] = [];
-    const [metrics] = await requestLaraApi("/Metrics", adminMetricsSchema, {
+    const [metrics] = await requestLaraApi("/Admin/Metrics", adminMetricsSchema, {
       signal,
       onAttributes: (attributes) => {
         const raw = attributes.Warnings;

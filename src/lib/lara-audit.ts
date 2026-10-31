@@ -107,7 +107,7 @@ export function auditLogsQueryOptions(filters: AuditLogFilters = {}) {
     queryFn: ({ signal }) => {
       if (getRuntimeMode().Mode === "preview") return fetchPreview(filters, signal);
 
-      return requestLaraApi(`/AuditLogs?${qs}`, auditLogSchema, { signal });
+      return requestLaraApi(`/Admin/AuditLogs?${qs}`, auditLogSchema, { signal });
     },
     retry: false,
     staleTime: 15_000,
