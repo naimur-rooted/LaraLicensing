@@ -4,11 +4,15 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Mail\ResellerApplicationReceivedAdminMail;
+use App\Mail\ResellerApprovedWelcomeMail;
 use App\Support\ApiEnvelope;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
@@ -53,6 +57,17 @@ final class ResellerApplicationController
         $created = DB::connection('root')->table('ResellerApplications')
             ->where('ApplicationId', $appId)
             ->first();
+
+        // Dispatch email notification to platform administrator
+        try {
+            $adminEmail = env('ADMIN_NOTIFICATION_EMAIL', 'admin@demo.lara.test');
+            Mail::to($adminEmail)->send(new ResellerApplicationReceivedAdminMail((array) $created));
+        } catch (\Throwable $e) {
+            Log::error('reseller_application.admin_notification_failed', [
+                'application_id' => $appId,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         return ApiEnvelope::success(
             results: [(array) $created],
@@ -101,19 +116,23 @@ final class ResellerApplicationController
         }
 
         $resellerSlug = $baseSlug;
+        $resellerName = (string) $app->CompanyName;
         $counter = 1;
-        while (DB::connection('root')->table('Resellers')->where('ResellerSlug', $resellerSlug)->exists()) {
+        while (DB::connection('root')->table('Resellers')->where('ResellerSlug', $resellerSlug)->orWhere('ResellerName', $resellerName)->exists()) {
             $resellerSlug = $baseSlug . '-' . $counter;
+            $resellerName = ((string) $app->CompanyName) . ' #' . $counter;
             $counter++;
         }
 
         $adminUserId = (int) ($request->user()?->getAuthIdentifier() ?? 1);
         $temporaryPassword = 'Reseller-' . Str::upper(Str::random(4)) . '-' . rand(1000, 9999);
 
+        $prefix = !empty($app->DesiredPrefix) ? strtoupper($app->DesiredPrefix) : strtoupper(substr($resellerSlug, 0, 5));
+
         // Transactional insert to Resellers, User creation, and update Application
-        $resellerId = DB::connection('root')->transaction(function () use ($app, $resellerSlug, $applicationId, $adminUserId, $temporaryPassword) {
+        $resellerId = DB::connection('root')->transaction(function () use ($app, $resellerName, $resellerSlug, $prefix, $applicationId, $adminUserId, $temporaryPassword) {
             $rId = DB::connection('root')->table('Resellers')->insertGetId([
-                'ResellerName' => $app->CompanyName,
+                'ResellerName' => $resellerName,
                 'ResellerSlug' => $resellerSlug,
                 'ContactEmail' => $app->ContactEmail,
                 'IsActive' => 1,
@@ -156,7 +175,6 @@ final class ResellerApplicationController
             }
 
             // Add requested prefix if valid
-            $prefix = !empty($app->DesiredPrefix) ? strtoupper($app->DesiredPrefix) : strtoupper(substr($resellerSlug, 0, 5));
             DB::connection('root')->table('Prefixes')->insert([
                 'ResellerId' => $rId,
                 'PrefixValue' => $prefix,
@@ -195,6 +213,18 @@ final class ResellerApplicationController
         $resellerArray = (array) $reseller;
         $resellerArray['TemporaryPassword'] = $temporaryPassword;
         $resellerArray['LoginEmail'] = $app->ContactEmail;
+        $resellerArray['Prefix'] = $prefix;
+
+        // Dispatch welcome email with login credentials to the newly approved Reseller
+        try {
+            Mail::to($app->ContactEmail)->send(new ResellerApprovedWelcomeMail($resellerArray));
+        } catch (\Throwable $e) {
+            Log::error('reseller_application.welcome_mail_failed', [
+                'reseller_id' => $resellerId,
+                'email' => $app->ContactEmail,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         return ApiEnvelope::success(
             results: [$resellerArray],
