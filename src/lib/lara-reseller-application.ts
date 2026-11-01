@@ -11,6 +11,7 @@ export const resellerApplicationSchema = z.object({
   DesiredPrefix: z.string().nullable().optional(),
   ExpectedVolume: z.string().nullable().optional(),
   Status: z.enum(["Pending", "Approved", "Denied"]),
+  TemporaryPassword: z.string().nullable().optional(),
   DecidedByUserId: z.number().nullable().optional(),
   DecidedAt: z.string().nullable().optional(),
   CreatedAt: z.string(),
@@ -30,12 +31,22 @@ export const resellerApplicationsQueryOptions = queryOptions({
   refetchInterval: 5_000,
 });
 
-export async function approveResellerApplication(applicationId: number): Promise<void> {
-  await requestLaraApi(
+export interface ApprovedResellerResult {
+  ResellerId: number;
+  ResellerName: string;
+  ResellerSlug: string;
+  ContactEmail: string;
+  LoginEmail: string;
+  TemporaryPassword?: string;
+}
+
+export async function approveResellerApplication(applicationId: number): Promise<ApprovedResellerResult> {
+  const res = await requestLaraApi<ApprovedResellerResult>(
     `/Admin/ResellerApplications/${applicationId}/Approve`,
     z.unknown(),
     { method: HttpMethodType.Post }
   );
+  return res[0];
 }
 
 export async function denyResellerApplication(applicationId: number): Promise<void> {

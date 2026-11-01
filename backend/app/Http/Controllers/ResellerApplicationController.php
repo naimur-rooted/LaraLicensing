@@ -8,7 +8,9 @@ use App\Support\ApiEnvelope;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 final class ResellerApplicationController
 {
@@ -106,9 +108,10 @@ final class ResellerApplicationController
         }
 
         $adminUserId = (int) ($request->user()?->getAuthIdentifier() ?? 1);
+        $temporaryPassword = 'Reseller-' . Str::upper(Str::random(4)) . '-' . rand(1000, 9999);
 
-        // Transactional insert to Resellers and update Application
-        $resellerId = DB::connection('root')->transaction(function () use ($app, $resellerSlug, $applicationId, $adminUserId) {
+        // Transactional insert to Resellers, User creation, and update Application
+        $resellerId = DB::connection('root')->transaction(function () use ($app, $resellerSlug, $applicationId, $adminUserId, $temporaryPassword) {
             $rId = DB::connection('root')->table('Resellers')->insertGetId([
                 'ResellerName' => $app->CompanyName,
                 'ResellerSlug' => $resellerSlug,
@@ -117,6 +120,40 @@ final class ResellerApplicationController
                 'CreatedAt' => now(),
                 'UpdatedAt' => now(),
             ]);
+
+            // Create or update portal user login for the Reseller
+            $existingUser = DB::connection('root')->table('Users')->where('Email', $app->ContactEmail)->first();
+            if ($existingUser) {
+                DB::connection('root')->table('Users')->where('UserId', $existingUser->UserId)->update([
+                    'TenantId' => $rId,
+                    'PasswordHash' => Hash::make($temporaryPassword),
+                    'IsActive' => 1,
+                    'UpdatedAt' => now(),
+                ]);
+                $userId = $existingUser->UserId;
+            } else {
+                $userId = DB::connection('root')->table('Users')->insertGetId([
+                    'Email' => $app->ContactEmail,
+                    'PasswordHash' => Hash::make($temporaryPassword),
+                    'TenantId' => $rId,
+                    'IsActive' => 1,
+                    'CreatedAt' => now(),
+                    'UpdatedAt' => now(),
+                ]);
+            }
+
+            // Assign Reseller role (RoleId: 3)
+            $hasRole = DB::connection('root')->table('UserRoles')
+                ->where('UserId', $userId)
+                ->where('RoleId', 3)
+                ->exists();
+            if (!$hasRole) {
+                DB::connection('root')->table('UserRoles')->insert([
+                    'UserId' => $userId,
+                    'RoleId' => 3,
+                    'CreatedAt' => now(),
+                ]);
+            }
 
             // Add requested prefix if valid
             $prefix = !empty($app->DesiredPrefix) ? strtoupper($app->DesiredPrefix) : strtoupper(substr($resellerSlug, 0, 5));
@@ -140,11 +177,12 @@ final class ResellerApplicationController
                 'UpdatedAt' => now(),
             ]);
 
-            // Update application status
+            // Update application status with generated temporary password
             DB::connection('root')->table('ResellerApplications')
                 ->where('ApplicationId', $applicationId)
                 ->update([
                     'Status' => 'Approved',
+                    'TemporaryPassword' => $temporaryPassword,
                     'DecidedByUserId' => $adminUserId,
                     'DecidedAt' => now(),
                     'UpdatedAt' => now(),
@@ -154,9 +192,12 @@ final class ResellerApplicationController
         });
 
         $reseller = DB::connection('root')->table('Resellers')->where('ResellerId', $resellerId)->first();
+        $resellerArray = (array) $reseller;
+        $resellerArray['TemporaryPassword'] = $temporaryPassword;
+        $resellerArray['LoginEmail'] = $app->ContactEmail;
 
         return ApiEnvelope::success(
-            results: [(array) $reseller],
+            results: [$resellerArray],
             requestId: (string) $request->attributes->get('X-Request-Id', '')
         );
     }
