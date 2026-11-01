@@ -36,6 +36,7 @@ import { Route as AuthenticatedAccountProfileRouteImport } from './routes/_authe
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
 import { Route as AuthenticatedAdminApiDocsRouteImport } from './routes/_authenticated/admin.api-docs'
 import { Route as AuthenticatedAdminAppUpdatesRouteImport } from './routes/_authenticated/admin.app-updates'
+import { Route as AuthenticatedAdminApplicationsRouteImport } from './routes/_authenticated/admin.applications'
 import { Route as AuthenticatedAdminAuditRouteImport } from './routes/_authenticated/admin.audit'
 import { Route as AuthenticatedAdminBackupRouteImport } from './routes/_authenticated/admin.backup'
 import { Route as AuthenticatedAdminDesignRouteImport } from './routes/_authenticated/admin.design'
@@ -205,6 +206,12 @@ const AuthenticatedAdminAppUpdatesRoute =
   AuthenticatedAdminAppUpdatesRouteImport.update({
     id: '/app-updates',
     path: '/app-updates',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminApplicationsRoute =
+  AuthenticatedAdminApplicationsRouteImport.update({
+    id: '/applications',
+    path: '/applications',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
 const AuthenticatedAdminAuditRoute = AuthenticatedAdminAuditRouteImport.update({
@@ -422,6 +429,7 @@ export interface FileRoutesByFullPath {
   '/account/profile': typeof AuthenticatedAccountProfileRoute
   '/admin/api-docs': typeof AuthenticatedAdminApiDocsRoute
   '/admin/app-updates': typeof AuthenticatedAdminAppUpdatesRoute
+  '/admin/applications': typeof AuthenticatedAdminApplicationsRoute
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/admin/backup': typeof AuthenticatedAdminBackupRouteWithChildren
   '/admin/design': typeof AuthenticatedAdminDesignRoute
@@ -481,6 +489,7 @@ export interface FileRoutesByTo {
   '/account/profile': typeof AuthenticatedAccountProfileRoute
   '/admin/api-docs': typeof AuthenticatedAdminApiDocsRoute
   '/admin/app-updates': typeof AuthenticatedAdminAppUpdatesRoute
+  '/admin/applications': typeof AuthenticatedAdminApplicationsRoute
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/admin/backup': typeof AuthenticatedAdminBackupRouteWithChildren
   '/admin/design': typeof AuthenticatedAdminDesignRoute
@@ -541,6 +550,7 @@ export interface FileRoutesById {
   '/_authenticated/account/profile': typeof AuthenticatedAccountProfileRoute
   '/_authenticated/admin/api-docs': typeof AuthenticatedAdminApiDocsRoute
   '/_authenticated/admin/app-updates': typeof AuthenticatedAdminAppUpdatesRoute
+  '/_authenticated/admin/applications': typeof AuthenticatedAdminApplicationsRoute
   '/_authenticated/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/_authenticated/admin/backup': typeof AuthenticatedAdminBackupRouteWithChildren
   '/_authenticated/admin/design': typeof AuthenticatedAdminDesignRoute
@@ -603,6 +613,7 @@ export interface FileRouteTypes {
     | '/account/profile'
     | '/admin/api-docs'
     | '/admin/app-updates'
+    | '/admin/applications'
     | '/admin/audit'
     | '/admin/backup'
     | '/admin/design'
@@ -662,6 +673,7 @@ export interface FileRouteTypes {
     | '/account/profile'
     | '/admin/api-docs'
     | '/admin/app-updates'
+    | '/admin/applications'
     | '/admin/audit'
     | '/admin/backup'
     | '/admin/design'
@@ -721,6 +733,7 @@ export interface FileRouteTypes {
     | '/_authenticated/account/profile'
     | '/_authenticated/admin/api-docs'
     | '/_authenticated/admin/app-updates'
+    | '/_authenticated/admin/applications'
     | '/_authenticated/admin/audit'
     | '/_authenticated/admin/backup'
     | '/_authenticated/admin/design'
@@ -969,6 +982,13 @@ declare module '@tanstack/react-router' {
       path: '/app-updates'
       fullPath: '/admin/app-updates'
       preLoaderRoute: typeof AuthenticatedAdminAppUpdatesRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/applications': {
+      id: '/_authenticated/admin/applications'
+      path: '/applications'
+      fullPath: '/admin/applications'
+      preLoaderRoute: typeof AuthenticatedAdminApplicationsRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
     '/_authenticated/admin/audit': {
@@ -1268,6 +1288,7 @@ const AuthenticatedAdminUsersRouteWithChildren =
 interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminApiDocsRoute: typeof AuthenticatedAdminApiDocsRoute
   AuthenticatedAdminAppUpdatesRoute: typeof AuthenticatedAdminAppUpdatesRoute
+  AuthenticatedAdminApplicationsRoute: typeof AuthenticatedAdminApplicationsRoute
   AuthenticatedAdminAuditRoute: typeof AuthenticatedAdminAuditRoute
   AuthenticatedAdminBackupRoute: typeof AuthenticatedAdminBackupRouteWithChildren
   AuthenticatedAdminDesignRoute: typeof AuthenticatedAdminDesignRoute
@@ -1290,6 +1311,7 @@ interface AuthenticatedAdminRouteChildren {
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminApiDocsRoute: AuthenticatedAdminApiDocsRoute,
   AuthenticatedAdminAppUpdatesRoute: AuthenticatedAdminAppUpdatesRoute,
+  AuthenticatedAdminApplicationsRoute: AuthenticatedAdminApplicationsRoute,
   AuthenticatedAdminAuditRoute: AuthenticatedAdminAuditRoute,
   AuthenticatedAdminBackupRoute: AuthenticatedAdminBackupRouteWithChildren,
   AuthenticatedAdminDesignRoute: AuthenticatedAdminDesignRoute,
