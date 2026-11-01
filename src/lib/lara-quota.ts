@@ -375,7 +375,8 @@ export function adminQuotaRequestsQueryOptions(
       });
     },
     retry: false,
-    staleTime: 15_000,
+    staleTime: 3_000,
+    refetchInterval: 5_000,
   });
 }
 

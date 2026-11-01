@@ -34,15 +34,34 @@ export function ResellerApplicationModal({
   const [volume, setVolume] = useState("100-500");
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    // Simulate real partner request dispatch
-    setTimeout(() => {
-      setIsSubmitting(false);
+    setSubmitError(null);
+    try {
+      const res = await fetch("/Public/ResellerApplications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          CompanyName: companyName,
+          ContactEmail: email,
+          Website: website || null,
+          DesiredPrefix: desiredPrefix || null,
+          ExpectedVolume: volume,
+        }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || data?.Status?.IsSuccess === false) {
+        throw new Error(data?.Status?.Message ?? "Failed to submit application.");
+      }
       setIsSubmitted(true);
-    }, 800);
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "Network error submitting application.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleClose = () => {
@@ -161,6 +180,10 @@ export function ResellerApplicationModal({
                 </Select>
               </div>
             </div>
+
+            {submitError && (
+              <p className="text-xs text-destructive bg-destructive/10 p-2 rounded">{submitError}</p>
+            )}
 
             <div className="pt-3 border-t border-border flex items-center justify-end gap-2">
               <Button

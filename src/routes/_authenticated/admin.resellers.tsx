@@ -2,6 +2,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 
 import { ResellerDataTable } from "../../components/admin/reseller-data-table";
+import { ResellerApplicationsInbox } from "../../components/admin/reseller-applications-inbox";
 import { PageActions } from "../../components/shell/AppShell";
 import { PageHeader } from "../../components/shell/PageHeader";
 import { RoutePending, RouteErrorState } from "../../components/shell/RouteFallbacks";
@@ -46,6 +47,7 @@ function ResellersPage() {
           New reseller
         </Link>
       </PageActions>
+      <ResellerApplicationsInbox />
       <ResellerDataTable resellers={data} />
     </>
   );

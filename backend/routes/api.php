@@ -77,6 +77,9 @@ Route::middleware(['auth:sanctum', 'session.active'])->group(function (): void {
 // authenticated shard status lives on Admin\MetricsController::shardStatus.
 Route::get('/Public/Health', HealthController::class)->name('api.public.health');
 
+Route::post('/Public/ResellerApplications', [\App\Http\Controllers\ResellerApplicationController::class, 'submitPublic'])->name('api.public.reseller_applications.submit');
+Route::post('/public/reseller-applications', [\App\Http\Controllers\ResellerApplicationController::class, 'submitPublic'])->name('api.public.reseller_applications.submit_alias');
+
 
 
 // Admin surface: SuperAdmin + Admin. No shard binding here; Admins act
@@ -96,6 +99,12 @@ $registerAdminRoutes = function (): void {
         Route::post('/Resellers', [ResellerController::class, 'store'])->name('resellers.store');
         Route::get('/Resellers/{ResellerSlug}', [ResellerController::class, 'show'])->name('resellers.show');
         Route::patch('/Resellers/{ResellerSlug}', [ResellerController::class, 'update'])->name('resellers.update');
+
+        // Reseller Partner Applications management
+        Route::get('/ResellerApplications', [\App\Http\Controllers\ResellerApplicationController::class, 'indexAdmin'])->name('reseller_applications.index');
+        Route::get('/reseller-applications', [\App\Http\Controllers\ResellerApplicationController::class, 'indexAdmin'])->name('reseller_applications.index_alias');
+        Route::post('/ResellerApplications/{ApplicationId}/Approve', [\App\Http\Controllers\ResellerApplicationController::class, 'approveAdmin'])->whereNumber('ApplicationId')->name('reseller_applications.approve');
+        Route::post('/ResellerApplications/{ApplicationId}/Deny', [\App\Http\Controllers\ResellerApplicationController::class, 'denyAdmin'])->whereNumber('ApplicationId')->name('reseller_applications.deny');
 
         // Plan 06 step 70. Feature catalog + TierFeatures matrix (Root, read-only).
         Route::get('/Features', [FeatureController::class, 'index'])->name('features.index');
