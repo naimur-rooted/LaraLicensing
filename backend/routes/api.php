@@ -81,10 +81,7 @@ Route::get('/Public/Health', HealthController::class)->name('api.public.health')
 
 // Admin surface: SuperAdmin + Admin. No shard binding here; Admins act
 // across resellers and explicitly select tenants per request.
-Route::middleware(['auth:sanctum', 'session.active', 'require.role:Admin|SuperAdmin', 'casbin.pep'])
-    ->prefix('Admin')
-    ->name('api.admin.')
-    ->group(function (): void {
+$registerAdminRoutes = function (): void {
         Route::get('/Ping', function (Request $request) {
             return response()->json([
                 'Ok' => true,
@@ -95,17 +92,16 @@ Route::middleware(['auth:sanctum', 'session.active', 'require.role:Admin|SuperAd
 
         // Plan 06 step 29. Reseller directory CRUD on the Root DB.
         Route::get('/Resellers', [ResellerController::class, 'index'])->name('resellers.index');
+        Route::get('/resellers', [ResellerController::class, 'index'])->name('resellers.index.alias');
         Route::post('/Resellers', [ResellerController::class, 'store'])->name('resellers.store');
         Route::get('/Resellers/{ResellerSlug}', [ResellerController::class, 'show'])->name('resellers.show');
         Route::patch('/Resellers/{ResellerSlug}', [ResellerController::class, 'update'])->name('resellers.update');
 
-
         // Plan 06 step 70. Feature catalog + TierFeatures matrix (Root, read-only).
         Route::get('/Features', [FeatureController::class, 'index'])->name('features.index');
+        Route::get('/features', [FeatureController::class, 'index'])->name('features.index.alias');
 
-        // Admin PricingPlans CRUD (Root DB). The public read path
-        // GET /Pricing/Plans (active plans only) is unchanged; this admin
-        // surface lists all plans and allows create/update/delete.
+        // Admin PricingPlans CRUD (Root DB).
         Route::get('/PricingPlans', [PricingPlanController::class, 'index'])->name('pricing_plans.index');
         Route::post('/PricingPlans', [PricingPlanController::class, 'store'])->name('pricing_plans.store');
         Route::get('/PricingPlans/{PricingPlanId}', [PricingPlanController::class, 'show'])->where('PricingPlanId', '[0-9]+')->name('pricing_plans.show');
@@ -118,23 +114,19 @@ Route::middleware(['auth:sanctum', 'session.active', 'require.role:Admin|SuperAd
         Route::post('/Prefixes', [PrefixController::class, 'store'])->name('prefixes.store');
         Route::delete('/Prefixes/{PrefixValue}', [PrefixController::class, 'destroy'])->name('prefixes.destroy');
 
-        // Plan 06 steps 31-33. License CRUD on the reseller shard. Show/update/revoke
-        // require ?ResellerSlug=... so the caller selects the shard explicitly.
+        // Plan 06 steps 31-33. License CRUD on the reseller shard.
+        Route::get('/Licenses', [LicenseController::class, 'index'])->name('licenses.index');
+        Route::get('/licenses', [LicenseController::class, 'index'])->name('licenses.index.alias');
         Route::post('/Licenses', [LicenseController::class, 'issue'])->name('licenses.issue');
         Route::get('/Licenses/{LicenseKey}', [LicenseController::class, 'show'])
             ->where('LicenseKey', '[A-Z0-9-]{4,80}')->name('licenses.show');
         Route::patch('/Licenses/{LicenseKey}', [LicenseController::class, 'update'])
             ->where('LicenseKey', '[A-Z0-9-]{4,80}')->name('licenses.update');
-        // Plan 09 step 58. `destroy` is the REST-symmetric alias; it delegates
-        // to `revoke()` so the audit action name stays `LicenseRevoked`.
         Route::delete('/Licenses/{LicenseKey}', [LicenseController::class, 'destroy'])
             ->where('LicenseKey', '[A-Z0-9-]{4,80}')->name('licenses.revoke');
-        // Plan 06 step 48. LicenseLedger read (shard-scoped via ?ResellerSlug).
         Route::get('/Licenses/{LicenseKey}/Ledger', [LicenseController::class, 'ledger'])
             ->where('LicenseKey', '[A-Z0-9-]{4,80}')->name('licenses.ledger');
 
-        // Plan 06 step 39 (admin bindings). Spec 30 Â§"Admin operations".
-        // Shard bound via ?ResellerSlug=..., same pattern as other Admin routes.
         Route::get('/Licenses/{LicenseKey}/Bindings', [AdminBindingController::class, 'index'])
             ->where('LicenseKey', '[A-Z0-9-]{4,80}')->name('licenses.bindings.index');
         Route::post('/Licenses/{LicenseKey}/Bindings/{MachineBindingId}/Release', [AdminBindingController::class, 'release'])
@@ -149,6 +141,7 @@ Route::middleware(['auth:sanctum', 'session.active', 'require.role:Admin|SuperAd
 
         // Plan 06 step 34. User directory + role assignment on Root DB.
         Route::get('/Users', [UserController::class, 'index'])->name('users.index');
+        Route::get('/users', [UserController::class, 'index'])->name('users.index.alias');
         Route::post('/Users', [UserController::class, 'store'])->name('users.store');
         Route::get('/Users/{UserId}', [UserController::class, 'show'])
             ->where('UserId', '[0-9]+')->name('users.show');
@@ -167,18 +160,13 @@ Route::middleware(['auth:sanctum', 'session.active', 'require.role:Admin|SuperAd
             ->where('UserId', '[0-9]+')->name('users.impersonate');
         Route::post('/Impersonation/End', [UserController::class, 'endImpersonation'])
             ->name('impersonation.end');
-        // Plan 06 step 43 (forceEnd). Admin-only termination of any active
-        // impersonation session by SessionId (spec 47 Â§2 AdminForced).
         Route::post('/Impersonation/{SessionId}/ForceEnd', [UserController::class, 'forceEndImpersonation'])
             ->where('SessionId', '[0-9a-fA-F-]{36}')
             ->name('impersonation.force_end');
 
-
         // Plan 06 step 37. Admin-scoped quota-request decision surface.
-        // Shard is selected explicitly via ?ResellerSlug=... on each call.
         Route::get('/QuotaRequests', [AdminQuotaRequestController::class, 'index'])
             ->name('quota_requests.index');
-        // Cross-tenant fanout inbox (spec 42 v1.1.0 Â§"Admin inbox").
         Route::get('/QuotaRequests/All', [AdminQuotaRequestController::class, 'indexAll'])
             ->name('quota_requests.index_all');
         Route::post('/QuotaRequests/{RequestId}/Approve', [AdminQuotaRequestController::class, 'approve'])
@@ -187,9 +175,7 @@ Route::middleware(['auth:sanctum', 'session.active', 'require.role:Admin|SuperAd
             ->where('RequestId', '[0-9]+')->name('quota_requests.deny');
 
         // Plan 06 step 45. Self-update publish saga.
-        // Phase 1 (v0.237.0): UploadTicket. Phase 3a/3c (v0.238.0):
-        // finalize + yank. Idempotency-Key required (see
-        // IdempotencyKeyMiddleware REQUIRED_PREFIXES `api/admin/appupdates`).
+        Route::get('/updates', [\App\Http\Controllers\Admin\AppUpdateController::class, 'index'])->name('updates.index.alias');
         Route::get('/AppUpdates', [\App\Http\Controllers\Admin\AppUpdateController::class, 'index'])
             ->name('app_updates.index');
         Route::post('/AppUpdates/UploadTicket', [\App\Http\Controllers\Admin\AppUpdateController::class, 'uploadTicket'])
@@ -199,43 +185,33 @@ Route::middleware(['auth:sanctum', 'session.active', 'require.role:Admin|SuperAd
         Route::post('/AppUpdates/{Version}/Yank', [\App\Http\Controllers\Admin\AppUpdateController::class, 'yank'])
             ->name('app_updates.yank');
 
-        // Plan 09 step 29. Dashboard KPI aggregator (root counts + shard fanout).
+        // Plan 09 step 29. Dashboard KPI aggregator.
         Route::get('/Metrics', [\App\Http\Controllers\Admin\MetricsController::class, 'index'])
             ->name('metrics.index');
-
-        // Plan 09 step 31. Per-shard reachability probe for the dashboard "Recheck now" control.
         Route::get('/Metrics/ShardStatus', [\App\Http\Controllers\Admin\MetricsController::class, 'shardStatus'])
             ->name('metrics.shardStatus');
 
-        // Plan 09 step 23. Read-only viewer over Root AuditLogs. Filters by
-        // Action/TargetType/ActorId; ordered CreatedAt DESC; Limit<=500.
+        // Plan 09 step 23. Read-only viewer over Root AuditLogs.
         Route::get('/AuditLogs', [\App\Http\Controllers\Admin\AuditController::class, 'index'])
             ->name('audit.index');
 
-        // v0.298.0. Auth session listing per user + admin-forced revoke by SessionId.
+        // v0.298.0. Auth session listing per user + admin-forced revoke.
         Route::get('/Users/{UserId}/Sessions', [\App\Http\Controllers\Admin\SessionController::class, 'index'])
             ->where('UserId', '[0-9]+')->name('users.sessions.index');
         Route::delete('/Sessions/{SessionId}', [\App\Http\Controllers\Admin\SessionController::class, 'destroy'])
             ->where('SessionId', '[0-9a-fA-F-]{36}')->name('sessions.destroy');
 
-        // Plan 14 step 9 (v0.614.0). Backup/Restore Export endpoint (S1 shadow).
-        // 02-spec/26-backup-restore/11-endpoint-export.md. Idempotency-Key required
-        // (see IdempotencyKeyMiddleware REQUIRED_PREFIXES `api/admin/backup/exports`).
+        // Plan 06 step 50. Backup & Restore saga.
         Route::post('/Backup/Exports', [\App\Http\Controllers\Admin\BrExportController::class, 'store'])
             ->name('backup.exports.store');
-
-        // Plan 14 step 27 (v0.676.0). Backup/Restore Import endpoint (S1 shadow,
-        // verifyOnly slice). 02-spec/26-backup-restore/12-endpoint-import.md.
-        // Idempotency-Key required (REQUIRED_PREFIXES `api/admin/backup/imports`).
-        // verifyAndApply is rejected 400 ValidationFailed until a follow-up step
-        // lands the apply-phase job dispatch.
+        Route::get('/Backup/Jobs/{JobId}', [\App\Http\Controllers\Admin\BrJobController::class, 'show'])
+            ->where('JobId', '[0-9]+')->name('backup.jobs.show');
+        Route::get('/Backup/Jobs/{JobId}/Events', [\App\Http\Controllers\Admin\BrJobController::class, 'events'])
+            ->where('JobId', '[0-9]+')->name('backup.jobs.events');
         Route::post('/Backup/Imports', [\App\Http\Controllers\Admin\BrImportController::class, 'store'])
             ->name('backup.imports.store');
 
-        // Plan 16 step 58 (v0.563.0). Runtime-config admin surface for
-        // repo-root `version.json`. `show` returns ETag over UpdatedAt;
-        // `update` enforces If-Match, atomic write, and SuperAdmin RBAC.
-        // Contract: 02-spec/28-runtime-modes/05-admin-runtime-toggle.md.
+        // Plan 16 Step 58. Runtime configuration viewer + updater.
         Route::get('/RuntimeConfig', [\App\Http\Controllers\Admin\RuntimeConfigController::class, 'show'])
             ->name('runtime_config.show');
         Route::put('/RuntimeConfig', [\App\Http\Controllers\Admin\RuntimeConfigController::class, 'update'])
@@ -244,7 +220,18 @@ Route::middleware(['auth:sanctum', 'session.active', 'require.role:Admin|SuperAd
         // Plan 18 Step 102. Admin Errors tail endpoint.
         Route::get('/Errors', [\App\Http\Controllers\Admin\ErrorController::class, 'index'])
             ->name('errors.index');
-    });
+};
+
+Route::middleware(['auth:sanctum', 'session.active', 'require.role:Admin|SuperAdmin', 'casbin.pep'])
+    ->prefix('Admin')
+    ->name('api.admin.')
+    ->group($registerAdminRoutes);
+
+Route::middleware(['auth:sanctum', 'session.active', 'require.role:Admin|SuperAdmin', 'casbin.pep'])
+    ->prefix('admin')
+    ->name('api.admin.lower.')
+    ->group($registerAdminRoutes);
+
 
 
 // Reseller surface: Reseller role + automatic shard binding by TenantId.

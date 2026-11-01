@@ -20,6 +20,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
         then: function () {
             \Illuminate\Support\Facades\Route::middleware('api')
+                ->prefix('api')
+                ->group(__DIR__.'/../routes/api.php');
+            \Illuminate\Support\Facades\Route::middleware('api')
                 ->prefix('Api')
                 ->group(__DIR__.'/../routes/api.php');
             \Illuminate\Support\Facades\Route::middleware('api')

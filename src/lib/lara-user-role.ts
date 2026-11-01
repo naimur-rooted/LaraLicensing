@@ -72,7 +72,7 @@ export const userRolesQueryOptions = queryOptions({
   queryFn: ({ signal }) =>
     getRuntimeMode().Mode === "preview"
       ? fetchPreviewUsers()
-      : requestLaraApi(`/Users?Limit=${USER_LIMIT}`, laraUserSchema, { signal }),
+      : requestLaraApi(`/Admin/Users?Limit=${USER_LIMIT}`, laraUserSchema, { signal }),
   retry: false,
 });
 

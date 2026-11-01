@@ -510,8 +510,8 @@ async function fetchLiveAdminLicenses(
   signal?: AbortSignal,
 ): Promise<License[]> {
   const path = filter?.ResellerId
-    ? `/Reseller/Licenses?Limit=100`
-    : `/Licenses?Limit=100`;
+    ? `/Admin/Licenses?ResellerId=${filter.ResellerId}&Limit=100`
+    : `/Admin/Licenses?Limit=100`;
 
   return requestLaraApi(path, licenseSchema, { signal });
 }

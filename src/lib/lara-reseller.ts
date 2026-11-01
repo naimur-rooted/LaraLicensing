@@ -48,7 +48,7 @@ export const resellersQueryOptions = queryOptions({
   queryFn: ({ signal }) =>
     getRuntimeMode().Mode === "preview"
       ? fetchPreviewResellers()
-      : requestLaraApi(`/Resellers?Limit=${RESELLER_LIMIT}`, resellerSchema, { signal }),
+      : requestLaraApi(`/Admin/Resellers?Limit=${RESELLER_LIMIT}`, resellerSchema, { signal }),
   retry: false,
 });
 

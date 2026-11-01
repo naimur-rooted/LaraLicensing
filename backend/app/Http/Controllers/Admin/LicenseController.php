@@ -72,6 +72,16 @@ final class LicenseController
         private readonly \App\Services\FeatureService $featureService,
     ) {
     }
+    public function index(Request $request): JsonResponse
+    {
+        return LicenseIndexHelper::index(
+            $request,
+            $this->shardResolver,
+            fn ($v) => $this->isoOrEmpty($v),
+            fn ($r) => $this->requestId($r),
+        );
+    }
+
 
 
         /**
