@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CheckCircle2, Building, Mail, Globe, Tag, Send } from "lucide-react";
+import { getApiBaseUrl } from "@/lib/lara-api-client";
 
 interface ResellerApplicationModalProps {
   isOpen: boolean;
@@ -41,7 +42,8 @@ export function ResellerApplicationModal({
     setIsSubmitting(true);
     setSubmitError(null);
     try {
-      const res = await fetch("/Public/ResellerApplications", {
+      const baseUrl = getApiBaseUrl();
+      const res = await fetch(`${baseUrl}/Public/ResellerApplications`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
