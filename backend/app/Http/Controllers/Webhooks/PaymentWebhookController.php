@@ -118,6 +118,26 @@ class PaymentWebhookController extends Controller
         $serial = $this->webhookService->mintSerialValue($eventData['productSlug'], $gateway, $eventId);
         $this->webhookService->recordEvent($gateway, $eventData, $serial, $request);
 
+        // Dispatch license serial email directly to the paying customer
+        try {
+            $product = $this->findActiveProduct((string) $eventData['productSlug']);
+            $productName = $product?->productName ?? ucfirst((string) $eventData['productSlug']);
+            \Illuminate\Support\Facades\Mail::to((string) $eventData['customerEmail'])->send(new \App\Mail\CustomerLicenseIssuedMail(
+                serialKey: $serial,
+                productName: $productName,
+                customerEmail: (string) $eventData['customerEmail'],
+                gateway: $gateway,
+                transactionId: $eventId
+            ));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('payment_webhook.customer_email_failed', [
+                'gateway' => $gateway,
+                'customer_email' => $eventData['customerEmail'] ?? '',
+                'serial' => $serial,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
         return $this->successResponse($gateway, $request, $eventData, $serial, false);
     }
 
