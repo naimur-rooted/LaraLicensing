@@ -1,18 +1,23 @@
 import { useApi } from "@/hooks/use-api";
+import { getLaraAccessToken } from "@/lib/lara-api-session";
 
 export function useCapabilities() {
+  const token = typeof window !== "undefined" ? getLaraAccessToken() : undefined;
+  const hasToken = typeof token === "string" && token.length > 0;
+
   const { data, isLoading, error } = useApi(
     "auth.capabilities",
     {},
     {
       staleTime: 60_000, // Cache for 60s as specified in 17-fe-routes.md
+      enabled: hasToken, // Only fetch when authenticated
     },
   );
 
   return {
     capabilities: data?.Capabilities ?? [],
-    isLoading,
-    error,
+    isLoading: hasToken ? isLoading : false,
+    error: hasToken ? error : null,
   };
 }
 

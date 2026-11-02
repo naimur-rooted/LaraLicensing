@@ -27,7 +27,7 @@ export function NotificationBell() {
         )}
       </button>
 
-      <NotificationDrawer open={open} onOpenChange={setOpen} />
+      {open && <NotificationDrawer open={open} onOpenChange={setOpen} />}
     </>
   );
 }

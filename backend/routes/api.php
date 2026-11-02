@@ -64,6 +64,8 @@ Route::middleware(['auth:sanctum', 'session.active'])->get('/Users/Me', [MeContr
 Route::middleware(['auth:sanctum', 'session.active'])->get('/v1/users/me', [MeController::class, 'show'])->name('api.v1.users.me');
 Route::middleware(['auth:sanctum', 'session.active'])->get('/api/v1/users/me', [MeController::class, 'show'])->name('api.compat.v1.users.me');
 Route::middleware(['auth:sanctum', 'session.active'])->get('/Me/Capabilities', [MeController::class, 'capabilities'])->name('api.me.capabilities');
+Route::middleware(['auth:sanctum', 'session.active'])->get('/api/Me/Capabilities', [MeController::class, 'capabilities'])->name('api.compat.me.capabilities');
+Route::middleware(['auth:sanctum', 'session.active'])->get('/api/admin/capabilities', [MeController::class, 'capabilities'])->name('api.compat.admin.capabilities');
 
 // Shared Reseller Quota endpoints (accessible by Admin and Reseller with row-scope)
 Route::middleware(['auth:sanctum', 'session.active'])->group(function (): void {
