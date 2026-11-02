@@ -45,6 +45,25 @@ class AuthSessionService
         $now = Carbon::now();
 
         return DB::connection('root')->transaction(function () use ($user, $sessionId, $now, $ttl, $rememberMe): AuthSession {
+            // Close any existing active normal sessions for this user so re-logins supersede old sessions
+            $activePrior = AuthSession::query()
+                ->where('UserId', (int) $user->getKey())
+                ->where('Kind', AuthSession::KIND_NORMAL)
+                ->whereNull('EndedAt')
+                ->get();
+
+            foreach ($activePrior as $oldSession) {
+                $oldSession->EndedAt = $now;
+                $oldSession->RevokeReason = self::REVOKE_OPERATOR_LOGOUT;
+                $oldSession->save();
+                $this->revokeTokensForSession((string) $oldSession->SessionId);
+                Log::info('auth.session.superseded', [
+                    'OldSessionId' => $oldSession->SessionId,
+                    'NewSessionId' => $sessionId,
+                    'UserId' => (int) $user->getKey(),
+                ]);
+            }
+
             $row = new AuthSession();
             $row->SessionId = $sessionId;
             $row->UserId = (int) $user->getKey();

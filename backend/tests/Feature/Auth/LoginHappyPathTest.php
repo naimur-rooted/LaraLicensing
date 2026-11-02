@@ -156,6 +156,40 @@ final class LoginHappyPathTest extends TestCase
         );
     }
 
+    public function test_subsequent_login_supersedes_previous_session_for_same_user(): void
+    {
+        $first = $this->postJson('/Api/Auth/Login', [
+            'Email' => self::EMAIL,
+            'Password' => self::PASSWORD,
+        ]);
+        $first->assertStatus(200);
+        $firstSessionId = (string) $first->json('Results.0.SessionId');
+
+        $activeBefore = AuthSession::query()
+            ->where('UserId', (int) $first->json('Results.0.UserId'))
+            ->whereNull('EndedAt')
+            ->count();
+        $this->assertSame(1, $activeBefore, 'Exactly one session must be active after first login.');
+
+        $second = $this->postJson('/Api/Auth/Login', [
+            'Email' => self::EMAIL,
+            'Password' => self::PASSWORD,
+        ]);
+        $second->assertStatus(200);
+        $secondSessionId = (string) $second->json('Results.0.SessionId');
+        $this->assertNotSame($firstSessionId, $secondSessionId);
+
+        $firstSession = AuthSession::query()->where('SessionId', $firstSessionId)->first();
+        $this->assertNotNull($firstSession->EndedAt, 'First session must have EndedAt set after re-login.');
+        $this->assertSame(AuthSessionService::REVOKE_OPERATOR_LOGOUT, $firstSession->RevokeReason);
+
+        $activeAfter = AuthSession::query()
+            ->where('UserId', (int) $second->json('Results.0.UserId'))
+            ->whereNull('EndedAt')
+            ->count();
+        $this->assertSame(1, $activeAfter, 'Active session count for this user must remain dynamically 1.');
+    }
+
     private function createRootFixtures(): void
     {
         $root = DB::connection('root');
