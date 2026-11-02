@@ -1,8 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Check, ShieldCheck, Zap, Sparkles } from "lucide-react";
+import { Check, ShieldCheck, Zap, Sparkles, Loader2 } from "lucide-react";
+import { getApiBaseUrl } from "@/lib/lara-api-client";
+import { getLaraAccessToken } from "@/lib/lara-api-session";
 
 interface PlatformSubscriptionModalProps {
   isOpen: boolean;
@@ -11,89 +13,17 @@ interface PlatformSubscriptionModalProps {
   onTierSelect: (tierCode: string) => void;
 }
 
-interface PlatformPlan {
-  code: string;
-  name: string;
-  monthlyPrice: string;
-  annualPrice: string;
-  biennialPrice: string;
-  productsLimit: string;
-  requestsLimit: string;
-  seatsPerLicense: string;
-  isPopular?: boolean;
-  isDecoyTarget?: boolean;
-  features: string[];
+export interface DynamicPricingPlan {
+  PricingPlanId: number;
+  planCode: string;
+  planName: string;
+  billingInterval: string;
+  retailPriceCents: number;
+  discountedPriceCents: number;
+  allowedMachineSlots: number;
+  isBestValue: boolean | number;
+  isActive: boolean | number;
 }
-
-const PLATFORM_PLANS: PlatformPlan[] = [
-  {
-    code: "STARTER",
-    name: "Starter / Free",
-    monthlyPrice: "$0.00",
-    annualPrice: "Free 1st Year",
-    biennialPrice: "N/A",
-    productsLimit: "1 Product",
-    requestsLimit: "100 req / day (max 15/hr)",
-    seatsPerLicense: "Up to 2 seats per license",
-    features: [
-      "1 Software Product Shard",
-      "Standard SQLite WAL Mode",
-      "Community Documentation",
-      "Basic Serial Generation",
-    ],
-  },
-  {
-    code: "ESSENTIAL",
-    name: "Essential",
-    monthlyPrice: "$2.50 / mo",
-    annualPrice: "$19.90 / yr",
-    biennialPrice: "$35.00 / 2 yr",
-    productsLimit: "3 Products",
-    requestsLimit: "200 req / day (max 25/hr)",
-    seatsPerLicense: "Up to 5 seats per license",
-    features: [
-      "3 Isolated Product Shards",
-      "Periodic 7/14-Day Cadence Checking",
-      "Decoupled Stripe & Webhook Integrations",
-      "Email Support",
-    ],
-  },
-  {
-    code: "PRO",
-    name: "Pro Developer",
-    monthlyPrice: "$5.00 / mo",
-    annualPrice: "$49.90 / yr",
-    biennialPrice: "$89.00 / 2 yr",
-    productsLimit: "15 Products",
-    requestsLimit: "1,000 req / day (max 120/hr)",
-    seatsPerLicense: "Up to 15 seats per license",
-    isPopular: true,
-    isDecoyTarget: true,
-    features: [
-      "15 Product Shard Databases",
-      "Real-Time Fraud & Anomaly Guard",
-      "Ed25519 Asymmetric Offline JWTs",
-      "1-Click AI Blueprint Generator",
-      "Priority Fast-Track Support",
-    ],
-  },
-  {
-    code: "MAX",
-    name: "Max Enterprise",
-    monthlyPrice: "$9.90 / mo",
-    annualPrice: "$89.00 / yr",
-    biennialPrice: "$149.00 / 2 yr",
-    productsLimit: "50 Products",
-    requestsLimit: "5,000 req / day (max 500/hr)",
-    seatsPerLicense: "Unlimited Floating Seats",
-    features: [
-      "50 Product Shards",
-      "Reseller Wholesale Subsystem Access",
-      "Impossible Travel Geo-Velocity Shield",
-      "Dedicated Slack / Discord Channel",
-    ],
-  },
-];
 
 export function PlatformSubscriptionModal({
   isOpen,
@@ -101,7 +31,90 @@ export function PlatformSubscriptionModal({
   currentTier,
   onTierSelect,
 }: PlatformSubscriptionModalProps) {
-  const [billingCycle, setBillingCycle] = useState<"monthly" | "annual" | "biennial">("biennial");
+  const [plans, setPlans] = useState<DynamicPricingPlan[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    let isMounted = true;
+    setIsLoading(true);
+    setError(null);
+
+    const loadPlans = async () => {
+      try {
+        const baseUrl = getApiBaseUrl();
+        const token =
+          getLaraAccessToken() ||
+          sessionStorage.getItem("LicensingPortal.AccessToken") ||
+          localStorage.getItem("LicensingPortal.AccessToken") ||
+          localStorage.getItem("lara_access_token") ||
+          localStorage.getItem("token");
+
+        // First attempt authenticated Admin/PricingPlans (if operator), otherwise public /Pricing/Plans
+        let resp = await fetch(`${baseUrl}/Pricing/Plans`, {
+          headers: {
+            Accept: "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        });
+
+        if (!resp.ok) {
+          resp = await fetch(`${baseUrl}/Admin/PricingPlans`, {
+            headers: {
+              Accept: "application/json",
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+          });
+        }
+
+        if (!resp.ok) {
+          throw new Error(`Failed to load plans: HTTP ${resp.status}`);
+        }
+
+        const json = await resp.json();
+        const items: DynamicPricingPlan[] = json.Data || json.Results?.Items || json.Results || [];
+        if (isMounted) {
+          setPlans(items.filter((p) => Boolean(p.isActive)));
+        }
+      } catch (err: unknown) {
+        if (isMounted) {
+          setError(err instanceof Error ? err.message : "Failed to load dynamic pricing deals");
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    void loadPlans();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen]);
+
+  const formatPrice = (cents: number) => {
+    return (cents / 100).toLocaleString("en-US", {
+      style: "currency",
+      currency: "USD",
+    });
+  };
+
+  const getIntervalLabel = (interval: string) => {
+    switch (interval.toLowerCase()) {
+      case "monthly":
+        return "/ month";
+      case "yearly":
+      case "annual":
+        return "/ year";
+      case "biennial":
+        return "/ 2 yr";
+      default:
+        return `/${interval}`;
+    }
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -113,101 +126,108 @@ export function PlatformSubscriptionModal({
           </div>
           <DialogTitle className="text-2xl">Choose Your Developer Platform Tier</DialogTitle>
           <DialogDescription>
-            Select a licensing package to unlock product shard quotas, daily validation bandwidth, and anti-piracy capabilities.
+            Live pricing deals and software licensing packages configured by the administration.
           </DialogDescription>
         </DialogHeader>
 
-        {/* Billing Cycle Switcher */}
-        <div className="flex justify-center my-2">
-          <div className="flex items-center rounded-lg border bg-muted/40 p-1 text-xs">
-            <button
-              onClick={() => setBillingCycle("monthly")}
-              className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
-                billingCycle === "monthly" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"
-              }`}
-            >
-              Billed Monthly
-            </button>
-            <button
-              onClick={() => setBillingCycle("annual")}
-              className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
-                billingCycle === "annual" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"
-              }`}
-            >
-              Annual (Save 35%)
-            </button>
-            <button
-              onClick={() => setBillingCycle("biennial")}
-              className={`flex items-center gap-1 rounded-md px-3 py-1.5 font-medium transition-colors ${
-                billingCycle === "biennial" ? "bg-emerald-600 text-white shadow-sm" : "text-muted-foreground"
-              }`}
-            >
-              <span>2-Year Decoy Target</span>
-              <span className="text-[10px] font-bold bg-white/20 px-1 rounded">SAVE 82%</span>
-            </button>
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-3">
+            <Loader2 className="size-6 animate-spin text-primary" />
+            <span className="text-xs">Fetching live dynamic pricing deals...</span>
           </div>
-        </div>
+        ) : error ? (
+          <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-5 text-center text-xs text-destructive">
+            <p className="font-semibold">{error}</p>
+            <p className="text-[11px] text-muted-foreground mt-1">Please check your network connection or try again.</p>
+          </div>
+        ) : plans.length === 0 ? (
+          <div className="rounded-xl border border-border bg-card p-8 text-center text-xs text-muted-foreground">
+            No active pricing deals are currently available.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 py-2">
+            {plans.map((plan) => {
+              const isSelected =
+                currentTier.toUpperCase() === plan.planCode.toUpperCase() ||
+                currentTier.toLowerCase() === plan.planName.toLowerCase();
+              const isBestValue = Boolean(plan.isBestValue);
+              const retailPrice = formatPrice(plan.retailPriceCents);
+              const discountedPrice = formatPrice(plan.discountedPriceCents);
+              const hasDiscount = plan.retailPriceCents > plan.discountedPriceCents;
 
-        {/* Pricing Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 py-2">
-          {PLATFORM_PLANS.map((plan) => {
-            const isSelected = currentTier.toUpperCase() === plan.code;
-            const price =
-              billingCycle === "biennial"
-                ? plan.biennialPrice
-                : billingCycle === "annual"
-                ? plan.annualPrice
-                : plan.monthlyPrice;
+              return (
+                <div
+                  key={plan.PricingPlanId}
+                  className={`relative flex flex-col justify-between rounded-xl border p-5 text-xs transition-all ${
+                    isBestValue
+                      ? "border-emerald-500 bg-emerald-500/5 shadow-md ring-1 ring-emerald-500/30"
+                      : "border-border bg-card hover:border-border/80"
+                  }`}
+                >
+                  {isBestValue && (
+                    <Badge className="absolute -top-2.5 right-3 bg-emerald-600 text-white text-[9px] font-bold">
+                      RECOMMENDED (BEST VALUE)
+                    </Badge>
+                  )}
 
-            return (
-              <div
-                key={plan.code}
-                className={`relative flex flex-col justify-between rounded-xl border p-4 text-xs transition-all ${
-                  plan.isDecoyTarget
-                    ? "border-emerald-500 bg-emerald-500/5 shadow-md ring-1 ring-emerald-500/30"
-                    : "border-border bg-card"
-                }`}
-              >
-                {plan.isDecoyTarget && (
-                  <Badge className="absolute -top-2.5 right-3 bg-emerald-600 text-white text-[9px] font-bold">
-                    RECOMMENDED (BEST VALUE)
-                  </Badge>
-                )}
+                  <div>
+                    <div className="text-[10px] font-mono text-muted-foreground tracking-wider uppercase mb-1">
+                      {plan.planCode}
+                    </div>
+                    <div className="font-bold text-base text-foreground mb-1">{plan.planName}</div>
 
-                <div>
-                  <div className="font-bold text-sm text-foreground mb-1">{plan.name}</div>
-                  <div className="font-mono text-lg font-extrabold text-foreground mb-2">{price}</div>
+                    <div className="flex items-baseline gap-1.5 my-2">
+                      <span className="font-mono text-2xl font-extrabold text-foreground">{discountedPrice}</span>
+                      {hasDiscount && (
+                        <span className="text-xs line-through text-muted-foreground font-mono">{retailPrice}</span>
+                      )}
+                      <span className="text-xs text-muted-foreground font-medium">
+                        {getIntervalLabel(plan.billingInterval)}
+                      </span>
+                    </div>
 
-                  <div className="space-y-1 mb-3 pb-3 border-b border-border/80 text-[11px] text-muted-foreground">
-                    <div className="font-semibold text-foreground">📦 {plan.productsLimit}</div>
-                    <div>⚡ {plan.requestsLimit}</div>
-                    <div>💻 {plan.seatsPerLicense}</div>
+                    <div className="space-y-1 mb-4 pb-3 border-b border-border/80 text-[11px] text-muted-foreground">
+                      <div className="font-semibold text-foreground flex items-center gap-1.5">
+                        <span>💻</span>
+                        <span>{plan.allowedMachineSlots} Machine Activation Slot{plan.allowedMachineSlots > 1 ? "s" : ""}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span>⚡</span>
+                        <span>Full REST API & SDK Ingestion</span>
+                      </div>
+                    </div>
+
+                    <ul className="space-y-2 text-muted-foreground text-[11px]">
+                      <li className="flex items-start gap-1.5">
+                        <Check className="size-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                        <span>Ed25519 Cryptographic Signatures</span>
+                      </li>
+                      <li className="flex items-start gap-1.5">
+                        <Check className="size-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                        <span>Automated Webhook Checkout Provisioning</span>
+                      </li>
+                      <li className="flex items-start gap-1.5">
+                        <Check className="size-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                        <span>Offline License Token Sync</span>
+                      </li>
+                    </ul>
                   </div>
 
-                  <ul className="space-y-2 text-muted-foreground text-[11px]">
-                    {plan.features.map((f, i) => (
-                      <li key={i} className="flex items-start gap-1.5">
-                        <Check className="size-3.5 text-emerald-500 shrink-0 mt-0.5" />
-                        <span>{f}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  <Button
+                    className="w-full mt-5 h-9 text-xs font-semibold"
+                    variant={isSelected ? "outline" : isBestValue ? "default" : "secondary"}
+                    onClick={() => {
+                      onTierSelect(plan.planCode);
+                      onOpenChange(false);
+                    }}
+                  >
+                    {isSelected ? "Current Plan" : "Select Tier"}
+                  </Button>
                 </div>
-
-                <Button
-                  className="w-full mt-4 h-8 text-xs font-semibold"
-                  variant={isSelected ? "outline" : plan.isDecoyTarget ? "default" : "secondary"}
-                  onClick={() => {
-                    onTierSelect(plan.code);
-                    onOpenChange(false);
-                  }}
-                >
-                  {isSelected ? "Current Plan" : "Select Tier"}
-                </Button>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
 
         {/* Lifetime Deal LTD Banner */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-xs">
