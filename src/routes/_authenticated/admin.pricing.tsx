@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { getApiBaseUrl } from "@/lib/lara-api-client";
+import { getLaraAccessToken } from "@/lib/lara-api-session";
 import { DollarSign, Laptop, Sparkles, Check, Edit2 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/admin/pricing")({
@@ -46,7 +47,12 @@ function AdminPricingPage() {
     setError(null);
     try {
       const baseUrl = getApiBaseUrl();
-      const token = localStorage.getItem("lara_access_token") || localStorage.getItem("token");
+      const token =
+        getLaraAccessToken() ||
+        sessionStorage.getItem("LicensingPortal.AccessToken") ||
+        localStorage.getItem("LicensingPortal.AccessToken") ||
+        localStorage.getItem("lara_access_token") ||
+        localStorage.getItem("token");
       const resp = await fetch(`${baseUrl}/Admin/PricingPlans`, {
         headers: {
           "Accept": "application/json",
@@ -78,7 +84,12 @@ function AdminPricingPage() {
     setIsSaving(true);
     try {
       const baseUrl = getApiBaseUrl();
-      const token = localStorage.getItem("lara_access_token") || localStorage.getItem("token");
+      const token =
+        getLaraAccessToken() ||
+        sessionStorage.getItem("LicensingPortal.AccessToken") ||
+        localStorage.getItem("LicensingPortal.AccessToken") ||
+        localStorage.getItem("lara_access_token") ||
+        localStorage.getItem("token");
       const resp = await fetch(`${baseUrl}/Admin/PricingPlans/${editingPlan.PricingPlanId}`, {
         method: "PATCH",
         headers: {
