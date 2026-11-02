@@ -52,21 +52,29 @@ final class FeatureController extends Controller
         return DB::connection(self::ROOT_CONNECTION)->table(self::FEATURES_TABLE)->get();
     }
 
-    private function buildFeatureItems(\Illuminate\Support\Collection $features): array
-    {
-        return $features->map(static function ($f): array {
-            $key = (string) ($f->FeatureKey ?? $f->Slug ?? '');
-            return [
-                'FeatureId' => (int) ($f->FeatureId ?? 0),
-                'FeatureKey' => $key,
-                'Slug' => $key,
-                'Name' => (string) ($f->Name ?? $key),
-                'Description' => (string) ($f->Description ?? ''),
-                'ValueType' => (string) ($f->ValueType ?? 'boolean'),
-            ];
-        })->sortBy('Slug')->values()->all();
-    }
-
+    private function buildFeatureItems(\Illuminate\Support\Collection $features): array
+    {
+        return $features->map(static function ($f): array {
+            $key = (string) ($f->FeatureKey ?? $f->Slug ?? '');
+            $parts = explode('.', $key);
+            $category = count($parts) > 1 ? $parts[0] : 'General';
+            $name = (string) ($f->Name ?? $key);
+
+            return [
+                'FeatureId' => (int) ($f->FeatureId ?? 0),
+                'FeatureKey' => $key,
+                'Code' => $key,
+                'Slug' => $key,
+                'Name' => $name,
+                'DisplayName' => $name,
+                'Category' => $category,
+                'Description' => (string) ($f->Description ?? ''),
+                'ValueType' => (string) ($f->ValueType ?? 'boolean'),
+                'IsBillable' => (bool) ($f->IsActive ?? 1),
+            ];
+        })->sortBy('Slug')->values()->all();
+    }
+
     private function buildCellsMap(): array
     {
         if (!DB::connection(self::ROOT_CONNECTION)->getSchemaBuilder()->hasTable(self::TIER_FEATURES_TABLE)) {

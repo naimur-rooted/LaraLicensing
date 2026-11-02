@@ -42,6 +42,7 @@ import { Route as AuthenticatedAdminBackupRouteImport } from './routes/_authenti
 import { Route as AuthenticatedAdminDesignRouteImport } from './routes/_authenticated/admin.design'
 import { Route as AuthenticatedAdminErrorsRouteImport } from './routes/_authenticated/admin.errors'
 import { Route as AuthenticatedAdminFeaturesRouteImport } from './routes/_authenticated/admin.features'
+import { Route as AuthenticatedAdminPricingRouteImport } from './routes/_authenticated/admin.pricing'
 import { Route as AuthenticatedAdminQuotaRequestsRouteImport } from './routes/_authenticated/admin.quota-requests'
 import { Route as AuthenticatedAdminQuotasRouteImport } from './routes/_authenticated/admin.quotas'
 import { Route as AuthenticatedAdminResellersRouteImport } from './routes/_authenticated/admin.resellers'
@@ -243,6 +244,12 @@ const AuthenticatedAdminFeaturesRoute =
     path: '/features',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminPricingRoute =
+  AuthenticatedAdminPricingRouteImport.update({
+    id: '/pricing',
+    path: '/pricing',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminQuotaRequestsRoute =
   AuthenticatedAdminQuotaRequestsRouteImport.update({
     id: '/quota-requests',
@@ -435,6 +442,7 @@ export interface FileRoutesByFullPath {
   '/admin/design': typeof AuthenticatedAdminDesignRoute
   '/admin/errors': typeof AuthenticatedAdminErrorsRoute
   '/admin/features': typeof AuthenticatedAdminFeaturesRoute
+  '/admin/pricing': typeof AuthenticatedAdminPricingRoute
   '/admin/quota-requests': typeof AuthenticatedAdminQuotaRequestsRoute
   '/admin/quotas': typeof AuthenticatedAdminQuotasRoute
   '/admin/resellers': typeof AuthenticatedAdminResellersRouteWithChildren
@@ -495,6 +503,7 @@ export interface FileRoutesByTo {
   '/admin/design': typeof AuthenticatedAdminDesignRoute
   '/admin/errors': typeof AuthenticatedAdminErrorsRoute
   '/admin/features': typeof AuthenticatedAdminFeaturesRoute
+  '/admin/pricing': typeof AuthenticatedAdminPricingRoute
   '/admin/quota-requests': typeof AuthenticatedAdminQuotaRequestsRoute
   '/admin/quotas': typeof AuthenticatedAdminQuotasRoute
   '/admin/resellers': typeof AuthenticatedAdminResellersRouteWithChildren
@@ -556,6 +565,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/design': typeof AuthenticatedAdminDesignRoute
   '/_authenticated/admin/errors': typeof AuthenticatedAdminErrorsRoute
   '/_authenticated/admin/features': typeof AuthenticatedAdminFeaturesRoute
+  '/_authenticated/admin/pricing': typeof AuthenticatedAdminPricingRoute
   '/_authenticated/admin/quota-requests': typeof AuthenticatedAdminQuotaRequestsRoute
   '/_authenticated/admin/quotas': typeof AuthenticatedAdminQuotasRoute
   '/_authenticated/admin/resellers': typeof AuthenticatedAdminResellersRouteWithChildren
@@ -619,6 +629,7 @@ export interface FileRouteTypes {
     | '/admin/design'
     | '/admin/errors'
     | '/admin/features'
+    | '/admin/pricing'
     | '/admin/quota-requests'
     | '/admin/quotas'
     | '/admin/resellers'
@@ -679,6 +690,7 @@ export interface FileRouteTypes {
     | '/admin/design'
     | '/admin/errors'
     | '/admin/features'
+    | '/admin/pricing'
     | '/admin/quota-requests'
     | '/admin/quotas'
     | '/admin/resellers'
@@ -739,6 +751,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/design'
     | '/_authenticated/admin/errors'
     | '/_authenticated/admin/features'
+    | '/_authenticated/admin/pricing'
     | '/_authenticated/admin/quota-requests'
     | '/_authenticated/admin/quotas'
     | '/_authenticated/admin/resellers'
@@ -1026,6 +1039,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminFeaturesRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/pricing': {
+      id: '/_authenticated/admin/pricing'
+      path: '/pricing'
+      fullPath: '/admin/pricing'
+      preLoaderRoute: typeof AuthenticatedAdminPricingRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/quota-requests': {
       id: '/_authenticated/admin/quota-requests'
       path: '/quota-requests'
@@ -1294,6 +1314,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminDesignRoute: typeof AuthenticatedAdminDesignRoute
   AuthenticatedAdminErrorsRoute: typeof AuthenticatedAdminErrorsRoute
   AuthenticatedAdminFeaturesRoute: typeof AuthenticatedAdminFeaturesRoute
+  AuthenticatedAdminPricingRoute: typeof AuthenticatedAdminPricingRoute
   AuthenticatedAdminQuotaRequestsRoute: typeof AuthenticatedAdminQuotaRequestsRoute
   AuthenticatedAdminQuotasRoute: typeof AuthenticatedAdminQuotasRoute
   AuthenticatedAdminResellersRoute: typeof AuthenticatedAdminResellersRouteWithChildren
@@ -1317,6 +1338,7 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminDesignRoute: AuthenticatedAdminDesignRoute,
   AuthenticatedAdminErrorsRoute: AuthenticatedAdminErrorsRoute,
   AuthenticatedAdminFeaturesRoute: AuthenticatedAdminFeaturesRoute,
+  AuthenticatedAdminPricingRoute: AuthenticatedAdminPricingRoute,
   AuthenticatedAdminQuotaRequestsRoute: AuthenticatedAdminQuotaRequestsRoute,
   AuthenticatedAdminQuotasRoute: AuthenticatedAdminQuotasRoute,
   AuthenticatedAdminResellersRoute:
